@@ -153,25 +153,26 @@ def check_node_type(node_id: int) -> NodeInterface:
     DronecanNode()
 
 def main():
-    # check if we have an online node
-    nodes_sniffer = NodeFinder()
+    node = DronecanNode()
+    nodes_sniffer = NodeFinder(node.node)
     node_ids: List[int] = []
     start_time = time.time()
-    while time.time() - start_time < 30:
+    while time.time() - start_time < 10:
         found_id = nodes_sniffer.find_online_node()
         if found_id not in node_ids:
             node_ids.append(found_id)
+            print(f"Found node {found_id}")
 
     ice_nodes: List[ICENode]    = []
     min_nodes: List[MiniNode]   = []
     for node_id in node_ids:
         params_interface = ParametersInterface(node=nodes_sniffer._node, target_node_id=node_id)
         params_interface.get_all()
-        if params_interface.get(MiniNode.unique_param).value is not None:
+        if params_interface.get(MiniNode.unique_param) is not None:
             ice_nodes.append(ICENode(node_id))
         else:
             min_nodes.append(MiniNode(node_id))
-    return len(ice_nodes), len(min_nodes)
+    print(len(ice_nodes), len(min_nodes))
 
 if __name__ == "__main__":
     main()

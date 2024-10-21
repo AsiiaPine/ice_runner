@@ -35,7 +35,7 @@ class NodeStatus:
 
     sub_mode: int = 0 # Not used currently, keep zero when publishing, ignore when receiving.
     
-    vendor_specific_status_code: int # Optional, vendor-specific node status code, e.g. a fault code or a status bitmask.
+    vendor_specific_status_code: int = 0 # Optional, vendor-specific node status code, e.g. a fault code or a status bitmask.
     def from_message(self, msg: dronecan.uavcan.protocol.NodeStatus):
         self.uptime_sec = msg.uptime_sec
         self.health = NodeStatus.Health(msg.health)
@@ -46,10 +46,8 @@ class NodeStatus:
 
 @dataclass
 class CylinderStatus:
-    dronecan_type = dronecan.uavcan.equipment.ice.CylinderStatus
     # Cylinder state information.
     # This is a nested data type.
-    # All unknown parameters should be set to NaN.
 
     # Cylinder ignition timing. Units: angular degrees of the crankshaft.
     ignition_timing_deg: float|None
@@ -62,7 +60,7 @@ class CylinderStatus:
 
     # Estimated lambda coefficient. This parameter is mostly useful for monitoring and tuning purposes. Unit: dimensionless ratio
     lambda_coefficient: float|None
-    def from_message(self, msg: dronecan.uavcan.equipment.ice.CylinderStatus):
+    def from_message(self, msg):
         self.ignition_timing_deg = msg.ignition_timing_deg
         self.injection_time_ms = msg.injection_time_ms
         self.cylinder_head_temperature = msg.cylinder_head_temperature
@@ -285,7 +283,7 @@ class ArrayStatus(Message):
 @dataclass
 class RawImu(Message):
     name = 'RawImu'
-    dronecan_type = dronecan.uavcan.equipment.imu.RawImu
+    dronecan_type = dronecan.uavcan.equipment.ahrs.RawIMU
     timestamp: int
 
     integration_interval: float|None
@@ -298,7 +296,7 @@ class RawImu(Message):
 
     covariance: float
 
-    def from_message(self, msg: dronecan.uavcan.equipment.imu.RawImu):
+    def from_message(self, msg: dronecan.uavcan.equipment.ahrs.RawIMU):
         self.timestamp = msg.timestamp
         self.integration_interval = msg.integration_interval
         self.rate_gyro_latest = msg.rate_gyro_latest
@@ -311,7 +309,7 @@ class RawImu(Message):
 @dataclass
 class ImuVibrations(Message):
     name = 'ImuVibrations'
-    dronecan_type = dronecan.uavcan.equipment.imu.RawImu
+    dronecan_type = dronecan.uavcan.equipment.ahrs.RawIMU
 
     timestamp: int
 
@@ -332,7 +330,7 @@ class ImuVibrations(Message):
 
     covariance: float
 
-    def from_message(self, msg: dronecan.uavcan.equipment.imu.RawImu):
+    def from_message(self, msg: dronecan.uavcan.equipment.ahrs.RawIMU):
         self.timestamp = msg.timestamp
         self.vibration = msg.integration_interval
         self.rate_gyro_latest = msg.rate_gyro_latest
