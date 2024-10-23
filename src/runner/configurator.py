@@ -63,12 +63,12 @@ class NodeInterface:
                 self._str_params.append(param)
         self._params = params
 
-    def change_command_type(self, type: int):
+    def change_command_type(self, type: int) -> None:
         self.command_type = type
         self._params_interface.set(params=Parameter(name=self.command_type_param_name, value=type))
 
     @classmethod
-    def extend_tx_mes_types(cls, new_types):
+    def extend_tx_mes_types(cls, new_types) -> None:
         # Add new types if they're not already present
         for new_type in new_types:
             if new_type not in cls.tx_mes_types:
@@ -107,8 +107,7 @@ class MiniNode(NodeInterface):
     tx_mes_types = [Messages.NodeStatus,
                     Messages.ESCRawCommand]
     rx_mes_types = [Messages.Command,
-                    Messages.ArrayCommand,
-                    ]
+                    Messages.ArrayCommand]
 
     class FeedbackTypes(Enum):
         DISABLED    = 0,
@@ -120,7 +119,7 @@ class MiniNode(NodeInterface):
         ARRAYCOMMAND = 1,
         HARDPOINT   = 2
 
-    def __init__(self, destination_node_id: int, node: DronecanNode|None = None):
+    def __init__(self, destination_node_id: int, node: DronecanNode|None = None) -> None:
         MiniNode.nodes_list.append(self)
         super().__init__(destination_node_id=destination_node_id, node=node)
         self.__get_parameters__()
@@ -129,7 +128,7 @@ class MiniNode(NodeInterface):
             if param.name == 'imu.mode':
                 self.has_imu = True
 
-    def change_pwm_channel(self, channel: int, pwm_num: int):
+    def change_pwm_channel(self, channel: int, pwm_num: int) -> None:
         self._params_interface.set(params=Parameter(name=f"pwm{pwm_num}.ch", value=channel))
 
     def change_feedback_type(self, type: int| FeedbackTypes):
@@ -146,32 +145,29 @@ class MiniNode(NodeInterface):
         res = self.node.sub_once(dronecan.uavcan.equipment.esc.RPMCommand, timeout_sec=timeout_sec)
         return Messages.ESCRPMCommand.from_message(res.message)
 
-class CombinedNode(ICENode, MiniNode):
-    pass
 
 def check_node_type(node_id: int) -> NodeInterface:
     DronecanNode()
 
 def main():
-    node = DronecanNode()
-    nodes_sniffer = NodeFinder(node.node)
-    node_ids: List[int] = []
-    start_time = time.time()
-    while time.time() - start_time < 10:
-        found_id = nodes_sniffer.find_online_node()
-        if found_id not in node_ids:
-            node_ids.append(found_id)
-            print(f"Found node {found_id}")
-
     ice_nodes: List[ICENode]    = []
     min_nodes: List[MiniNode]   = []
+    node_ids: List[int] = []
+
+    node = DronecanNode()
+    nodes_sniffer = NodeFinder(node.node)
+    node_ids = nodes_sniffer.find_online_nodes(1.0)
+
     for node_id in node_ids:
-        params_interface = ParametersInterface(node=nodes_sniffer._node, target_node_id=node_id)
-        params_interface.get_all()
-        if params_interface.get(MiniNode.unique_param) is not None:
-            ice_nodes.append(ICENode(node_id))
-        else:
+        print(f"Start getting params of {node_id}")
+        params_interface = ParametersInterface(target_node_id=node_id)
+        params = params_interface.get_all()
+        is_mini_node = sum([1 for param in params if param.name == MiniNode.unique_param])
+        if is_mini_node:
             min_nodes.append(MiniNode(node_id))
+        else:
+            ice_nodes.append(ICENode(node_id))
+        del params_interface
     print(len(ice_nodes), len(min_nodes))
 
 if __name__ == "__main__":
