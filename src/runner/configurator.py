@@ -3,20 +3,39 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+from os import path
 from typing import Any, Dict, List
 import dronecan
 from raccoonlab_tools.dronecan.utils import ParametersInterface, NodeFinder, Parameter
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.dronecan.utils import ParametersInterface
-from nodes_types import ICENode, MiniNode, NodeType
+import yaml
+from nodes_types import ICENode, MiniNode, NodeInterface, NodeType
+from logging_configurator import get_logger
+
+logger = get_logger(__name__)
+
+class NodesParametersParser:
+    def __init__(self, file_path: str):
+        self.parameters = {}
+        with open(file_path, 'r') as file:
+            self.parameters = yaml.safe_load(file)
+
+    def convert_parameters_to_dronecan(self) -> List[Parameter]:
+        parameters_list = []
+        for name, data in self.parameters.items():
+            parameters_list.append(Parameter(name=name, value=data["value"]))
+        return parameters_list
 
 class NodesConfigurator:
     """
         Class for finding nodes and working with their parameters
     """
     def __init__(self) -> None:
-        self.ice_nodes:  List[ICENode]    = []
-        self.min_nodes:  List[MiniNode]   = []
+        self.nodes: Dict[NodeType, List[NodeInterface]] = {}
+        self.node_types = {NodeType.ICE: ICENode, NodeType.MINI: MiniNode}
+        for node_type in NodeType:
+            self.nodes[node_type] = []
         self.node = DronecanNode()
         self.nodes_sniffer = NodeFinder(self.node.node)
         self.node.node.mode = dronecan.uavcan.protocol.NodeStatus().MODE_OPERATIONAL
@@ -30,24 +49,23 @@ class NodesConfigurator:
             print(f"Start getting params of {node_id}")
             node_type = NodesConfigurator.check_node_type(node_id)
 
-            if node_type == NodeType.ICE:
-                self.ice_nodes.append(ICENode(node_id, node=self.node))
-            elif node_type == NodeType.MINI:
-                self.min_nodes.append(MiniNode(node_id, node=self.node))
+            if node_type >= NodeType.UNKNOWN.value:
+                print(f"Unknown node type: {node_id}, skip")
             else:
-                print(f"Unknown node type: {node_id}")
-        print(f"Found ice nodes: {len(self.ice_nodes)}")
-        print(f"Found mini nodes: {len(self.min_nodes)}")
+                self.nodes[node_type].append(self.node_types[node_type](node_id, node=self.node))
+        for node_type in NodeType:
+            print(f"Found {node_type.name} nodes: {len(self.nodes[node_type])}")
 
     def get_nodes_list(self, node_type: NodeType| None = None) -> List[MiniNode]|List[ICENode]:
+        """Get list of nodes of the specified type, if node_type is None, return list of all nodes"""
         if node_type is None:
-            return self.ice_nodes + self.min_nodes
-        if node_type == NodeType.ICE:
-            return self.ice_nodes
-        elif node_type == NodeType.MINI:
-            return self.min_nodes
-        else:
+            nodes = []
+            for node_type in NodeType:
+                nodes += self.nodes[node_type]
+            return nodes
+        if node_type >= NodeType.UNKNOWN.value:
             raise Exception(f"Unknown node type: {node_type}")
+        return self.nodes[node_type]
 
     def get_node_params(self, node_id: int) -> Dict[str, Any]:
         for node in self.get_nodes_list():
@@ -56,6 +74,11 @@ class NodesConfigurator:
 
     def set_parameters_to_nodes(self, parameters: List[Parameter]|Dict[str, Any],
                                         node_type: NodeType| None = None) -> int:
+        """The function sets parameters to dronecan nodes of the specified type
+            :param parameters: List of dronecan parameters or dictionary with parameters in format {name: {value : ...}}
+            :param node_type: Type of nodes to set parameters
+            :return: Number of parameters that were set successfully
+        """
         if isinstance(parameters, dict):
             parameters = self.convert_dict_to_params(parameters)
         nodes_list = self.get_nodes_list(node_type)
@@ -64,6 +87,13 @@ class NodesConfigurator:
             success += node.set_params(parameters)
         return success
 
+    def set_parameters_to_node(self, parameters: List[Parameter]|Dict[str, Any],
+                                        node_id: int) -> int:
+        if isinstance(parameters, dict):
+            parameters = self.convert_dict_to_params(parameters)
+        node = self.get_node(node_id)
+        return node.set_params(parameters)
+
     def convert_dict_to_params(self, params: Dict[str, Any]) -> List[Parameter]:
         parameters = []
         for param in params.keys():
@@ -71,7 +101,7 @@ class NodesConfigurator:
         return parameters
 
     def check_node_type(node_id: int) -> NodeType:
-        """Check node type by its parameters"""
+        """Check node type by unique for each node type parameter"""
         params_interface = ParametersInterface(target_node_id=node_id)
         params = params_interface.get_all()
         if sum([1 for param in params if param.name == MiniNode.unique_param]):
@@ -86,10 +116,19 @@ class NodesConfigurator:
                 for param in node.parameters.keys():
                     print(f"{param}: {node.parameters[param]}")
 
+    def get_node(self, node_id: int) -> NodeInterface:
+        for node_type in NodeType:
+            for node in self.nodes[node_type]:
+                if node.node_id == node_id:
+                    return node
+
 # TODO: add tests
 # TODO: remove main
 if __name__ == "__main__":
+    mini_nodes_parameters_path = path.dirname(path.abspath(__file__)) + '/default_params/mini_node.yml'
+    param_parser = NodesParametersParser(mini_nodes_parameters_path)
     configurator = NodesConfigurator()
     configurator.find_nodes()
     configurator.print_all_params(39)
+    configurator.set_parameters_to_nodes(param_parser.convert_parameters_to_dronecan(), NodeType.MINI)
     print(configurator.set_parameters_to_nodes([Parameter(name="air.cmd", value=1)], NodeType.ICE))

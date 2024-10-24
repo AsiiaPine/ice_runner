@@ -5,7 +5,7 @@ handlers:
   fileHandler: 
     class: logging.handlers.TimedRotatingFileHandler
     formatter: brief
-    filename: logs/messages.log
+    filename: logs/nodes_interface.log
 
   consoleHandler: 
     class: logging.StreamHandler
