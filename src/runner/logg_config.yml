@@ -10,20 +10,27 @@ handlers:
   consoleHandler: 
     class: logging.StreamHandler
     formatter: precise
-    stream  : sys.stdout
 
 loggers:
   root:
     level: DEBUG
     handlers: [fileHandler, consoleHandler]
-  Messages:
+  DronecanMessages:
     level: DEBUG
-    handlers: [fileHandler]
+    handlers: [consoleHandler]
     propagate: 0
   nodes_types:
     level: DEBUG
-    handlers: [fileHandler]
+    handlers: [consoleHandler]
     propagate: 0
+  nodes_configurator:
+    level: DEBUG
+    handlers: [consoleHandler]
+    propagate: 0
+  communication_with_nodes:
+    level: DEBUG
+    handlers: [fileHandler]
+    propagate: 1
 
 # Root logger should be specified if common settings are needed
 root:

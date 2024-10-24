@@ -1,6 +1,7 @@
 import os
-from typing import List
-from configurator import NodesConfigurator, NodesParametersParser
+from typing import Any, List
+from nodes_configurator import NodesConfigurator, NodesParametersParser
+from DronecanMessages import ActuatorStatus, Message, NodeStatus
 from logging_configurator import get_logger
 from nodes_types import NodeType
 
@@ -12,15 +13,25 @@ class NodesCommunicator:
         self.configurator.find_nodes()
         self.mes_timeout = mes_timeout_sec
 
-    def get_ice_nodes_states(self):
+    def get_ice_nodes_states(self)-> List[Message]:
+        messages:List[Message] = []
         for ice_node in self.configurator.nodes[NodeType.ICE]:
             for mes_type in ice_node.rx_mes_types:
-                print(ice_node.recieve_message(mes_type, timeout_sec=self.mes_timeout))
+                message = ice_node.recieve_message(mes_type, timeout_sec=self.mes_timeout)
+                if message is None:
+                    continue
+                messages.append(ice_node.recieve_message(mes_type, timeout_sec=self.mes_timeout))
+        return messages
 
-    def get_mini_nodes_states(self):
+    def get_mini_nodes_states(self) -> List[Message]:
+        messages: List[Message] = []
         for mini_node in self.configurator.nodes[NodeType.MINI]:
             for mes_types in mini_node.rx_mes_types:
-                print(mini_node.recieve_message(mes_types, timeout_sec=self.mes_timeout))
+                message = mini_node.recieve_message(mes_types, timeout_sec=self.mes_timeout)
+                if message is None:
+                    continue
+                messages.append(mini_node.recieve_message(mes_types, timeout_sec=self.mes_timeout))
+        return messages
 
     def set_parameters_to_nodes(self, parameters_dir: str, nodes_ids: List[int]) -> None:
         """Parse directory with parameters and set them to nodes from nodes_ids list. File name should contain node type. Example: ice.yml"""
@@ -35,7 +46,8 @@ class NodesCommunicator:
                     needed_nodes = self.configurator.get_nodes_list(NodeType.MINI)
                     for node in needed_nodes:
                         if node.node_id in nodes_ids:
-                            node.set_params(params)
+                            if node.set_params(params) < len(params):
+                                logger.error(f"Failed to set parameters for node {node.node_id}")
 
                 elif file.startswith("ice"):
                     parser = NodesParametersParser(files_dir + "/" + file)
@@ -43,7 +55,8 @@ class NodesCommunicator:
                     needed_nodes = self.configurator.get_nodes_list(NodeType.ICE)
                     for node in needed_nodes:
                         if node.node_id in nodes_ids:
-                            node.set_params(params)
+                            if node.set_params(params) < len(params):
+                                logger.error(f"Failed to set parameters for node {node.node_id}")
                 else:
                     logger.error(f"Unknown nodetype in file {files_dir}/{file}. Please, specify nodetype in file name. Example: ice.yml")
 
@@ -52,6 +65,15 @@ class NodesCommunicator:
 # TODO: remove main
 if __name__ == "__main__":
     communicator = NodesCommunicator(mes_timeout_sec=2.0)
-    communicator.set_parameters_to_nodes(parameters_dir="default_params", nodes_ids=[39])
-    communicator.get_ice_nodes_states()
-    communicator.get_mini_nodes_states()
+    # communicator.set_parameters_to_nodes(parameters_dir="default_params", nodes_ids=[39, 42])
+    ice_states = communicator.get_ice_nodes_states()
+    mini_states = communicator.get_mini_nodes_states()
+    print("Got states:")
+    print(f"Ice states: {len(ice_states)}")
+    print(f"Mini states: {len(mini_states)}")
+    for ice_state in ice_states:
+        if isinstance(ice_state, NodeStatus):
+            print("ICE state dict:", ice_state.to_dict())
+    for mini_state in mini_states:
+        if isinstance(mini_state, NodeStatus):
+            print("Mini state dict:", mini_state.to_dict())

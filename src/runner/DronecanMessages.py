@@ -1,6 +1,6 @@
 import abc
 import enum
-from typing import Any, List
+from typing import Any, Dict, List
 import dronecan
 from dataclasses import dataclass
 from logging_configurator import get_logger
@@ -11,20 +11,22 @@ logger = get_logger(__name__)
 class Message(abc.ABC):
     name = 'Message'
     dronecan_type = None
-    source_id: int
-    timestamp: int
 
     @abc.abstractmethod
     def from_message(cls, data: Any) -> Any|None:
         if data is None:
             Message.logger.debug(f"Message {cls.__name__} is None")
             return None
+
     @abc.abstractmethod
     def to_dronecan(self)-> Any :
         pass
 
+    def to_dict(self) -> Dict[str, Any]:
+        pass
+
 @dataclass
-class NodeStatus:
+class NodeStatus(Message):
     """ Node status information. All UAVCAN nodes are required to publish this message periodically."""
     name = 'uavcan.protocol.NodeStatus'
     dronecan_type = dronecan.uavcan.protocol.NodeStatus
@@ -62,8 +64,12 @@ class NodeStatus:
     def to_dronecan(self) -> dronecan.uavcan.protocol.NodeStatus:
         return self.dronecan_type(uptime_sec=self.uptime_sec, health=self.health, mode=self.mode, sub_mode=self.sub_mode, vendor_specific_status_code=self.vendor_specific_status_code)
 
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"uptime_sec": self.uptime_sec, "health": self.health, "mode": self.mode, "sub_mode": self.sub_mode, "vendor_specific_status_code": self.vendor_specific_status_code}
+
 @dataclass
-class CylinderStatus:
+class CylinderStatus(Message):
     dronecan_type = dronecan.uavcan.equipment.ice.reciprocating.CylinderStatus
     # Cylinder state information.
     # This is a nested data type.
@@ -99,6 +105,14 @@ class CylinderStatus:
             cylinder_head_temperature=self.cylinder_status.cylinder_head_temperature,
             exhaust_gas_temperature=self.cylinder_status.exhaust_gas_temperature,
             lambda_coefficient=self.cylinder_status.lambda_coefficient)
+
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"ignition_timing_deg": self.cylinder_status.ignition_timing_deg,
+                "injection_time_ms": self.cylinder_status.injection_time_ms,
+                "cylinder_head_temperature": self.cylinder_status.cylinder_head_temperature,
+                "exhaust_gas_temperature": self.cylinder_status.exhaust_gas_temperature,
+                "lambda_coefficient": self.cylinder_status.lambda_coefficient}
 
 @dataclass
 class ICEReciprocatingStatus(Message):
@@ -167,7 +181,7 @@ class ICEReciprocatingStatus(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.ice.reciprocating.Status):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         state = ICEReciprocatingStatus.State(msg.state)
         flags = msg.flags
@@ -186,11 +200,13 @@ class ICEReciprocatingStatus(Message):
         throttle_position_percent = msg.throttle_position_percent
         ecu_index = msg.ecu_index
         spark_plug_usage = ICEReciprocatingStatus.SparkPlugUsage(msg.spark_plug_usage)
-        cylinder_status = ICEReciprocatingStatus.CylinderStatus()
-        for i in len(msg.cylinder_status):
-            cylinder_status[i] = ICEReciprocatingStatus.CylinderStatus()
-            cylinder_status[i].from_message(msg.cylinder_status[i])
-        return cls(state, flags, engine_load_percent, engine_speed_rpm, spark_dwell_time_ms, atmospheric_pressure_kpa, intake_manifold_pressure_kpa, intake_manifold_temperature, coolant_temperature, oil_pressure, oil_temperature, fuel_pressure, fuel_consumption_rate_cm3pm, estimated_consumed_fuel_volume_cm3, throttle_position_percent, ecu_index, spark_plug_usage, cylinder_status)
+        cylinder_status = []
+        for i in range(16):
+            try:
+                cylinder_status.append(CylinderStatus.from_message(msg.cylinder_status[i]))
+            except IndexError:
+                break
+        return cls(state=state, flags=flags, engine_load_percent=engine_load_percent, engine_speed_rpm=engine_speed_rpm, spark_dwell_time_ms=spark_dwell_time_ms, atmospheric_pressure_kpa=atmospheric_pressure_kpa, intake_manifold_pressure_kpa=intake_manifold_pressure_kpa,intake_manifold_temperature=intake_manifold_temperature, coolant_temperature=coolant_temperature, oil_pressure=oil_pressure,oil_temperature=oil_temperature, fuel_pressure=fuel_pressure,fuel_consumption_rate_cm3pm=fuel_consumption_rate_cm3pm,estimated_consumed_fuel_volume_cm3=estimated_consumed_fuel_volume_cm3, throttle_position_percent=throttle_position_percent, ecu_index=ecu_index, spark_plug_usage=spark_plug_usage, cylinder_status=cylinder_status)
 
     def to_dronecan(self) -> dronecan.uavcan.equipment.ice.reciprocating.Status:
         return dronecan.uavcan.equipment.ice.reciprocating.Status(
@@ -211,8 +227,28 @@ class ICEReciprocatingStatus(Message):
             throttle_position_percent=self.throttle_position_percent,
             ecu_index=self.ecu_index,
             spark_plug_usage=self.spark_plug_usage,
-            cylinder_status=self.cylinder_status.to_dronecan())
+            cylinder_status=self.cylinder_status.to_dict())
 
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"state": self.state,
+                "flags": self.flags,                
+                "engine_load_percent": self.engine_load_percent,
+                "engine_speed_rpm": self.engine_speed_rpm,
+                "spark_dwell_time_ms": self.spark_dwell_time_ms,
+                "atmospheric_pressure_kpa": self.atmospheric_pressure_kpa,
+                "intake_manifold_pressure_kpa": self.intake_manifold_pressure_kpa,
+                "intake_manifold_temperature": self.intake_manifold_temperature,
+                "coolant_temperature": self.coolant_temperature,
+                "oil_pressure": self.oil_pressure,
+                "oil_temperature": self.oil_temperature,
+                "fuel_pressure": self.fuel_pressure,
+                "fuel_consumption_rate_cm3pm": self.fuel_consumption_rate_cm3pm,
+                "estimated_consumed_fuel_volume_cm3": self.estimated_consumed_fuel_volume_cm3,
+                "throttle_position_percent": self.throttle_position_percent,
+                "ecu_index": self.ecu_index,
+                "spark_plug_usage": self.spark_plug_usage,
+                "cylinder_status": self.cylinder_status.to_dict()}
 
 @dataclass
 class FuelTankStatus(Message):
@@ -228,7 +264,7 @@ class FuelTankStatus(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.ice.FuelTankStatus):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         available_fuel_volume_percent = msg.available_fuel_volume_percent
         available_fuel_volume_cm3 = msg.available_fuel_volume_cm3
@@ -248,6 +284,14 @@ class FuelTankStatus(Message):
                                 fuel_consumption_rate_cm3pm=self.fuel_consumption_rate_cm3pm,
                                 fuel_temperature=self.fuel_temperature,
                                 fuel_tabk_id=self.fuel_tank_id)
+
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"available_fuel_volume_percent": self.available_fuel_volume_percent,
+                "available_fuel_volume_cm3": self.available_fuel_volume_cm3,
+                "fuel_consumption_rate_cm3pm": self.fuel_consumption_rate_cm3pm,
+                "fuel_temperature": self.fuel_temperature,
+                "fuel_tabk_id": self.fuel_tank_id}
 
 @dataclass
 class ESCStatus(Message):
@@ -269,7 +313,7 @@ class ESCStatus(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.esc.Status):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         error_count = msg.error_count
         voltage = msg.voltage
@@ -291,6 +335,16 @@ class ESCStatus(Message):
             esc_index = self.esc_index
         )
 
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"error_count": self.error_count,
+                "voltage": self.voltage,
+                "current": self.current,
+                "temperature": self.temperature,
+                "rpm": self.rpm,
+                "power_rating_pct": self.power_rating_pct,
+                "esc_index": self.esc_index}
+
 @dataclass
 class ESCRPMCommand(Message):
     # Generic ESC raw command message.
@@ -301,7 +355,7 @@ class ESCRPMCommand(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.esc.RPMCommand):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         command = msg.command
         return cls(command)
@@ -310,6 +364,10 @@ class ESCRPMCommand(Message):
         return dronecan.uavcan.equipment.esc.RPMCommand(
             command=self.command
         )
+    
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"command": self.command}
 
 @dataclass
 class ESCRawCommand(Message):
@@ -320,13 +378,17 @@ class ESCRawCommand(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.esc.RawCommand):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         command = msg.command
         return cls(command)
 
     def to_dronecan(self) -> dronecan.uavcan.equipment.esc.RawCommand:
         return dronecan.uavcan.equipment.esc.RawCommand(command=self.command)
+
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"command": self.command}
 
 @dataclass
 class ActuatorCommand(Message):
@@ -346,7 +408,7 @@ class ActuatorCommand(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.actuator.Command):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         actuator_id = msg.actuator_id
         command_type = ActuatorCommand.CommandType(msg.command_type)
@@ -358,6 +420,12 @@ class ActuatorCommand(Message):
                                                           command_type=self.command_type,
                                                           command_value=self.command_value)
 
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"actuator_id": self.actuator_id,
+                "command_type": self.command_type,
+                "command_value": self.command_value}
+
 @dataclass
 class ArrayCommand(Message):
     name = 'uavcan.equipment.actuator.ArrayCommand'
@@ -366,7 +434,7 @@ class ArrayCommand(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.actuator.ArrayCommand):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         commands = []
         for i in len(msg.commands):
@@ -375,6 +443,10 @@ class ArrayCommand(Message):
 
     def to_dronecan(self) -> dronecan.uavcan.equipment.actuator.ArrayCommand:
         return dronecan.uavcan.equipment.actuator.ArrayCommand(commands=self.commands)
+
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"commands": self.commands}
 
 @dataclass
 class ActuatorStatus(Message):
@@ -391,7 +463,7 @@ class ActuatorStatus(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.actuator.Status):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         actuator_id = msg.actuator_id
         position = msg.position
@@ -406,6 +478,14 @@ class ActuatorStatus(Message):
                                                          force=self.force,
                                                          speed=self.speed,
                                                          power_rating_pct=self.power_rating_pct)
+
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"actuator_id": self.actuator_id,
+                "position": self.position,
+                "force": self.force,
+                "speed": self.speed,
+                "power_rating_pct": self.power_rating_pct}
 
 @dataclass
 class RawImu(Message):
@@ -425,7 +505,7 @@ class RawImu(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.ahrs.RawIMU):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         timestamp = msg.timestamp
         integration_interval = msg.integration_interval
@@ -444,6 +524,16 @@ class RawImu(Message):
                                                      accelerometer_latest=self.accelerometer_latest,
                                                      accelerometer_integral=self.accelerometer_integral,
                                                      covariance=self.covariance)
+
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"timestamp": self.timestamp,
+                "integration_interval": self.integration_interval,
+                "rate_gyro_latest": self.rate_gyro_latest,
+                "rate_gyro_integral": self.rate_gyro_integral,
+                "accelerometer_latest": self.accelerometer_latest,
+                "accelerometer_integral": self.accelerometer_integral,
+                "covariance": self.covariance}
 
 @dataclass
 class ImuVibrations(Message):
@@ -471,7 +561,7 @@ class ImuVibrations(Message):
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.ahrs.RawIMU):
-        super().from_message(msg)
+        super().from_message(Message, msg)
 
         timestamp = msg.timestamp
         vibration = msg.integration_interval
@@ -501,3 +591,16 @@ class ImuVibrations(Message):
                                                         self.accel_dominant_magnitude,
                                                         self.accel_dominant_srn],
                                                      covariance=self.covariance)
+
+    def to_dict(self) -> Dict[str, Any]:
+        super().to_dict()
+        return {"timestamp": self.timestamp,
+                "vibration": self.vibration,
+                "rate_gyro_latest": self.rate_gyro_latest,
+                "gyro_dominant_frequency": self.gyro_dominant_frequency,
+                "gyro_dominant_magnitude": self.gyro_dominant_magnitude,
+                "gyro_dominant_srn": self.gyro_dominant_srn,
+                "accelerometer_latest": self.accelerometer_latest,
+                "accel_dominant_frequency": self.accel_dominant_frequency,
+                "accel_dominant_magnitude": self.accel_dominant_magnitude,
+                "accel_dominant_srn": self.accel_dominant_srn}

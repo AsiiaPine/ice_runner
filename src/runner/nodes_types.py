@@ -8,7 +8,7 @@ import dronecan
 from raccoonlab_tools.dronecan.utils import Parameter, \
                                             ParametersInterface, \
                                             NodeCommander
-import Messages
+import DronecanMessages as DronecanMessages
 from typing import Any, Dict, List
 import dronecan
 
@@ -19,6 +19,8 @@ from raccoonlab_tools.dronecan.utils import (
     NodeCommander,
 )
 from logging_configurator import get_logger
+
+logger = get_logger(__name__)
 
 PARAM_NODE_ID = "uavcan.node.id"
 PARAM_SYSTEM_NAME = "system.name"
@@ -33,13 +35,11 @@ class NodeInterface:
     name = 'ABS Node'
     command_type_param_name = ''
 
-    rx_mes_types = [Messages.NodeStatus]
+    rx_mes_types = [DronecanMessages.NodeStatus]
     tx_mes_types = []
 
-    logger = get_logger(__name__)
-
     def __init__(self, destination_node_id: int, node: DronecanNode|None = None) -> None:
-        print(f"NodeInterface logger {self.logger}")
+        print(f"NodeInterface logger {logger}")
         self.interface_node = node if node is not None else DronecanNode()
         self.node_id = destination_node_id
         self._params_interface = ParametersInterface(node.node, target_node_id=self.node_id)
@@ -48,7 +48,7 @@ class NodeInterface:
         self.__get_parameters__()
 
     def msg_filter(self, transfer: dronecan.node.TransferEvent) -> bool:
-        transfer.transfer.source_node_id == self.node_id
+        return transfer.transfer.source_node_id == self.node_id
 
     def recv_parameter(self, param: Parameter|int|str) -> Parameter:
         if isinstance(param, Parameter):
@@ -59,8 +59,9 @@ class NodeInterface:
         """
         """
         if self._params_interface.set(param):
+            logger.info(f"Set parameter {param.name} for node {self.node_id}")
             return True
-        self.logger.error(f"Failed to set parameter {param.name} for node {self.node_id}. Param does not exist")
+        logger.error(f"Failed to set parameter {param.name} for node {self.node_id}. Param does not exist")
         return False
 
     def set_params(self, params: List[Parameter]) -> int:
@@ -92,23 +93,24 @@ class NodeInterface:
             if new_type not in cls.tx_mes_types:
                 cls.tx_mes_types.append(new_type)
 
-    def recieve_message(self, msg_type: Messages, timeout_sec=0.03) -> Messages.Message|None:
+    def recieve_message(self, msg_type: DronecanMessages, timeout_sec=0.03) -> DronecanMessages.Message|None:
         if msg_type not in self.rx_mes_types:
-            NodeInterface.logger.debug(f"Message type {msg_type} is not in {self.node_id} rx_mes_types")
+            logger.error(f"Message type {msg_type} is not in {self.node_id} rx_mes_types")
             return None
         res = self.interface_node.sub_once(msg_type.dronecan_type, timeout_sec=timeout_sec, msg_filter=self.msg_filter)
         if res is None:
-            NodeInterface.logger.debug(f"No message {msg_type.dronecan_type} from node {self.node_id}")
+            logger.error(f"No message {msg_type.dronecan_type} from node {self.node_id}")
             return None
+        logger.debug(f"Got message {msg_type.name} from node {self.node_id}")
         return msg_type.from_message(msg=res.message)
 
-    def send_message(self, msg: Messages.Message, timeout_sec=0.03) -> None:
+    def send_message(self, msg: DronecanMessages.Message, timeout_sec=0.03) -> None:
         if type(msg) not in self.tx_mes_types:
-            NodeInterface.logger.debug(f"Message type {type(msg)} is not in {self.node_id} tx_mes_types")
+            logger.error(f"Message type {type(msg)} is not in {self.node_id} tx_mes_types")
             return
         self.interface_node.pub(msg.to_dronecan(), timeout_sec=timeout_sec)
 
-    def get_message_types(self) -> Dict[str, Messages.Message]:
+    def get_message_types(self) -> Dict[str, DronecanMessages.Message]:
         """Retuns node supported message types
             @return: Dict with tx and rx message types
         """
@@ -120,12 +122,12 @@ class ICENode(NodeInterface):
     unique_param = 'air.cmd'
     command_type_param_name = 'air.cmd'
 
-    rx_mes_types = [Messages.NodeStatus,
-                    Messages.ICEReciprocatingStatus,
-                    Messages.FuelTankStatus,
-                    Messages.ActuatorStatus,
-                    Messages.ESCStatus]
-    tx_mes_types = [Messages.ESCRPMCommand]
+    rx_mes_types = [DronecanMessages.NodeStatus,
+                    DronecanMessages.ICEReciprocatingStatus,
+                    DronecanMessages.FuelTankStatus,
+                    DronecanMessages.ActuatorStatus,
+                    DronecanMessages.ESCStatus]
+    tx_mes_types = [DronecanMessages.ESCRPMCommand]
 
     class AirCommandTypes(enum.IntEnum):
         RAWCOMMAND      = 0,
@@ -139,12 +141,12 @@ class MiniNode(NodeInterface):
     name = "mini_node"
     unique_param = "pwm.cmd_type"
 
-    rx_mes_types = [Messages.NodeStatus,
-                    Messages.ActuatorStatus,
-                    Messages.ESCStatus]
-    tx_mes_types = [Messages.ActuatorCommand,
-                    Messages.ArrayCommand,
-                    Messages.ESCRawCommand]
+    rx_mes_types = [DronecanMessages.NodeStatus,
+                    DronecanMessages.ActuatorStatus,
+                    DronecanMessages.ESCStatus]
+    tx_mes_types = [DronecanMessages.ActuatorCommand,
+                    DronecanMessages.ArrayCommand,
+                    DronecanMessages.ESCRawCommand]
 
     class FeedbackTypes(enum.IntEnum):
         DISABLED    = 0,
@@ -163,11 +165,11 @@ class MiniNode(NodeInterface):
         for param in self.parameters.keys():
             if param == 'imu.mode':
                 self.has_imu = True
-                self.logger.info(f"MiniNode {self.node_id} has IMU")
-                self.tx_mes_types.append(Messages.RawImu)
-                self.tx_mes_types.append(Messages.ImuVibrations)
+                logger.info(f"MiniNode {self.node_id} has IMU")
+                self.tx_mes_types.append(DronecanMessages.RawImu)
+                self.tx_mes_types.append(DronecanMessages.ImuVibrations)
                 return
-        self.logger.info(f"MiniNode {self.node_id} does not have IMU")
+        logger.info(f"MiniNode {self.node_id} does not have IMU")
 
     def change_pwm_channel(self, channel: int, pwm_num: int) -> None:
         self._params_interface.set(params=Parameter(name=f"pwm{pwm_num}.ch", value=channel))

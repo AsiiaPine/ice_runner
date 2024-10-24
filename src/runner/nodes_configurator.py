@@ -111,6 +111,7 @@ class NodesConfigurator:
         return NodeType.UNKNOWN
 
     def print_all_params(self, node_id) -> None:
+        print(f"Node {node_id} parameters:")
         for node in self.get_nodes_list():
             if node.node_id == node_id:
                 for param in node.parameters.keys():
