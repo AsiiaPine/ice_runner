@@ -13,12 +13,17 @@ class NodesCommunicator:
         self.configurator.find_nodes()
         self.mes_timeout = mes_timeout_sec
 
+    def send_message(self, message: Message, node_id: int, timeout_sec: float = 0.03) -> bool:
+        node = self.configurator.get_node(node_id)
+        return node.send_message(message, timeout_sec=timeout_sec)
+
     def get_ice_nodes_states(self)-> List[Message]:
         messages:List[Message] = []
         for ice_node in self.configurator.nodes[NodeType.ICE]:
             for mes_type in ice_node.rx_mes_types:
                 message = ice_node.recieve_message(mes_type, timeout_sec=self.mes_timeout)
                 if message is None:
+                    logger.info(f"No message {mes_type} from node {ice_node.node_id}")
                     continue
                 messages.append(ice_node.recieve_message(mes_type, timeout_sec=self.mes_timeout))
         return messages
@@ -29,6 +34,7 @@ class NodesCommunicator:
             for mes_types in mini_node.rx_mes_types:
                 message = mini_node.recieve_message(mes_types, timeout_sec=self.mes_timeout)
                 if message is None:
+                    logger.info(f"No message {mes_types} from node {mini_node.node_id}")
                     continue
                 messages.append(mini_node.recieve_message(mes_types, timeout_sec=self.mes_timeout))
         return messages
@@ -48,6 +54,7 @@ class NodesCommunicator:
                         if node.node_id in nodes_ids:
                             if node.set_params(params) < len(params):
                                 logger.error(f"Failed to set parameters for node {node.node_id}")
+                            logger.info(f"Set parameters for node {node.node_id}")
 
                 elif file.startswith("ice"):
                     parser = NodesParametersParser(files_dir + "/" + file)
@@ -57,6 +64,8 @@ class NodesCommunicator:
                         if node.node_id in nodes_ids:
                             if node.set_params(params) < len(params):
                                 logger.error(f"Failed to set parameters for node {node.node_id}")
+                            logger.info(f"Set parameters for node {node.node_id}")
+
                 else:
                     logger.error(f"Unknown nodetype in file {files_dir}/{file}. Please, specify nodetype in file name. Example: ice.yml")
 
@@ -65,7 +74,7 @@ class NodesCommunicator:
 # TODO: remove main
 if __name__ == "__main__":
     communicator = NodesCommunicator(mes_timeout_sec=2.0)
-    # communicator.set_parameters_to_nodes(parameters_dir="default_params", nodes_ids=[39, 42])
+    communicator.set_parameters_to_nodes(parameters_dir="default_params", nodes_ids=[39, 42])
     ice_states = communicator.get_ice_nodes_states()
     mini_states = communicator.get_mini_nodes_states()
     print("Got states:")

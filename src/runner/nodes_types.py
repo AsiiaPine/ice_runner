@@ -34,7 +34,6 @@ class NodeInterface:
     tx_mes_types = []
 
     def __init__(self, destination_node_id: int, node: DronecanNode|None = None) -> None:
-        print(f"NodeInterface logger {logger}")
         self.interface_node = node if node is not None else DronecanNode()
         self.node_id = destination_node_id
         self._params_interface = ParametersInterface(node.node, target_node_id=self.node_id)
@@ -99,11 +98,12 @@ class NodeInterface:
         logger.debug(f"Got message {msg_type.name} from node {self.node_id}")
         return msg_type.from_message(msg=res.message)
 
-    def send_message(self, msg: DronecanMessages.Message, timeout_sec=0.03) -> None:
+    def send_message(self, msg: DronecanMessages.Message, timeout_sec=0.03) -> bool:
         if type(msg) not in self.tx_mes_types:
             logger.error(f"Message type {type(msg)} is not in {self.node_id} tx_mes_types")
-            return
+            return False
         self.interface_node.pub(msg.to_dronecan(), timeout_sec=timeout_sec)
+        return True
 
     def get_message_types(self) -> Dict[str, DronecanMessages.Message]:
         """Retuns node supported message types
