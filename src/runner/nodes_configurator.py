@@ -3,13 +3,12 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import yaml
 from os import path
 from typing import Any, Dict, List
 import dronecan
 from raccoonlab_tools.dronecan.utils import ParametersInterface, NodeFinder, Parameter
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-from raccoonlab_tools.dronecan.utils import ParametersInterface
-import yaml
 from nodes_types import ICENode, MiniNode, NodeInterface, NodeType
 from logging_configurator import get_logger
 

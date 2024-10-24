@@ -1,5 +1,4 @@
 import logging.config
-import logging.handlers
 from os import path
 import yaml
 

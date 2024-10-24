@@ -1,7 +1,7 @@
 import os
 from typing import Any, List
 from nodes_configurator import NodesConfigurator, NodesParametersParser
-from DronecanMessages import ActuatorStatus, Message, NodeStatus
+from DronecanMessages import Message, NodeStatus
 from logging_configurator import get_logger
 from nodes_types import NodeType
 

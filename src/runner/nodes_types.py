@@ -5,13 +5,8 @@
 
 import enum
 import dronecan
-from raccoonlab_tools.dronecan.utils import Parameter, \
-                                            ParametersInterface, \
-                                            NodeCommander
 import DronecanMessages as DronecanMessages
 from typing import Any, Dict, List
-import dronecan
-
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.dronecan.utils import (
     Parameter,
