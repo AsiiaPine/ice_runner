@@ -1,0 +1,39 @@
+version: 1
+disable_existing_loggers: true
+
+handlers:
+  fileHandler: 
+    class: logging.handlers.TimedRotatingFileHandler
+    formatter: brief
+    filename: logs/messages.log
+
+  consoleHandler: 
+    class: logging.StreamHandler
+    formatter: precise
+    stream  : sys.stdout
+
+loggers:
+  root:
+    level: DEBUG
+    handlers: [fileHandler, consoleHandler]
+  Messages:
+    level: DEBUG
+    handlers: [fileHandler]
+    propagate: 0
+  nodes_types:
+    level: DEBUG
+    handlers: [fileHandler]
+    propagate: 0
+
+# Root logger should be specified if common settings are needed
+root:
+  level: DEBUG
+  handlers: [fileHandler, consoleHandler]
+    # handlers: [h1, h2]
+
+formatters:
+  brief:
+    format: "%(asctime)s | %(levelname)-8s | %(lineno)04d | %(message)s"
+  precise:
+    format: "%(asctime)s | %(levelname)-8s | %(filename)s-%(funcName)s-%(lineno)04d | %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
