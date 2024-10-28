@@ -1,3 +1,4 @@
 __*
 bot/.env
 *.log*
+*.yml

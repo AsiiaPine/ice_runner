@@ -10,6 +10,7 @@ logger = get_logger(__name__)
 class NodesCommunicator:
     def __init__(self, mes_timeout_sec: float = 0.03):
         self.configurator = NodesConfigurator()
+        logger.info("Finding nodes")
         self.configurator.find_nodes()
         self.mes_timeout = mes_timeout_sec
 
