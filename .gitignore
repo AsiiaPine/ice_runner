@@ -1,4 +1,4 @@
 __*
-bot/.env
+*.env
 *.log*
-*.yml
+lats_config.yml

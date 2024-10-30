@@ -1,11 +1,11 @@
 import abc
 import enum
+import logging
 from typing import Any, Dict, List
 import dronecan
 from dataclasses import dataclass
-from logging_configurator import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 @dataclass
 class Message(abc.ABC):
@@ -364,7 +364,7 @@ class ESCRPMCommand(Message):
         return dronecan.uavcan.equipment.esc.RPMCommand(
             command=self.command
         )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         super().to_dict()
         return {"command": self.command}

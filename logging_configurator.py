@@ -15,6 +15,3 @@ with open(absolute_path + path.normpath('/logg_config.yml'), 'r') as file:
     log_conf_file = yaml.safe_load(file)
 
 logging.config.dictConfig(log_conf_file)
-
-def get_logger(name):
-    return logging.getLogger(name)

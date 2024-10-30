@@ -4,6 +4,7 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
 import enum
+import logging
 import dronecan
 import DronecanMessages as DronecanMessages
 from typing import Any, Dict, List
@@ -13,9 +14,8 @@ from raccoonlab_tools.dronecan.utils import (
     ParametersInterface,
     NodeCommander,
 )
-from logging_configurator import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 PARAM_NODE_ID = "uavcan.node.id"
 PARAM_SYSTEM_NAME = "system.name"

@@ -36,7 +36,6 @@ loggers:
 root:
   level: DEBUG
   handlers: [fileHandler, consoleHandler]
-    # handlers: [h1, h2]
 
 formatters:
   brief:

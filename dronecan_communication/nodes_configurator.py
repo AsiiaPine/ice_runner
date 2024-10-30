@@ -3,6 +3,7 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import logging
 import yaml
 from os import path
 from typing import Any, Dict, List
@@ -10,9 +11,8 @@ import dronecan
 from raccoonlab_tools.dronecan.utils import ParametersInterface, NodeFinder, Parameter
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 from nodes_types import ICENode, MiniNode, NodeInterface, NodeType
-from logging_configurator import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class NodesParametersParser:
     def __init__(self, file_path: str):
@@ -37,7 +37,6 @@ class NodesConfigurator:
             self.nodes[node_type] = []
         self.node = DronecanNode()
         self.nodes_sniffer = NodeFinder(self.node.node)
-        self.node.node.mode = dronecan.uavcan.protocol.NodeStatus().MODE_OPERATIONAL
 
     def find_nodes(self, timeout_sec: float = 1.0) -> None:
         """Find nodes and check their types, save them to approptiate lists"""
@@ -54,6 +53,7 @@ class NodesConfigurator:
                 self.nodes[node_type].append(self.node_types[node_type](node_id, node=self.node))
         for node_type in NodeType:
             print(f"Found {node_type.name} nodes: {len(self.nodes[node_type])}")
+        self.node.node.mode = dronecan.uavcan.protocol.NodeStatus().MODE_OPERATIONAL
 
     def get_nodes_list(self, node_type: NodeType| None = None) -> List[MiniNode]|List[ICENode]:
         """Get list of nodes of the specified type, if node_type is None, return list of all nodes"""
