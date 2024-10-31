@@ -11,6 +11,11 @@ handlers:
     class: logging.StreamHandler
     formatter: precise
 
+  rawMessageHandler:
+    class: logging.handlers.TimedRotatingFileHandler
+    formatter: rawMessage
+    filename: logs/raw_messages.log
+
 loggers:
   root:
     level: DEBUG
@@ -31,6 +36,10 @@ loggers:
     level: DEBUG
     handlers: [fileHandler]
     propagate: 1
+  dronecan_commander:
+    level: DEBUG
+    handlers: [rawMessageHandler]
+    propagate: 1
 
 # Root logger should be specified if common settings are needed
 root:
@@ -43,4 +52,7 @@ formatters:
     datefmt: "%Y-%m-%d %H:%M:%S"
   precise:
     format: "%(asctime)s | %(levelname)-8s | %(filename)s-%(funcName)s-%(lineno)04d | %(message)s"
+    datefmt: "%H:%M:%S"
+  rawMessage:
+    format: "%(asctime)s | %(message)s"
     datefmt: "%H:%M:%S"

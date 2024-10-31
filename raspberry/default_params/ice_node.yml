@@ -23,5 +23,27 @@ air.input_rc_min:
   value: 1000
 
 air.input_rc_max:
-  value: 2000
   note: Min value of input (for RawCommand typically is 2000, for ArrayCommand is +1.0 or 1.0 or 1000.0)
+  value: 2000
+
+throttle.cmd:
+  note: 0 means RawCommand, 1 means ArrayCommand.
+  value: 0
+
+throttle.ch:
+  note: Index of setpoint channel. [-1; 255]. -1 means disabled
+  value: 7
+
+throttle.starter.period_on_ms:
+  value: 3000
+
+throttle.starter.period_off_ms:
+  value: 500
+
+throttle.gas.min_def:
+  note: PWM duration when throttle is 0 (RawCommand is 0 or Command is -1.0)
+  value: 1500
+
+throttle.gas.max:
+  note: PWM duration when setpoint is max (RawCommand is 8191 or Command is 1.0)
+  value: 1500

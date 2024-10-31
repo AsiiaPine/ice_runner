@@ -28,6 +28,40 @@ from dotenv import load_dotenv
 from bot.bot_mqtt_client import BotMqttClient
 
 # from dronecan_communication.nodes_communicator import NodesCommunicator
+conf_params_description = '''
+*rpm*:
+    default: 4500
+    description: Целевые обороты ДВС\n
+*max-temperature*:
+    default: 190
+    description: Максимальная допустимая температура ДВС, после которой скрипт завершит выполнение\n
+*max-gas-throttle*:
+    dafeult: 100
+    description: Максимальное допустимый уровень газовой заслонки в процентах. Значение 100 означает, что нет ограничений.\n
+*report-period*:
+    default: 600
+    description: Период публикации статус сообщения в секундах \n
+*chat-id*:
+    default: None
+    description: Идентификатор телеграм-чата, с которым бот будет взаимодействовать.\n
+*time*:
+    default: None
+    description: Время в секундах, через которое скрипт автоматически закончит свое выполнение
+*max-vibration*:
+    default: None
+    description: Максимальный допустимый уровень вибрации\n
+*min-fuel-volume*:
+    default: 0
+    description: Минимальный уровень топлива (% или cm3), после которого прекращаем обкатку/выдаем предупреждение.
+'''
+
+commands_discription : Dict[str, str] = {
+    "start": "Запускает автоматическую обкатку ДВС используя последние настроенные параметры/\nStart the automatic running using the last configuration\n",
+    "status": "Получить статус подключенных блоков ДВС и текущие настройки/\nGet the status of the connected blocks and current configuration\n",
+    "help": "Выдать список доступных команд/\nSend a list of available commands\n",
+    "stop": "Остановить обкатку двигателей/\nStop the automatic running immediately\n",
+    "conf": "Начать процесс настройки параметров\. После нажатия кнопки бот отправит сообщение с текущей конфигурацией и ждет в ответе новые параметры в формате \-\-имя значение\. Используйте комманду /cancel чтобы отменить конфигурирование и оставить старые параметры/\nStarts configuration process, after call you have specify configuration parameters in format \-\-name value\. Use /cancel to cancel the action\n",
+    "cancel": "Отменить последнее действие/\nCancel any action\n"}
 
 configuration: Dict[str, Any] = {}
 connected_nodes = {'ice': [], 'mini': []}
@@ -80,8 +114,8 @@ class Conf(StatesGroup):
 @form_router.message(Conf.conf_state)
 async def process_configuration(message: types.Message, state: FSMContext):
     """Process configuration of the runner"""
-    print("Configuration started")
-    print(message.text)
+    print("TG:\tConfiguration started")
+    print("TG:\t" + message.text)
     matches = re.findall(r'--(\S+) (\d+)', message.text)
     for name, value in matches:
         configuration[name] = value
@@ -96,6 +130,7 @@ async def process_configuration(message: types.Message, state: FSMContext):
 async def command_conf_handler(message: types.Message, state: FSMContext):
     await state.set_state(Conf.conf_state)
     await message.reply("Send me your configuration in format --name value")
+    await message.answer("Available parameters:\n" + conf_params_description)
 
 # You can use state='*' if you want to handle all states
 @form_router.message(Command("cancel"))
@@ -132,23 +167,18 @@ async def command_run_handler(message: Message) -> None:
         i += 1
         time.sleep(1)
     await message.answer(f"Started")
-    await mqtt_client.publish("commander", "start")
+    mqtt_client.publish("bot", "start")
 
 @dp.message(Command("help"))
 async def command_help_handler(message: Message) -> None:
     """
     This handler receives messages with `/help` command
     """
+    help_str = ''
+    for command, description in commands_discription.items():
+        help_str += f"\- *{command}*:\n\t{description}\n"
     await message.answer(
-        "I can help you with the following commands:\n"
-        "/conf - to configure the runner\n"
-        "/cancel - to cancel any action\n"
-        "/help - to get this message\n"
-        "/run - to start the automatic running using the last configuration\n"
-        "/start - to start the automatic ICE runner\n"
-        "/status - to get the status of the connected ICE and current configuration\n"
-        "/stop - to stop the automatic running immediately."
-    )
+        "Список команд/ List of commands:\n" + help_str, parse_mode=ParseMode.MARKDOWN_V2)
 
 @dp.message(Command("status"))
 async def command_status_handler(message: Message) -> None:
@@ -173,13 +203,13 @@ async def command_start_handler(message: Message) -> None:
     """
     This handler receives messages with `/start` command
     """
-    print("Start handler")
+    print("TG:\tStart handler")
     await message.answer(f"Hello, {html.bold(message.from_user.full_name)}!")
     if not configuration:
-        print("No configuration stored")
+        print("TG:\tNo configuration stored")
         await message.answer(f"No configuration stored. Send configuration with /conf command")
     else:
-        print("Configuration stored")
+        print("TG:\tConfiguration stored")
         await message.answer("Previous configuration: " + get_configuration_str(configuration))
 
 @dp.message(Command("stop"))
@@ -198,7 +228,7 @@ async def main() -> None:
     load_dotenv()
     TOKEN = os.getenv("BOT_TOKEN")
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    print(configuration_file_path)
+    print("TG:\t" + configuration_file_path)
     dp.include_router(form_router)
     await dp.start_polling(bot)
 

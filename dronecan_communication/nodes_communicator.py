@@ -1,9 +1,10 @@
 import logging
 import os
-from typing import Any, List
+from typing import Any, Dict, List
 from nodes_configurator import NodesConfigurator, NodesParametersParser
 from DronecanMessages import Message, NodeStatus
 from nodes_types import NodeType
+from raccoonlab_tools.dronecan.utils import Parameter
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class NodesCommunicator:
 
     def broadcast_message(self, message: Message, timeout_sec: float = 0.03) -> bool:
         """Send message to all nodes"""
-        self.configurator.node.pub(message.to_dronecan(), timeout_sec=timeout_sec)
+        self.configurator.node.publish(message.to_dronecan())
 
     def get_ice_nodes_states(self)-> List[Message]:
         messages:List[Message] = []
@@ -45,7 +46,7 @@ class NodesCommunicator:
                 messages.append(mini_node.recieve_message(mes_types, timeout_sec=self.mes_timeout))
         return messages
 
-    def set_parameters_to_nodes(self, parameters_dir: str, nodes_ids: List[int]= []) -> None:
+    def set_parameters_to_nodes_from_dir(self, parameters_dir: str, nodes_ids: List[int]= []) -> None:
         """Parse directory with parameters and set them to nodes from nodes_ids list. File name should contain node type. Example: ice.yml"""
         absolute_path = os.path.dirname(os.path.abspath(__file__))
         files_dir = absolute_path + "/" + parameters_dir
@@ -69,6 +70,21 @@ class NodesCommunicator:
                             logger.error(f"Failed to set parameters for node {node.node_id}")
                         else:
                             logger.info(f"Set parameters for node {node.node_id}")
+
+    def set_parameters_to_nodes(self, parameters: List[Parameter]|Dict[str, Any],
+                                        node_type: NodeType| None = None) -> int:
+        """The function sets parameters to dronecan nodes of the specified type
+            :param parameters: List of dronecan parameters or dictionary with parameters in format {name: {value : ...}}
+            :param node_type: Type of nodes to set parameters
+            :return: Number of parameters that were set successfully
+        """
+        if isinstance(parameters, dict):
+            parameters = NodesParametersParser.convert_dict_to_params(parameters)
+        nodes_list = self.configurator.get_nodes_list(node_type)
+        success = 0
+        for node in nodes_list:
+            success += node.set_params(parameters)
+        return success
 
 # TODO: add tests
 # TODO: remove main

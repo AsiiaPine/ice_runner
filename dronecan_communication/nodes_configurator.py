@@ -26,6 +26,12 @@ class NodesParametersParser:
             parameters_list.append(Parameter(name=name, value=data["value"]))
         return parameters_list
 
+    def convert_dict_to_params(params: Dict[str, Any]) -> List[Parameter]:
+        parameters = []
+        for param in params.keys():
+            parameters.append(Parameter(name=param, value=params[param]))
+        return parameters
+
 class NodesConfigurator:
     """
         Class for finding nodes and working with their parameters

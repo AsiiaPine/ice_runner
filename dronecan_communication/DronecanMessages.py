@@ -227,7 +227,7 @@ class ICEReciprocatingStatus(Message):
             throttle_position_percent=self.throttle_position_percent,
             ecu_index=self.ecu_index,
             spark_plug_usage=self.spark_plug_usage,
-            cylinder_status=self.cylinder_status.to_dict())
+            cylinder_status=self.cylinder_status)
 
     def to_dict(self) -> Dict[str, Any]:
         super().to_dict()
@@ -248,7 +248,7 @@ class ICEReciprocatingStatus(Message):
                 "throttle_position_percent": self.throttle_position_percent,
                 "ecu_index": self.ecu_index,
                 "spark_plug_usage": self.spark_plug_usage,
-                "cylinder_status": self.cylinder_status.to_dict()}
+                "cylinder_status": [cylinder_status.to_dict() for cylinder_status in self.cylinder_status]}
 
 @dataclass
 class FuelTankStatus(Message):
