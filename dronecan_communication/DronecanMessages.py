@@ -62,11 +62,11 @@ class NodeStatus(Message):
         return cls(uptime_sec, health, mode, sub_mode, vendor_specific_status_code)
 
     def to_dronecan(self) -> dronecan.uavcan.protocol.NodeStatus:
-        return self.dronecan_type(uptime_sec=self.uptime_sec, health=self.health, mode=self.mode, sub_mode=self.sub_mode, vendor_specific_status_code=self.vendor_specific_status_code)
+        return self.dronecan_type(uptime_sec=self.uptime_sec, health=self.health.value, mode=self.mode.value, sub_mode=self.sub_mode, vendor_specific_status_code=self.vendor_specific_status_code)
 
     def to_dict(self) -> Dict[str, Any]:
         super().to_dict()
-        return {"uptime_sec": self.uptime_sec, "health": self.health, "mode": self.mode, "sub_mode": self.sub_mode, "vendor_specific_status_code": self.vendor_specific_status_code}
+        return {"uptime_sec": self.uptime_sec, "health": self.health.value, "mode": self.mode.value, "sub_mode": self.sub_mode, "vendor_specific_status_code": self.vendor_specific_status_code}
 
 @dataclass
 class CylinderStatus(Message):
@@ -210,7 +210,7 @@ class ICEReciprocatingStatus(Message):
 
     def to_dronecan(self) -> dronecan.uavcan.equipment.ice.reciprocating.Status:
         return dronecan.uavcan.equipment.ice.reciprocating.Status(
-            state=self.state,
+            state=self.state.value,
             flags=self.flags,
             engine_load_percent=self.engine_load_percent,
             engine_speed_rpm=self.engine_speed_rpm,
@@ -226,12 +226,12 @@ class ICEReciprocatingStatus(Message):
             estimated_consumed_fuel_volume_cm3=self.estimated_consumed_fuel_volume_cm3,
             throttle_position_percent=self.throttle_position_percent,
             ecu_index=self.ecu_index,
-            spark_plug_usage=self.spark_plug_usage,
+            spark_plug_usage=self.spark_plug_usage.value,
             cylinder_status=self.cylinder_status)
 
     def to_dict(self) -> Dict[str, Any]:
         super().to_dict()
-        return {"state": self.state,
+        return {"state": self.state.value,
                 "flags": self.flags,                
                 "engine_load_percent": self.engine_load_percent,
                 "engine_speed_rpm": self.engine_speed_rpm,
@@ -247,7 +247,7 @@ class ICEReciprocatingStatus(Message):
                 "estimated_consumed_fuel_volume_cm3": self.estimated_consumed_fuel_volume_cm3,
                 "throttle_position_percent": self.throttle_position_percent,
                 "ecu_index": self.ecu_index,
-                "spark_plug_usage": self.spark_plug_usage,
+                "spark_plug_usage": self.spark_plug_usage.value,
                 "cylinder_status": [cylinder_status.to_dict() for cylinder_status in self.cylinder_status]}
 
 @dataclass

@@ -1,4 +1,5 @@
 
+from ast import List
 import logging
 import os
 import sys
@@ -22,9 +23,10 @@ class DronecanCommander:
         self.stop_message = messages.ESCRPMCommand(command=[0, 0, 0])
         self.current_prm_command = self.stop_message
         self.ice_node = self.communicator.configurator.get_nodes_list(node_type=NodeType.ICE)[0]
-        self.mini_nodes = self.communicator.configurator.get_nodes_list(node_type=NodeType.MINI)[0]
+        self.mini_node = self.communicator.configurator.get_nodes_list(node_type=NodeType.MINI)[0]
         self.logging_interval_s = logging_interval_s
         self.last_logging_time = 0
+        self.states: Dict[str, List[str]] = {}
         if self.ice_node is None:
             print("No ice nodes found")
 
@@ -40,27 +42,25 @@ class DronecanCommander:
         print("Stop")
         self.communicator.send_message(message=self.stop_message, node_id=39, timeout_sec=2.0)
 
-    def run(self) -> None:
+    async def run(self) -> None:
         self.communicator.broadcast_message(message=self.current_prm_command)
-        ice_messages = self.communicator.get_ice_nodes_states()
-        mini_messages = self.communicator.get_mini_nodes_states()
-        for message in ice_messages:
-            if isinstance(message, messages.NodeStatus):
-                print(f"Ice node status: {message.to_dict()}")
-
-        for message in mini_messages:
-            if isinstance(message, messages.NodeStatus):
-                print(f"Mini node status: {message.to_dict()}")
-        if time.time() - self.last_logging_time > self.logging_interval_s:
-            self.last_logging_time = time.time()
-            logger.info(f"Ice nodes statuses:\n\t{[ice_message.to_dict() for ice_message in ice_messages]}")
-            logger.info(f"Mini nodes statuses:\n\t{[mini_message.to_dict() for mini_message in mini_messages]}")
-            logger.info(f"current PRM command: {self.current_prm_command.to_dict()}")
-        self.ice_messages = ice_messages
-        self.mini_messages = mini_messages
+        await self.get_states()
 
     def set_rpm(self, rpm: int) -> None:
         self.current_prm_command = messages.ESCRPMCommand(command=[rpm, rpm, rpm])
 
     def set_raw_command(self, value: int) -> None:
         self.current_prm_command = messages.ESCRawCommand(command=[value, value, value])
+
+    async def get_states(self):
+        states = {"ice": {}, "mini": {}}
+        for mess_type in self.ice_node.rx_mes_types:
+            message = self.ice_node.recieve_message(mess_type, timeout_sec=0.03)
+            if message is not None:
+                states["ice"][mess_type.name] = message.to_dict()
+
+        for mess_type in self.mini_node.rx_mes_types:
+            message = self.ice_node.recieve_message(mess_type, timeout_sec=0.03)
+            if message is not None:
+                states["ice"][mess_type.name] = message.to_dict()
+        self.states = states
