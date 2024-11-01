@@ -1,17 +1,18 @@
 from MQTTClientBase import MqttClient
-
-client: MqttClient = None
+from paho import mqtt
+from paho.mqtt.client import MQTTv311, Client
 
 class ServerMqttClient(MqttClient):
+    client = Client(client_id="server", clean_session=True, userdata=None, protocol=MQTTv311)
     def __init__(self, client_id: str = "server", server_ip: str = "localhost", port: int = 1883, max_messages: int = 10) -> None:
         super().__init__(client_id, server_ip, port, max_messages)
-        global client
-        client = self.client
+        # global client
         # self.subscribe("uavcan.protocol.NodeStatus")
         # self.subscribe("nodes_status")
         self.subscribe("raspberry_pi")
-        for raspberry_id in range(1, 4):
+        for raspberry_id in range(1, 6):
             self.subscribe(f"raspberry_{raspberry_id}")
+
 
         self.subscribe("bot")
         self.publish("commander", f"ready {client_id}")
@@ -27,13 +28,13 @@ class ServerMqttClient(MqttClient):
         #         print("SERVER:\tRaspberry Pi ready")
         #         self.publish("commander", f"{msg.topic} ready")
         #         self.publish("commander", f"{msg.topic} ready")
-        if "raspberry_pi" == msg.topic:
-            print(f"SERVER:\tRaspberry Pi {msg.topic} received message {msg.topic}: {msg.payload.decode()}")
-            rp_topic, message = msg.payload.decode().split(" ", maxsplit=1)
-            if message == "ready":
-                print(f"SERVER:\t{rp_topic} ready")
-                self.subscribe(rp_topic)
-                self.publish(f"{rp_topic}_commander", f"registered")
+        # if "raspberry_pi" == msg.topic:
+        #     print(f"SERVER:\tRaspberry Pi {msg.topic} received message {msg.topic}: {msg.payload.decode()}")
+        #     rp_topic, message = msg.payload.decode().split(" ", maxsplit=1)
+        #     if message == "ready":
+        #         print(f"SERVER:\t{rp_topic} ready")
+        #         self.subscribe(rp_topic)
+        #         self.publish(f"{rp_topic}_commander", f"registered")
         if "bot" in msg.topic:
             print(f"Serve:\tBot {msg.topic} received message {msg.topic}: {msg.payload.decode()}")
             if msg.payload.decode() == "start":
@@ -63,8 +64,43 @@ class ServerMqttClient(MqttClient):
     def publish(self, topic, message):
         print(f"Serve:\tServerMqttClient publish {topic}: {message}")
         return super().publish(topic, message)
-    
-    # TODO: specify callbacks for each topic with
-    @client.topic_callback("commander/#")
-    def handle_commander(client, userdata, message):
-        print(f"Server received message user:{userdata} {message.topic}: {message.payload.decode()}")
+
+
+# TODO: specify callbacks for each topic with
+@ServerMqttClient.client.topic_callback("raspberry_pi/#")
+def handle_raspberry_pi(client, userdata, msg):
+    print(f"Server received message user:{userdata} {message.topic}: {message.payload.decode()}")
+    print(f"SERVER:\tRaspberry Pi {msg.topic} received message {msg.topic}: {msg.payload.decode()}")
+    rp_topic, message = msg.payload.decode().split(" ", maxsplit=1)
+    if message == "ready":
+        print(f"SERVER:\t{rp_topic} ready")
+        client.subscribe(rp_topic)
+        client.publish(f"{rp_topic}_commander", f"registered")
+
+def handle_raspberry_msg(id, client, userdata, msg):
+    print(f"Server received message user:{userdata} {msg.topic}: {msg.payload.decode()}")
+    print(f"SERVER:\tRaspberry 1 {msg.topic} received message {msg.topic}: {msg.payload.decode()}")
+    client.publish(f"raspberry_{id}_commander", f"received {msg.topic}")
+
+@ServerMqttClient.client.topic_callback("raspberry_1/#")
+def handle_raspberry_1(client, userdata, msg):
+    ServerMqttClient.handle_raspberry_msg(1, client, userdata, msg)
+@ServerMqttClient.client.topic_callback("raspberry_2/#")
+def handle_raspberry_2(client, userdata, msg):
+    ServerMqttClient.handle_raspberry_msg(2, client, userdata, msg)
+@ServerMqttClient.client.topic_callback("raspberry_3/#")
+def handle_raspberry_3(client, userdata, msg):
+    ServerMqttClient.handle_raspberry_msg(3, client, userdata, msg)
+@ServerMqttClient.client.topic_callback("raspberry_4/#")
+def handle_raspberry_4(client, userdata, msg):
+    ServerMqttClient.handle_raspberry_msg(4, client, userdata, msg)
+@ServerMqttClient.client.topic_callback("raspberry_5/#")
+def handle_raspberry_5(client, userdata, msg):
+    ServerMqttClient.handle_raspberry_msg(5, client, userdata, msg)
+
+ServerMqttClient.client.message_callback_add("raspberry_pi/#", handle_raspberry_pi)
+ServerMqttClient.client.message_callback_add(f"raspberry_{1}/#", handle_raspberry_1)
+ServerMqttClient.client.message_callback_add(f"raspberry_{2}/#", handle_raspberry_2)
+ServerMqttClient.client.message_callback_add(f"raspberry_{3}/#", handle_raspberry_3)
+ServerMqttClient.client.message_callback_add(f"raspberry_{4}/#", handle_raspberry_4)
+ServerMqttClient.client.message_callback_add(f"raspberry_{5}/#", handle_raspberry_5)
