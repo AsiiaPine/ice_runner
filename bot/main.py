@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+import time
 from typing import Any, Dict
 from aiogram import Bot
 from aiogram.enums import ParseMode
@@ -25,22 +26,25 @@ BotMqttClient.connect()
 async def start_bot() -> None:
     config_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'last_config.yml'))
     handlers.set_configuration(config_file_path)
-    handlers.setup_mqtt_client(BotMqttClient)
+    # handlers.setup_mqtt_client(BotMqttClient)
     load_dotenv()
     TOKEN = os.getenv("BOT_TOKEN")
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     print("TG:\t" + config_file_path)
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
-    await handlers.dp.start_polling(bot)
+    await handlers.dp.poll(bot)
     start()
+    BotMqttClient.client.loop_forever()
     while True:
-        pass
+        BotMqttClient.client.publish("ice_runner/bot", "keep alive")
+        time.sleep(1)
+    #     pass
 
 # async def start_bot() -> None:
 #     start()
 
 # async def main() -> None:
-#     asyncio.gather(start_bot(), start_bot())
+#     await asyncio.gather(start_bot(), start_bot())
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)

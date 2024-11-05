@@ -21,7 +21,6 @@ from aiogram.types import Message
 import yaml
 from dotenv import load_dotenv
 
-
 from bot_mqtt_client import BotMqttClient
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RPStates
@@ -67,15 +66,15 @@ rp_id = None
 configuration: Dict[int, Dict[str, Any]] = {}
 # connected_nodes = {'ice': [], 'mini': []}
 configuration_file_path: str = None
-mqtt_client: BotMqttClient = None
+mqtt_client = BotMqttClient
 
-def on_message(client, userdata, msg):
-    print(msg.topic + ": " + msg.payload.decode())
+# def on_message(client, userdata, msg):
+#     print(msg.topic + ": " + msg.payload.decode())
 
-def setup_mqtt_client(client: BotMqttClient) -> None:
-    global mqtt_client
-    mqtt_client = client
-    mqtt_client.on_message = on_message
+# def setup_mqtt_client(client: BotMqttClient) -> None:
+#     global mqtt_client
+#     mqtt_client = client
+    # mqtt_client.on_message = on_message
 
 def set_configuration(path: str) -> None:
     global configuration_file_path
@@ -221,6 +220,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     global rp_id
     await state.set_state(Conf.status_state)
     await message.answer(f"Number of connected ICE runners: {len(mqtt_client.rp_status.keys())}")
+    print(f"Number of connected ICE runners: {len(mqtt_client.rp_status.keys())}")
     for rp_id, status in mqtt_client.rp_status.items():
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
         print(f"Raspberry Pi {rp_id} status:\n")

@@ -39,7 +39,7 @@ class RaspberryMqttClient:
         for node_type in state.keys():
             print(f"Publishing {node_type} state")
             for dronecan_type in state[node_type].keys():
-                cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/{node_type}/{dronecan_type}", str(state[node_type][dronecan_type]))
+                cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/dronecan/{dronecan_type}", str(state[node_type][dronecan_type]))
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", RaspberryMqttClient.state.value)
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/command", RaspberryMqttClient.setpoint_command)
 

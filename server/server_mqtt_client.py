@@ -6,6 +6,7 @@ import yaml
 from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
 import ast
+import pprint
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RPStates
 
@@ -67,19 +68,20 @@ class ServerMqttClient:
         for topic in ServerMqttClient.rp_messages[rp_id].keys():
             sub_topic_mes = ServerMqttClient.rp_messages[rp_id][topic]
             if topic == "cmd":
-                ServerMqttClient.rp_cmd[rp_id] = sub_topic_mes
+                ServerMqttClient.rp_cmd[rp_id]["cmd"] = sub_topic_mes
             elif topic == "state":
-                ServerMqttClient.rp_status[rp_id] = sub_topic_mes
-                cls.client.publish(f"ice_runner/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_messages[rp_id]["state"])
-            if topic == "ice" or topic == "mini":
+                stats.state = RPStates(int(sub_topic_mes))
+                cls.client.publish(f"ice_runner/bot_commander/rp_states/{rp_id}/state", stats.state.value)
+            if topic == "dronecan":
                 for dronecan_type in sub_topic_mes.keys():
-                    message = sub_topic_mes[dronecan_type]
+                    dronecan_message = sub_topic_mes[dronecan_type]
                     if dronecan_type == "uavcan.equipment.ice.reciprocating.Status":
-                        stats.update_with_resiprocating_status(message)
+                        stats.update_with_resiprocating_status(dronecan_message)
                     if dronecan_type == "uavcan.equipment.ahrs.RawIMU":
-                        stats.update_with_raw_imu(message)
-                cls.client.publish(f"ice_runner/bot_commander/rp_states/{rp_id}/state", stats.to_yaml_str())
-        print(f"Raspberry Pi {rp_id} state published")
+                        stats.update_with_raw_imu(dronecan_message)
+
+        topic = f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats"
+        cls.client.publish(topic, stats.to_yaml_str()).wait_for_publish()
 
     def publish_rp_state(cls, rp_id: int) -> None:
         print("publishing rp state")
@@ -91,13 +93,8 @@ class ServerMqttClient:
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats", stats)
 
 
-# @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/#")
-def handle_raspberry_pi(client, userdata, msg):
-    print(f"Server:\t{msg.topic} received message {msg.topic}: {msg.payload.decode()}")
-
-# @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/state")
 def handle_raspberry_pi_state(client, userdata, msg):
-    print(f"Server:\{msg.topic} received message {msg.topic}: {msg.payload.decode()}")
+    # print(f"Server:\{msg.topic} received message {msg.topic}: {msg.payload.decode()}")
     rp_id = int(msg.topic.split("/")[2])
     state = RPStates(int(msg.payload.decode()))
     if rp_id not in ServerMqttClient.rp_status.keys():
@@ -106,31 +103,17 @@ def handle_raspberry_pi_state(client, userdata, msg):
     ServerMqttClient.rp_status[rp_id].state = state
     client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id].state.value)
 
-# @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/ice/#")
-def handle_raspberry_pi_ice_status(client, userdata, msg):
-    print("got raspberry pi ice status")
+def handle_raspberry_pi_dronecan_message(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
     message_type = msg.topic.split("/")[4]
     if rp_id not in ServerMqttClient.rp_messages.keys():
         ServerMqttClient.rp_messages[rp_id] = {}
-    if "ice" not in ServerMqttClient.rp_messages[rp_id].keys():
-        ServerMqttClient.rp_messages[rp_id]["ice"] = {}
-    if message_type not in ServerMqttClient.rp_messages[rp_id]["ice"].keys():
-        ServerMqttClient.rp_messages[rp_id]["ice"][message_type] = {}
-    ServerMqttClient.rp_messages[rp_id]["ice"][message_type] = ast.literal_eval(msg.payload.decode())
+        print("Add new rp_id to messages")
 
-# @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/mini/#")
-def handle_raspberry_pi_mini_status(client, userdata, msg):
-    print("got raspberry pi mini status")
-    rp_id = int(msg.topic.split("/")[2])
-    message_type = msg.topic.split("/")[4]
-    if rp_id not in ServerMqttClient.rp_messages.keys():
-        ServerMqttClient.rp_messages[rp_id] = {}
-    if "mini" not in ServerMqttClient.rp_messages[rp_id].keys():
-        ServerMqttClient.rp_messages[rp_id]["mini"] = {}
-    if message_type not in ServerMqttClient.rp_messages[rp_id]["mini"].keys():
-        ServerMqttClient.rp_messages[rp_id]["mini"][message_type] = {}
-    ServerMqttClient.rp_messages[rp_id]["mini"][message_type] = ast.literal_eval(msg.payload.decode())
+    if message_type not in ServerMqttClient.rp_messages[rp_id].keys():
+        print("Add new message type to messages")
+        ServerMqttClient.rp_messages[rp_id][message_type] = {}
+    ServerMqttClient.rp_messages[rp_id][message_type] = ast.literal_eval(msg.payload.decode())
 
 # @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/state")
 def handle_bot_usr_cmd_state(client, userdata,  msg):
@@ -155,12 +138,9 @@ def handle_bot_usr_cmd_stop(client, userdata,  msg):
 
 def start() -> None:
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/state", handle_raspberry_pi_state)
-    ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/ice/#", handle_raspberry_pi_ice_status)
-    ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/mini/#", handle_raspberry_pi_mini_status)
+    ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/dronecan/#", handle_raspberry_pi_dronecan_message)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/state", handle_bot_usr_cmd_state)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/stop", handle_bot_usr_cmd_stop)
-    # ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/#", handle_raspberry_pi)
-    # ServerMqttClient.client.subscribe("ice_runner/#")
     ServerMqttClient.client.subscribe("ice_runner/raspberry_pi/#")
     ServerMqttClient.client.subscribe("ice_runner/bot/#")
     ServerMqttClient.client.loop_start()
