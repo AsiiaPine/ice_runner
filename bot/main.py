@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 
-BotMqttClient.connect()
 
 async def start_bot() -> None:
     config_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'last_config.yml'))
@@ -32,19 +31,20 @@ async def start_bot() -> None:
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     print("TG:\t" + config_file_path)
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
-    await handlers.dp.poll(bot)
-    start()
-    BotMqttClient.client.loop_forever()
-    while True:
-        BotMqttClient.client.publish("ice_runner/bot", "keep alive")
-        time.sleep(1)
+    await BotMqttClient.connect()
+    async def main() -> None:
+        await asyncio.gather(handlers.dp.start_polling(bot), start())
+    asyncio.run(main())
+
+
+    # start()
+    # # BotMqttClient.client.loop_forever()
+    # while True:
+    #     BotMqttClient.client.publish("ice_runner/bot", "keep alive")
+    #     time.sleep(1)
     #     pass
 
 # async def start_bot() -> None:
-#     start()
-
-# async def main() -> None:
-#     await asyncio.gather(start_bot(), start_bot())
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
