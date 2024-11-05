@@ -64,17 +64,8 @@ commands_discription : Dict[str, str] = {
 rp_id = None
 
 configuration: Dict[int, Dict[str, Any]] = {}
-# connected_nodes = {'ice': [], 'mini': []}
 configuration_file_path: str = None
 mqtt_client = BotMqttClient
-
-# def on_message(client, userdata, msg):
-#     print(msg.topic + ": " + msg.payload.decode())
-
-# def setup_mqtt_client(client: BotMqttClient) -> None:
-#     global mqtt_client
-#     mqtt_client = client
-    # mqtt_client.on_message = on_message
 
 def set_configuration(path: str) -> None:
     global configuration_file_path
@@ -223,7 +214,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     print(f"Number of connected ICE runners: {len(mqtt_client.rp_status.keys())}")
     for rp_id, status in mqtt_client.rp_status.items():
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
-        print(f"Raspberry Pi {rp_id} status:\n")
+        print(f"\tRaspberry Pi {rp_id} status:\n")
         time.sleep(0.1)
         await message.answer(f"Raspberry Pi {rp_id} status:\n")
         await message.answer(f"\t{status}")
@@ -245,10 +236,9 @@ async def command_start_handler(message: Message) -> None:
     else:
         print("TG:\tConfiguration stored")
         await message.answer("Previous configuration: " + get_configuration_str(configuration))
-    print("connected nodes", mqtt_client.rp_status.keys())
     await message.answer(f"Connected Raspberry Pi IDs:")
     for id, state in mqtt_client.rp_states.items():
-        await message.answer(f"\t{id}: {state}")
+        await message.answer(f"\t{id}: state - {state}")
 
 @dp.message(Command(commands=["stop", "стоп"]))
 async def command_stop_handler(message: Message) -> None:

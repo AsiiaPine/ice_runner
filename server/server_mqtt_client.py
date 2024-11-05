@@ -11,9 +11,9 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from common.RPStates import RPStates
 
 class RPStatus:
-    def __init__(self, id: int, state: RPStates = None) -> None:
+    def __init__(self, id: int, state: int = None) -> None:
         self.id: int = id
-        self.state: RPStates = state
+        self.state: int = state
         self.rpm: int = None
         self.temperature: int = None
         self.available_fuel_volume: float = None
@@ -28,6 +28,8 @@ class RPStatus:
         self.engaged_time: int = None
 
     def to_yaml_str(self) -> str:
+        # string = yaml.dump(self, default_flow_style=False)
+        yaml.emitter.Emitter.prepare_tag = lambda self, tag: ''
         return yaml.dump(self, default_flow_style=False)
 
     def update_with_resiprocating_status(self, status: Dict[str, Any]) -> None:
@@ -70,8 +72,8 @@ class ServerMqttClient:
             if topic == "cmd":
                 ServerMqttClient.rp_cmd[rp_id]["cmd"] = sub_topic_mes
             elif topic == "state":
-                stats.state = RPStates(int(sub_topic_mes))
-                cls.client.publish(f"ice_runner/bot_commander/rp_states/{rp_id}/state", stats.state.value)
+                stats.state = int(sub_topic_mes)
+                cls.client.publish(f"ice_runner/bot_commander/rp_states/{rp_id}/state", stats.state)
             if topic == "dronecan":
                 for dronecan_type in sub_topic_mes.keys():
                     dronecan_message = sub_topic_mes[dronecan_type]
@@ -85,7 +87,7 @@ class ServerMqttClient:
 
     def publish_rp_state(cls, rp_id: int) -> None:
         print("publishing rp state")
-        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", cls.rp_status[rp_id].state.value)
+        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", cls.rp_status[rp_id].state)
 
     def publish_rp_status(cls, rp_id: int) -> None:
         print("publishing rp status")
@@ -96,12 +98,12 @@ class ServerMqttClient:
 def handle_raspberry_pi_state(client, userdata, msg):
     # print(f"Server:\{msg.topic} received message {msg.topic}: {msg.payload.decode()}")
     rp_id = int(msg.topic.split("/")[2])
-    state = RPStates(int(msg.payload.decode()))
+    state = int(msg.payload.decode())
     if rp_id not in ServerMqttClient.rp_status.keys():
         ServerMqttClient.rp_status[rp_id] = RPStatus(rp_id, state)
         ServerMqttClient.rp_messages[rp_id] = {}
     ServerMqttClient.rp_status[rp_id].state = state
-    client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id].state.value)
+    client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id].state)
 
 def handle_raspberry_pi_dronecan_message(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
@@ -119,8 +121,8 @@ def handle_raspberry_pi_dronecan_message(client, userdata, msg):
 def handle_bot_usr_cmd_state(client, userdata,  msg):
     print("got bot usr cmd state")
     rp_id = int(msg.payload.decode())
-    ServerMqttClient.publish_rp_status(rp_id)
-    ServerMqttClient.publish_rp_state(rp_id)
+    ServerMqttClient.publish_rp_status(ServerMqttClient, rp_id)
+    ServerMqttClient.publish_rp_state(ServerMqttClient, rp_id)
 
 # @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/stop")
 def handle_bot_usr_cmd_stop(client, userdata,  msg):
@@ -129,7 +131,7 @@ def handle_bot_usr_cmd_stop(client, userdata,  msg):
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/command", "stop")
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/setpoint", 0)
     while True:
-        if ServerMqttClient.rp_status[rp_id].state == RPStates.STOPPED:
+        if ServerMqttClient.rp_status[rp_id].state == RPStates.STOPPED.value:
             time.sleep(0.1)
             ServerMqttClient.publish_rp_state(rp_id)
             break
