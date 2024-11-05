@@ -1,20 +1,11 @@
-from enum import IntEnum
+import os
+import sys
 import time
 from typing import Any, Dict, List
-import paho.mqtt.client as paho
 from paho import mqtt
 from paho.mqtt.client import MQTTv311
-
-# TODO: specify callbacks for each topic with
-# @client.topic_callback("mytopic/#")
-# def handle_mytopic(client, userdata, message):
-class RPStates(IntEnum):
-    READY       = 0
-    STOPPING    = 1
-    STOPPED     = 2
-    STARTING    = 3
-    RUNNING     = 4
-
+sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from common.RPStates import RPStates
 
 class RaspberryMqttClient:
     client = mqtt.client.Client(client_id="raspberry_0", clean_session=True, userdata=None, protocol=MQTTv311)
@@ -22,7 +13,7 @@ class RaspberryMqttClient:
     last_message_receive_time = 0
     setpoint_command: float = 0
     nodes_states: Dict[str, List[str]] = {}
-    state = RPStates.READY
+    state = RPStates.WAITING
 
     @classmethod
     def get_client(cls) -> mqtt.client.Client:
@@ -33,10 +24,9 @@ class RaspberryMqttClient:
         cls.rp_id = rp_id
         cls.client = mqtt.client.Client(client_id=f"raspberry_{rp_id}", clean_session=True, protocol=MQTTv311, reconnect_on_failure=True)
         cls.client.connect(server_ip, port, 60)
-        cls.client.subscribe(f"ice_runner/server/raspberry_pi_commander/{rp_id}/#")
-        cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", "ready")
+        cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", RPStates.WAITING.value)
         print(f"ice_runner/raspberry_pi/{rp_id}/state")
-        cls.client.loop_start()
+
 
     @classmethod
     def set_id(cls, rp_id: str) -> None:
@@ -47,12 +37,12 @@ class RaspberryMqttClient:
     def publish_state(cls, state: Dict[str, Dict[str, Any]]) -> None:
         print("publishing state")
         for node_type in state.keys():
+            print(f"Publishing {node_type} state")
             for dronecan_type in state[node_type].keys():
                 cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/{node_type}/{dronecan_type}", str(state[node_type][dronecan_type]))
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", RaspberryMqttClient.state.value)
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/comand", RaspberryMqttClient.setpoint_command)
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/command", RaspberryMqttClient.setpoint_command)
 
-@RaspberryMqttClient.client.topic_callback(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/command")
 def handle_command(client, userdata, message):
     print(f"RP:\t{message.topic}: {message.payload.decode()}")
     mes_text = message.payload.decode()
@@ -71,23 +61,19 @@ def handle_command(client, userdata, message):
             print("RP:\tRun")
     if message.payload.decode() == "keep alive":
         print("RP:\tKeep alive")
+        RaspberryMqttClient.last_message_receive_time = time.time()
 
-@RaspberryMqttClient.client.topic_callback(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/setpoint")
 def handle_setpoint(client, userdata, message):
     print(f"RP:\t{message.topic}: {message.payload.decode()}")
     RaspberryMqttClient.setpoint_command = float(message.payload.decode())
 
-@RaspberryMqttClient.client.topic_callback("ice_runner/server/raspberry_pi_commander")
-def handle_rp_commander(client, userdata, message):
-    print(f"RP:\t{message.topic}: {message.payload.decode()}")
-    if message.payload.decode() == "ready":
-        print("RP:\tServer is ready")
-        RaspberryMqttClient.last_message_receive_time = time.time()
-
-@RaspberryMqttClient.client.topic_callback(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/conf")
-def handle_conf(client, userdata, message):
+def handle_config(client, userdata, message):
     print("RP:\tConfiguration")
 
-RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/command", handle_command)
-RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/conf", handle_conf)
-RaspberryMqttClient.client.message_callback_add("ice_runner/server/raspberry_pi_commander", handle_rp_commander)
+def start() -> None:
+    RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/command", handle_command)
+
+    RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/config", handle_config)
+
+    RaspberryMqttClient.client.subscribe(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/#")
+    RaspberryMqttClient.client.loop_start()

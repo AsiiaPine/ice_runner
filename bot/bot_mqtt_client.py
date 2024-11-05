@@ -18,10 +18,7 @@ class BotMqttClient:
     def connect(cls, server_ip: str = "localhost", port: int = 1883, max_messages: int = 10) -> None:
         cls.client = Client(client_id="bot", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
         cls.client.connect(server_ip, port, 60)
-        cls.client.publish("ice_runner/bot/", "ready")
-        cls.client.subscribe("ice_runner/server/bot_commander", "ready")
-        # cls.client.publish("ice_runner/bot", "send_all")
-        cls.client.loop_forever()
+
 
     @classmethod
     def get_client(cls) -> mqtt.client.Client:
@@ -39,7 +36,9 @@ def handle_commander_stats(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     BotMqttClient.rp_status[rp_pi_id] = message.payload.decode()
 
-
-
-BotMqttClient.client.message_callback_add("ice_runner/bot_commander/rp_states/+/state", handle_commander_state)
-BotMqttClient.client.message_callback_add("ice_runner/bot_commander/rp_states/+/stats", handle_commander_stats)
+def start() -> None:
+    BotMqttClient.client.publish("ice_runner/bot", "ready")
+    BotMqttClient.client.message_callback_add("ice_runner/bot_commander/rp_states/+/state", handle_commander_state)
+    BotMqttClient.client.message_callback_add("ice_runner/bot_commander/rp_states/+/stats", handle_commander_stats)
+    BotMqttClient.client.subscribe("ice_runner/server/bot_commander/#")
+    BotMqttClient.client.loop_start()

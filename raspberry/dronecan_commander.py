@@ -32,7 +32,7 @@ class DronecanCommander:
 
         self.logging_interval_s = logging_interval_s
         self.last_logging_time = 0
-        self.states: Dict[str, List[str]] = {}
+        self.states: Dict[str, List[str]] = {"ice": {}, "mini": {}}
         if self.ice_node is None:
             print("No ice nodes found")
 
@@ -59,16 +59,15 @@ class DronecanCommander:
         self.current_prm_command = messages.ESCRawCommand(command=[value, value, value])
 
     async def get_states(self):
-        states = {"ice": {}, "mini": {}}
         for mess_type in self.ice_node.rx_mes_types:
             message = self.ice_node.recieve_message(mess_type, timeout_sec=0.03)
             if message is not None:
-                states["ice"][mess_type.name] = message.to_dict()
+                self.states["ice"][mess_type.name] = message.to_dict()
 
         if self.mini_node is None:
             return
         for mess_type in self.mini_node.rx_mes_types:
             message = self.ice_node.recieve_message(mess_type, timeout_sec=0.03)
             if message is not None:
-                states["mini"][mess_type.name] = message.to_dict()
-        self.states = states
+                self.states["mini"][mess_type.name] = message.to_dict()
+        # self.states = self.states
