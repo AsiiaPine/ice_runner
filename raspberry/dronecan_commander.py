@@ -22,8 +22,14 @@ class DronecanCommander:
         # self.communicator.set_parameters_to_nodes(parameters_dir="default_params")
         self.stop_message = messages.ESCRPMCommand(command=[0, 0, 0])
         self.current_prm_command = self.stop_message
-        self.ice_node = self.communicator.configurator.get_nodes_list(node_type=NodeType.ICE)[0]
-        self.mini_node = self.communicator.configurator.get_nodes_list(node_type=NodeType.MINI)[0]
+        self.ice_node = self.communicator.configurator.nodes[NodeType.ICE][0]
+
+        mini_nodes = self.communicator.configurator.nodes[NodeType.MINI]
+        if len(mini_nodes) > 0:
+            self.mini_node = mini_nodes[0]
+        else:
+            self.mini_node = None
+
         self.logging_interval_s = logging_interval_s
         self.last_logging_time = 0
         self.states: Dict[str, List[str]] = {}
@@ -59,8 +65,10 @@ class DronecanCommander:
             if message is not None:
                 states["ice"][mess_type.name] = message.to_dict()
 
+        if self.mini_node is None:
+            return
         for mess_type in self.mini_node.rx_mes_types:
             message = self.ice_node.recieve_message(mess_type, timeout_sec=0.03)
             if message is not None:
-                states["ice"][mess_type.name] = message.to_dict()
+                states["mini"][mess_type.name] = message.to_dict()
         self.states = states

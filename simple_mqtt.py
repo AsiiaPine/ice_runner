@@ -21,7 +21,9 @@ def on_message(client, userdata, msg):
 
 client = mqtt.client.Client(client_id="raspberry_0", clean_session=True, userdata=None, protocol=MQTTv311)
 client.connect("localhost", 1883, 60)
-client.subscribe("ice_runner/raspberry_pi/#")
+client.subscribe("ice_runner/#")
+# client.subscribe("ice_runner/raspberry_pi/+/state")
+# client.subscribe("ice_runner/raspberry_pi/#")
 client.on_message = on_message
 client.loop_forever()
 

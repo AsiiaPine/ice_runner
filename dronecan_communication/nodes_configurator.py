@@ -66,7 +66,7 @@ class NodesConfigurator:
         if node_type is None:
             nodes = []
             for node_type in NodeType:
-                nodes += self.nodes[node_type]
+                nodes.append(self.nodes[node_type])
             return nodes
         if node_type >= NodeType.UNKNOWN.value:
             raise Exception(f"Unknown node type: {node_type}")

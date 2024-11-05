@@ -19,6 +19,7 @@ class RPStates(IntEnum):
 class RaspberryMqttClient:
     client = mqtt.client.Client(client_id="raspberry_0", clean_session=True, userdata=None, protocol=MQTTv311)
     rp_id: int = 0
+    last_message_receive_time = 0
     setpoint_command: float = 0
     nodes_states: Dict[str, List[str]] = {}
     state = RPStates.READY
@@ -32,8 +33,9 @@ class RaspberryMqttClient:
         cls.rp_id = rp_id
         cls.client = mqtt.client.Client(client_id=f"raspberry_{rp_id}", clean_session=True, protocol=MQTTv311, reconnect_on_failure=True)
         cls.client.connect(server_ip, port, 60)
-        cls.client.subscribe(f"ice_runner/server/rp_commander/{rp_id}/#")
+        cls.client.subscribe(f"ice_runner/server/raspberry_pi_commander/{rp_id}/#")
         cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", "ready")
+        print(f"ice_runner/raspberry_pi/{rp_id}/state")
         cls.client.loop_start()
 
     @classmethod
@@ -42,21 +44,15 @@ class RaspberryMqttClient:
         cls.client._client_id = f"raspberry_{rp_id}"
 
     @classmethod
-    def loop_forever(cls) -> None:
-        try:
-            print("RP:\tPress CTRL+C to exit")
-            cls.client.loop_forever()
-        except:
-            print("RP:\tExiting...")
-
-    @classmethod
-    def publich_state(cls, state: Dict[str, Dict[str, Any]]) -> None:
+    def publish_state(cls, state: Dict[str, Dict[str, Any]]) -> None:
+        print("publishing state")
         for node_type in state.keys():
             for dronecan_type in state[node_type].keys():
                 cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/{node_type}/{dronecan_type}", str(state[node_type][dronecan_type]))
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", RaspberryMqttClient.state.value)
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/comand", RaspberryMqttClient.setpoint_command)
 
-@RaspberryMqttClient.client.topic_callback("ice_runner/server/rp_commander/{rp_id}/command")
+@RaspberryMqttClient.client.topic_callback(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/command")
 def handle_command(client, userdata, message):
     print(f"RP:\t{message.topic}: {message.payload.decode()}")
     mes_text = message.payload.decode()
@@ -76,16 +72,22 @@ def handle_command(client, userdata, message):
     if message.payload.decode() == "keep alive":
         print("RP:\tKeep alive")
 
-@RaspberryMqttClient.client.topic_callback("ice_runner/raspberry_pi/{rp_id}/setpoint")
+@RaspberryMqttClient.client.topic_callback(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/setpoint")
 def handle_setpoint(client, userdata, message):
     print(f"RP:\t{message.topic}: {message.payload.decode()}")
     RaspberryMqttClient.setpoint_command = float(message.payload.decode())
 
+@RaspberryMqttClient.client.topic_callback("ice_runner/server/raspberry_pi_commander")
+def handle_rp_commander(client, userdata, message):
+    print(f"RP:\t{message.topic}: {message.payload.decode()}")
+    if message.payload.decode() == "ready":
+        print("RP:\tServer is ready")
+        RaspberryMqttClient.last_message_receive_time = time.time()
 
-@classmethod
-@RaspberryMqttClient.client.topic_callback("ice_runner/raspberry_pi/{rp_id}/conf")
+@RaspberryMqttClient.client.topic_callback(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/conf")
 def handle_conf(client, userdata, message):
     print("RP:\tConfiguration")
 
-RaspberryMqttClient.client.message_callback_add("ice_runner/server/rp_commander/{rp_id}/command", handle_command)
-RaspberryMqttClient.client.message_callback_add("ice_runner/raspberry_pi/{rp_id}/conf", handle_conf)
+RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/command", handle_command)
+RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/conf", handle_conf)
+RaspberryMqttClient.client.message_callback_add("ice_runner/server/raspberry_pi_commander", handle_rp_commander)

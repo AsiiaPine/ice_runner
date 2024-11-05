@@ -125,6 +125,7 @@ class ICEReciprocatingStatus(Message):
         STATE_RUNNING   = 2 # The engine is running normally.
         STATE_FAULT     = 3  # The engine can no longer function.
 
+    # TODO: use flags properly, as mask, not enum
     class Flags(enum.IntEnum):
         FLAG_GENERAL_ERROR = 1, # General error. This flag is required, and it can be used to indicate an error condition that does not fit any of the other flags.
         FLAG_CRANKSHAFT_SENSOR_ERROR_SUPPORTED = 2,

@@ -22,24 +22,24 @@ loggers:
     handlers: [fileHandler, consoleHandler]
   DronecanMessages:
     level: DEBUG
-    handlers: [consoleHandler]
+    handlers: [fileHandler]
     propagate: 0
   nodes_types:
     level: DEBUG
-    handlers: [consoleHandler]
+    handlers: [fileHandler]
     propagate: 0
   nodes_configurator:
     level: DEBUG
-    handlers: [consoleHandler]
+    handlers: [fileHandler]
     propagate: 0
   communication_with_nodes:
     level: DEBUG
     handlers: [fileHandler]
-    propagate: 1
+    propagate: 0
   dronecan_commander:
     level: DEBUG
     handlers: [rawMessageHandler]
-    propagate: 1
+    propagate: 0
 
 # Root logger should be specified if common settings are needed
 root:
@@ -55,4 +55,4 @@ formatters:
     datefmt: "%H:%M:%S"
   rawMessage:
     format: "%(asctime)s | %(message)s"
-    datefmt: "%H:%M:%S"
+    datefmt: "%Y-%m-%d %H:%M:%S"
