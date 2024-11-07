@@ -6,9 +6,10 @@ import yaml
 from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
 import ast
-import pprint
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RPStates
+
+SETPOINT_STEP = 10
 
 class RPStatus:
     def __init__(self, id: int, state: int = None) -> None:
@@ -26,6 +27,8 @@ class RPStatus:
 
         self.vibrations: int = None
         self.engaged_time: int = None
+        self.start_time: int = None
+        self.run_time: int = 0
 
     def to_yaml_str(self) -> str:
         # string = yaml.dump(self, default_flow_style=False)
@@ -40,16 +43,46 @@ class RPStatus:
         self.temperature = status["oil_temperature"]
         self.current = status["intake_manifold_temperature"]
         self.voltage_out = status["fuel_pressure"]
+        self.run_time = time.time() - self.start_time
 
     def update_with_raw_imu(self, status: Dict[str, Any]) -> None:
         self.vibrations = status["integration_interval"]
+
+class IceRunnerConfiguration:
+    rpm: int = 4500
+    time: int = 0
+    max_temperature: int = 190
+    max_gas_throttle: int = 0
+    report_period: int = 600
+    chat_id: int = 0
+    max_vibration: int = 100
+    min_fuel_volume: int = 0
+
+    @classmethod
+    def from_dict(cls, conf: Dict[str, Any]) -> Any:
+        cls.rpm = conf["rpm"] if "rpm" in conf.keys() else 4500
+        cls.time = conf["time"] if "time" in conf.keys() else 0
+        cls.max_temperature = conf["max-temperature"] if "max-temperature" in conf.keys() else 190
+        cls.max_gas_throttle = conf["max-gas-throttle"] if "max-gas-throttle" in conf.keys() else 0
+        cls.report_period = conf["report-period"] if "report-period" in conf.keys() else 600
+        cls.chat_id = conf["chat-id"] if "chat-id" in conf.keys() else 0
+        cls.max_vibration = conf["max-vibration"] if "max-vibration" in conf.keys() else 0
+        cls.min_fuel_volume = conf["min-fuel-volume"] if "min-fuel-volume" in conf.keys() else 0
+        return cls
+
+    def to_dict(self) -> Dict[str, Any]:
+        yaml.emitter.Emitter.prepare_tag = lambda self, tag: ''
+        return yaml.dump(self, default_flow_style=False)
 
 class ServerMqttClient:
     client = Client(client_id="server", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
     rp_messages: Dict[int, Dict[str, Dict[str, Any]]] = {}
     rp_status: Dict[int, RPStatus] = {}
-    rp_cmd: Dict[int, float] = {}
+    rp_setpoint: Dict[int, float] = {}
+    rp_cur_setpoint: Dict[int, float] = {}
+
     last_ready_transmit = 0
+    rp_configuration: Dict[int, IceRunnerConfiguration] = {}
 
     @classmethod
     def connect(cls, server_ip: str = "localhost", port: int = 1883) -> None:
@@ -69,8 +102,8 @@ class ServerMqttClient:
 
         for topic in ServerMqttClient.rp_messages[rp_id].keys():
             sub_topic_mes = ServerMqttClient.rp_messages[rp_id][topic]
-            if topic == "cmd":
-                ServerMqttClient.rp_cmd[rp_id]["cmd"] = sub_topic_mes
+            if topic == "setpoint":
+                ServerMqttClient.rp_cur_setpoint[rp_id] = int(sub_topic_mes)
             elif topic == "state":
                 stats.state = int(sub_topic_mes)
                 cls.client.publish(f"ice_runner/bot_commander/rp_states/{rp_id}/state", stats.state)
@@ -85,23 +118,52 @@ class ServerMqttClient:
         topic = f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats"
         cls.client.publish(topic, stats.to_yaml_str()).wait_for_publish()
 
+    @classmethod
+    def control_ice_runner(cls, rp_id: int) -> None:
+        if rp_id not in cls.rp_setpoint.keys():
+            cls.rp_setpoint[rp_id] = 0
+        # throttle_ex = cls.rp_configuration[rp_id].max_gas_throttle < cls.rp_status[rp_id].gas_throttle
+        # temp_ex = cls.rp_configuration[rp_id].max_temperature < cls.rp_status[rp_id].temperature
+        # vibration_ex = cls.rp_configuration[rp_id].max_vibration < cls.rp_status[rp_id].vibrations
+        # time_ex = cls.rp_configuration[rp_id].time < cls.rp_status[rp_id].run_time
+        # if throttle_ex or temp_ex or vibration_ex or time_ex:
+        #     cls.rp_setpoint[rp_id] = 0
+
+        elif cls.rp_status[rp_id].state == RPStates.RUNNING.value:
+            if cls.rp_status[rp_id].rpm < cls.rp_configuration[rp_id].rpm:
+                cls.rp_setpoint[rp_id] = cls.rp_cur_setpoint[rp_id] + SETPOINT_STEP
+
+            elif cls.rp_status[rp_id].rpm > cls.rp_configuration[rp_id].rpm:
+                cls.rp_setpoint[rp_id] = cls.rp_cur_setpoint[rp_id] - SETPOINT_STEP
+
+        command = f"{cls.rp_setpoint[rp_id]}"
+        print(f"Sending command {command} to Raspberry Pi {rp_id}")
+        topic = f"ice_runner/server/raspberry_pi_commander/{rp_id}/setpoint"
+        cls.client.publish(topic, command).wait_for_publish()
+
+    @classmethod
     def publish_rp_state(cls, rp_id: int) -> None:
-        print("publishing rp state")
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", cls.rp_status[rp_id].state)
 
+    @classmethod
     def publish_rp_status(cls, rp_id: int) -> None:
-        print("publishing rp status")
         stats = cls.rp_status[rp_id].to_yaml_str()
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats", stats)
 
+    @classmethod
+    def publish_rp_configuration(cls, rp_id: int) -> None:
+        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/config", cls.rp_configuration[rp_id])
 
 def handle_raspberry_pi_state(client, userdata, msg):
-    # print(f"Server:\{msg.topic} received message {msg.topic}: {msg.payload.decode()}")
     rp_id = int(msg.topic.split("/")[2])
     state = int(msg.payload.decode())
     if rp_id not in ServerMqttClient.rp_status.keys():
         ServerMqttClient.rp_status[rp_id] = RPStatus(rp_id, state)
         ServerMqttClient.rp_messages[rp_id] = {}
+    if rp_id not in ServerMqttClient.rp_configuration.keys():
+        ServerMqttClient.rp_configuration[rp_id] = None
+    if rp_id not in ServerMqttClient.rp_cur_setpoint.keys():
+        ServerMqttClient.rp_cur_setpoint[rp_id] = 0
     ServerMqttClient.rp_status[rp_id].state = state
     client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id].state)
 
@@ -110,39 +172,65 @@ def handle_raspberry_pi_dronecan_message(client, userdata, msg):
     message_type = msg.topic.split("/")[4]
     if rp_id not in ServerMqttClient.rp_messages.keys():
         ServerMqttClient.rp_messages[rp_id] = {}
-        print("Add new rp_id to messages")
-
     if message_type not in ServerMqttClient.rp_messages[rp_id].keys():
-        print("Add new message type to messages")
         ServerMqttClient.rp_messages[rp_id][message_type] = {}
     ServerMqttClient.rp_messages[rp_id][message_type] = ast.literal_eval(msg.payload.decode())
 
-# @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/state")
-def handle_bot_usr_cmd_state(client, userdata,  msg):
-    print("got bot usr cmd state")
-    rp_id = int(msg.payload.decode())
-    ServerMqttClient.publish_rp_status(ServerMqttClient, rp_id)
-    ServerMqttClient.publish_rp_state(ServerMqttClient, rp_id)
+def handle_raspberry_pi_setpoint(client, userdata, msg):
+    rp_id = int(msg.topic.split("/")[2])
+    # print(f"Got setpoint msg for Raspberry Pi {rp_id}")
+    ServerMqttClient.rp_cur_setpoint[rp_id] = float(msg.payload.decode())
 
-# @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/stop")
+
+def handle_bot_usr_cmd_state(client, userdata,  msg):
+    # print("got bot usr cmd state")
+    rp_id = int(msg.payload.decode())
+    ServerMqttClient.publish_rp_status(rp_id)
+    ServerMqttClient.publish_rp_state(rp_id)
+
 def handle_bot_usr_cmd_stop(client, userdata,  msg):
     print("got bot usr cmd stop")
     rp_id = int(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/command", "stop")
+    ServerMqttClient.rp_setpoint[rp_id] = 0
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/setpoint", 0)
     while True:
-        if ServerMqttClient.rp_status[rp_id].state == RPStates.STOPPED.value:
+        if ServerMqttClient.rp_status[rp_id].state != RPStates.RUNNING.value:
             time.sleep(0.1)
             ServerMqttClient.publish_rp_state(rp_id)
             break
         print(f"Raspberry Pi {rp_id} is stopping. Current state: {ServerMqttClient.rp_status[rp_id].state}")
         time.sleep(0.1)
 
+def handle_bot_usr_cmd_start(client, userdata,  msg):
+    rp_id = int(msg.payload.decode())
+    ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "start")
+    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/setpoint", 8191)
+    ServerMqttClient.rp_setpoint[rp_id] = 8191
+
+def handle_bot_configure(client, userdata, msg):
+    rp_id = int(msg.topic.split("/")[-1])
+    if rp_id not in ServerMqttClient.rp_configuration.keys():
+        ServerMqttClient.rp_configuration[rp_id] = {}
+    cofig = ast.literal_eval(msg.payload.decode())
+    for name, value in cofig.items():
+        ServerMqttClient.rp_configuration[rp_id][name] = value
+
+def handle_bot_conf(client, userdata, msg):
+    rp_id = int(msg.payload.decode())
+    print(f"Bot waiting for configuration for Raspberry Pi {rp_id}")
+    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/config", str(ServerMqttClient.rp_configuration[rp_id]))
+    print(f"Bot got configuration for Raspberry Pi {str(ServerMqttClient.rp_configuration[rp_id])}")
+
 def start() -> None:
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/state", handle_raspberry_pi_state)
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/dronecan/#", handle_raspberry_pi_dronecan_message)
+    ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/setpoint", handle_raspberry_pi_setpoint)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/state", handle_bot_usr_cmd_state)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/stop", handle_bot_usr_cmd_stop)
+    ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/start", handle_bot_usr_cmd_start)
+    ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/conf", handle_bot_conf)
+    ServerMqttClient.client.message_callback_add("ice_runner/bot/configure/#", handle_bot_configure)
     ServerMqttClient.client.subscribe("ice_runner/raspberry_pi/#")
     ServerMqttClient.client.subscribe("ice_runner/bot/#")
     ServerMqttClient.client.loop_start()

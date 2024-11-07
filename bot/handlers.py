@@ -9,9 +9,7 @@ from aiogram import Router, Bot, Dispatcher, types, F, html
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
-    KeyboardButton,
     Message,
-    ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
 )
 from aiogram.client.default import DefaultBotProperties
@@ -67,7 +65,7 @@ configuration: Dict[int, Dict[str, Any]] = {}
 configuration_file_path: str = None
 mqtt_client = BotMqttClient
 
-def set_configuration(path: str) -> None:
+def get_configuration_from_file(path: str) -> None:
     global configuration_file_path
     global configuration
     configuration_file_path = path
@@ -89,17 +87,12 @@ def get_configuration_str(conf: Dict[str, Any] = None) -> str:
             conf_str += f"\t{name}: {value}\n"
         return conf_str
 
-# Bot token can be obtained via https://t.me/BotFather
-
-# All handlers should be attached to the Router (or Dispatcher)
 dp = Dispatcher()
 form_router = Router()
 dp.include_router(form_router)
 
-class RPConf(StatesGroup):
-    rp_id = State()
-
 class Conf(StatesGroup):
+    rp_id = State()
     conf_state = State()
     status_state = State()
 
@@ -108,7 +101,7 @@ async def process_configuration(message: types.Message, state: FSMContext):
     """Process configuration of the runner"""
     if rp_id is None:
         await message.answer("Choose Raspberry Pi ID first. Print RP ID")
-        state.set_state(RPConf.rp_id)
+        state.set_state(Conf.rp_id)
         return
 
     print("TG:\tConfiguration started")
@@ -118,26 +111,30 @@ async def process_configuration(message: types.Message, state: FSMContext):
         configuration[int(rp_id)] = {}
     for name, value in matches:
         configuration[int(rp_id)][name] = value
-    await message.reply("Your configuration: " + get_configuration_str(configuration[rp_id]))
+    conf_str = get_configuration_str(configuration[rp_id])
+    await message.reply("Your configuration: " + conf_str)
     with open(configuration_file_path, "w") as file:
         yaml.dump(configuration, file, default_flow_style=False)
     await message.reply(f"Configuration finished")
     await state.clear()
+    mqtt_client.client.publish(f"ice_runner/bot/configure/{rp_id}", conf_str)
 
-@dp.message(Command(commands = ["chose_rp", "выбрать_ДВС"]))
+@form_router.message(Command(commands=["chose_rp", "выбрать_ДВС"]))
 async def choose_rp_id(message: types.Message, state: FSMContext) -> None:
-    await state.set_state(RPConf.rp_id)
+    await state.set_state(Conf.rp_id)
     print("Choose RP ID")
     await message.answer("Choose Raspberry Pi ID. Print RP ID")
 
-@form_router.message(RPConf.rp_id)
+@form_router.message(Conf.rp_id)
 async def choose_rp_id_handler(message: types.Message, state: FSMContext) -> None:
-    if message.text not in mqtt_client.rp_status.keys():
-        await message.answer("Raspberry Pi ID is not in the list")
+    print("Configure RP ID")
+    if int(message.text) not in mqtt_client.rp_status.keys():
+        await message.reply("Raspberry Pi ID is not in the list")
         return
     global rp_id
     rp_id = int(message.text)
     print("Choose RP ID", rp_id)
+    await message.reply(f"Chosen RP ID: {rp_id}")
     await state.clear()
 
 # Commands handlers
@@ -145,7 +142,7 @@ async def choose_rp_id_handler(message: types.Message, state: FSMContext) -> Non
 async def command_conf_handler(message: types.Message, state: FSMContext):
     if rp_id is None:
         await message.answer("Choose Raspberry Pi ID first")
-        state.set_state(RPConf.rp_id)
+        state.set_state(Conf.rp_id)
         return
 
     await state.set_state(Conf.conf_state)
@@ -173,16 +170,23 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
         reply_markup=ReplyKeyboardRemove(),
     )
 
-@dp.message(Command(commands=["run", "запустить"]))
-async def command_run_handler(message: Message) -> None:
+@form_router.message(Command(commands=["run", "запустить"]))
+async def command_run_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/run` command
     """
-    if configuration is None:
+    if rp_id is None:
+        await message.answer("Choose Raspberry Pi ID first")
+        await state.set_state(Conf.rp_id)
+        return
+    if rp_id not in configuration.keys():
         await message.answer(f"No configuration defined.")
     else:
         await message.answer("Chosen rp_id: " + str(rp_id))
-        await message.answer("Chosen configuration: " + get_configuration_str(configuration[rp_id]))
+        if configuration[rp_id] is None:
+            await message.answer("No configuration for Raspberry Pi " + str(rp_id))
+        else:
+            await message.answer("Chosen configuration: " + get_configuration_str(configuration[rp_id]))
         await message.answer(f"Send /cancel to abort the running. After start you can send /stop to stop")
     i = 0
     while i < 3:
@@ -214,14 +218,16 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     print(f"Number of connected ICE runners: {len(mqtt_client.rp_status.keys())}")
     for rp_id, status in mqtt_client.rp_status.items():
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
+        mqtt_client.client.publish("ice_runner/bot/usr_cmd/conf", str(rp_id))
         print(f"\tRaspberry Pi {rp_id} status:\n")
-        time.sleep(0.1)
-        await message.answer(f"Raspberry Pi {rp_id} status:\n")
-        await message.answer(f"\t{status}")
-        if configuration[int(rp_id)] is None:
-            await message.answer(f"No configuration for Raspberry Pi {rp_id}")
-            return
-    # await message.answer("Current configuration: " + get_configuration_str(configuration[int(rp_id)]))
+        await asyncio.sleep(0.1)
+        message_text = f"\# Raspberry Pi {rp_id} status:\n"
+        await message.answer(message_text+f"\t{status}")
+        configuration[rp_id] = mqtt_client.rp_configuration[rp_id]
+        # if rp_id not in configuration.keys():
+            # await message.answer(f"No configuration for Raspberry Pi {rp_id}. Send /conf to configure")
+            # return
+        await message.answer("Current configuration: " + get_configuration_str(configuration[int(rp_id)]))
 
 @dp.message(CommandStart(ignore_case=True))
 async def command_start_handler(message: Message) -> None:
@@ -246,13 +252,13 @@ async def command_stop_handler(message: Message) -> None:
     This handler receives messages with `/stop` command
     """
     await message.answer(f"Stopping")
-    await mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
+    mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}").wait_for_publish()
     rp_status = int(mqtt_client.rp_status[rp_id])
     while True:
-        if rp_status == RPStates.STOPPED.value:
+        if rp_status != RPStates.RUNNING.value:
             break
-        await message.answer(f"Raspberry Pi {rp_id} is stopping. Current state: {rp_status.state}")
-        time.sleep(1)
+        await message.answer(f"Raspberry Pi {rp_id} is stopping. Current state: {RPStates(rp_status).name}")
+        await asyncio.sleep(1)
     await message.answer(f"Stopped")
 
 async def main() -> None:

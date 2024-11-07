@@ -1,10 +1,12 @@
 
 from ast import List
+import asyncio
 import logging
 import os
 import sys
 import time
 from typing import Any, Dict
+from mqtt_client import RaspberryMqttClient
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../dronecan_communication')))
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -12,62 +14,96 @@ from dronecan_communication.nodes_communicator import NodesCommunicator, NodeTyp
 import dronecan_communication.DronecanMessages as messages
 logger = logging.getLogger(__name__)
 
+RAWCmdStep = 0.1
+RPMCmdStep = 0.1
+
 class DronecanCommander:
-    def __init__(self, logging_interval_s: int = 10) -> None:
-        self.communicator = NodesCommunicator(mes_timeout_sec=2.0)
-        while self.communicator.configurator.get_nodes_list(node_type=NodeType.ICE) is None:
+    stop_message = messages.ESCRPMCommand(command=[0, 0, 0])
+    current_rpm_command = messages.ESCRPMCommand(command=[0, 0, 0])
+
+    @classmethod
+    def connect(cls, logging_interval_s: int = 10) -> None:
+        cls.communicator = NodesCommunicator(mes_timeout_sec=2.0)
+        while cls.communicator.configurator.get_nodes_list(node_type=NodeType.ICE) is None:
             print("No ice nodes found, waiting")
-            self.communicator.find_nodes()
+            cls.communicator.find_nodes()
 
-        # self.communicator.set_parameters_to_nodes(parameters_dir="default_params")
-        self.stop_message = messages.ESCRPMCommand(command=[0, 0, 0])
-        self.current_prm_command = self.stop_message
-        self.ice_node = self.communicator.configurator.nodes[NodeType.ICE][0]
+        cls.ice_node = cls.communicator.configurator.nodes[NodeType.ICE][0]
 
-        mini_nodes = self.communicator.configurator.nodes[NodeType.MINI]
+        mini_nodes = cls.communicator.configurator.nodes[NodeType.MINI]
         if len(mini_nodes) > 0:
-            self.mini_node = mini_nodes[0]
+            cls.mini_node = mini_nodes[0]
         else:
-            self.mini_node = None
+            cls.mini_node = None
 
-        self.logging_interval_s = logging_interval_s
-        self.last_logging_time = 0
-        self.states: Dict[str, List[str]] = {"ice": {}, "mini": {}}
-        if self.ice_node is None:
+        cls.logging_interval_s = logging_interval_s
+        cls.last_logging_time = 0
+        cls.states: Dict[str, Dict[str, messages.Message]] = {"ice": {}, "mini": {}}
+        if cls.ice_node is None:
             print("No ice nodes found")
 
-    def set_parameters(self, parameters: Dict[str, Any]) -> None:
-        self.communicator.set_parameters_to_nodes(parameters, NodeType.ICE)
+    @classmethod
+    def set_parameters(cls, parameters: Dict[str, Any]) -> None:
+        cls.communicator.set_parameters_to_nodes(parameters, NodeType.ICE)
 
-    def start(self) -> None:
+    @classmethod
+    def start(cls) -> None:
         print("Start")
-        self.current_prm_command = messages.ESCRPMCommand(command=[1000, 1000, 1000])
-        self.communicator.broadcast_message(message=self.current_prm_command, timeout_sec=2.0)
+        cls.current_rpm_command = messages.ESCRPMCommand(command=[1000, 1000, 1000])
+        cls.current_raw_command = messages.ESCRawCommand(command=[1000, 1000, 1000])
+        cls.communicator.broadcast_message(message=cls.current_rpm_command, timeout_sec=2.0)
+        cls.communicator.broadcast_message(message=cls.current_raw_command, timeout_sec=2.0)
 
-    def stop(self) -> None:
+    @classmethod
+    def stop(cls) -> None:
         print("Stop")
-        self.communicator.send_message(message=self.stop_message, node_id=39, timeout_sec=2.0)
+        cls.communicator.send_message(message=cls.stop_message, node_id=39, timeout_sec=2.0)
 
-    async def run(self) -> None:
-        self.communicator.broadcast_message(message=self.current_prm_command)
-        await self.get_states()
+    @classmethod
+    def run(cls) -> None:
+        while True:
+            cls.set_setpoint(RaspberryMqttClient.setpoint_command)
+            cls.communicator.broadcast_message(message=cls.current_rpm_command)
+            cls.communicator.broadcast_message(message=cls.current_raw_command)
+            print(cls.current_raw_command)
+            print(cls.current_rpm_command)
+            cls.get_states()
+            RaspberryMqttClient.publish_state(cls.states)
+            # await asyncio.sleep(0.1)
 
-    def set_rpm(self, rpm: int) -> None:
-        self.current_prm_command = messages.ESCRPMCommand(command=[rpm, rpm, rpm])
+    @classmethod
+    def set_setpoint(cls, rpm: int) -> None:
+        cls.current_raw_command = messages.ESCRawCommand(command=[rpm, rpm, rpm])
+        cls.current_rpm_command = messages.ESCRPMCommand(command=[rpm, rpm, rpm])
 
-    def set_raw_command(self, value: int) -> None:
-        self.current_prm_command = messages.ESCRawCommand(command=[value, value, value])
+    # @classmethod
+    # def reduce_setpoint(cls) -> None:
+    #     curr_raw_cmd = cls.current_raw_command.command[0] - RAWCmdStep
+    #     curr_prm_cmd = cls.current_prm_command.command[0] - RPMCmdStep
+    #     cls.current_raw_command = messages.ESCRawCommand(command=[curr_raw_cmd, curr_raw_cmd, curr_raw_cmd])
+    #     cls.current_prm_command = messages.ESCRPMCommand(command=[curr_prm_cmd, curr_prm_cmd, curr_prm_cmd])
 
-    async def get_states(self):
-        for mess_type in self.ice_node.rx_mes_types:
-            message = self.ice_node.recieve_message(mess_type, timeout_sec=0.03)
+    # @classmethod
+    # def increase_setpoint(cls) -> None:
+    #     curr_raw_cmd = cls.current_raw_command.command[0] + RAWCmdStep
+    #     curr_prm_cmd = cls.current_prm_command.command[0] + RPMCmdStep
+    #     cls.current_raw_command = messages.ESCRawCommand(command=[curr_raw_cmd, curr_raw_cmd, curr_raw_cmd])
+    #     cls.current_prm_command = messages.ESCRPMCommand(command=[curr_prm_cmd, curr_prm_cmd, curr_prm_cmd])
+
+    @classmethod
+    def set_raw_command(cls, value: int) -> None:
+        cls.current_rpm_command = messages.ESCRawCommand(command=[value, value, value])
+
+    @classmethod
+    def get_states(cls):
+        for mess_type in cls.ice_node.rx_mes_types:
+            message = cls.ice_node.recieve_message(mess_type, timeout_sec=0.03)
             if message is not None:
-                self.states["ice"][mess_type.name] = message.to_dict()
+                cls.states["ice"][mess_type.name] = message
 
-        if self.mini_node is None:
+        if cls.mini_node is None:
             return
-        for mess_type in self.mini_node.rx_mes_types:
-            message = self.ice_node.recieve_message(mess_type, timeout_sec=0.03)
+        for mess_type in cls.mini_node.rx_mes_types:
+            message = cls.ice_node.recieve_message(mess_type, timeout_sec=0.03)
             if message is not None:
-                self.states["mini"][mess_type.name] = message.to_dict()
-        # self.states = self.states
+                cls.states["mini"][mess_type.name] = message

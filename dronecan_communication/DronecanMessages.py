@@ -363,7 +363,7 @@ class ESCRPMCommand(Message):
 
     def to_dronecan(self) -> dronecan.uavcan.equipment.esc.RPMCommand:
         return dronecan.uavcan.equipment.esc.RPMCommand(
-            command=self.command
+            rpm=self.command
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -385,7 +385,7 @@ class ESCRawCommand(Message):
         return cls(command)
 
     def to_dronecan(self) -> dronecan.uavcan.equipment.esc.RawCommand:
-        return dronecan.uavcan.equipment.esc.RawCommand(command=self.command)
+        return dronecan.uavcan.equipment.esc.RawCommand(cmd=self.command)
 
     def to_dict(self) -> Dict[str, Any]:
         super().to_dict()

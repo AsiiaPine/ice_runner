@@ -22,21 +22,9 @@ async def main(id: int) -> None:
     load_dotenv()
     RaspberryMqttClient.set_id(id)
     RaspberryMqttClient.connect(id, "localhost", 1883)
-    start()
+    DronecanCommander.connect()
+    await asyncio.gather(start(), DronecanCommander.run())
     # mqtt_client = RaspberryMqttClient(f"raspberry_{id}", os.getenv("SERVER_IP"), 1882)
-    dronecan_commander = DronecanCommander()
-    while True:
-        await dronecan_commander.run()
-        # await dronecan_commander.get_states()
-        RaspberryMqttClient.publish_state(dronecan_commander.states)
-        # print("States", dronecan_commander.states)
-        if RaspberryMqttClient.last_message_receive_time + 2 < time.time():
-            print("RP:\tNo message received for 2 seconds")
-            # RaspberryMqttClient.client.reconnect()
-            dronecan_commander.set_rpm(0)
-        else:
-            if RaspberryMqttClient.setpoint_command is not None:
-                dronecan_commander.set_rpm(RaspberryMqttClient.setpoint_command)
 
 
 if __name__ == "__main__":

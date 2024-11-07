@@ -22,6 +22,7 @@ class NodesCommunicator:
 
     def broadcast_message(self, message: Message, timeout_sec: float = 0.03) -> bool:
         """Send message to all nodes"""
+        print(f"Broadcasting message {message.to_dronecan()}")
         self.configurator.node.publish(message.to_dronecan())
 
     def get_ice_nodes_states(self)-> List[Message]:

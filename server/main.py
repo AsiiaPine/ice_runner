@@ -26,10 +26,10 @@ def start_server() -> None:
                 topic = f"ice_runner/server/raspberry_pi_commander/{rp_id}/command"
                 ServerMqttClient.client.publish(topic, "keep alive").wait_for_publish()
                 ServerMqttClient.analyse_rp_messages(rp_id)
-                # ServerMqttClient.client.publish(f"ice_runner/server/raspberry_pi_commander/{rp_id}/
-                # command", "keep alive").wait_for_publish()
+                ServerMqttClient.publish_rp_configuration(rp_id)
+                ServerMqttClient.control_ice_runner(rp_id)
+
             last_keep_alive = time.time()
-        # ServerMqttClient.client.publish(f"ice_runner/server/raspberry_pi_commander/1/command", "keep alive").wait_for_publish()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
