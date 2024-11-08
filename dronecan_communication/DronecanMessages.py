@@ -553,12 +553,12 @@ class ImuVibrations(Message):
     accel_dominant_magnitude: float|None
     accel_dominant_srn: float|None
     rate_gyro_latest: List[float]|None                 # Latest sample, radian/second
-    rate_gyro_integral: List[float]|None               # Integrated samples, radian/second
+    # rate_gyro_integral: List[float]|None               # Integrated samples, radian/second
 
     accelerometer_latest: List[float]|None             # Latest sample, meter/(second^2)
-    accelerometer_integral: List[float]|None             # Latest sample, meter/(second^2)# Integrated samples, meter/(second^2)
+    # accelerometer_integral: List[float]|None             # Latest sample, meter/(second^2)# Integrated samples, meter/(second^2)
 
-    covariance: float
+    # covariance: float
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.ahrs.RawIMU):
