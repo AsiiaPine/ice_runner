@@ -6,8 +6,7 @@ from typing import Any, Dict, List
 
 from mqtt_client import RaspberryMqttClient
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-from raccoonlab_tools.dronecan.utils import NodeFinder
-
+from raccoonlab_tools.dronecan.utils import NodeFinder, ParametersInterface
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../dronecan_communication')))
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
@@ -35,7 +34,7 @@ class DronecanCommander:
     finder: NodeFinder
     last_report_time = 0
     is_started = False
-    state = Dict[str, Any]
+    state: Dict[str, Any] = {}
     # to_run: bool = 0
     rx_mes_types: list[messages.Message] = [messages.NodeStatus,
                     messages.ICEReciprocatingStatus,
@@ -45,13 +44,24 @@ class DronecanCommander:
                     messages.ESCStatus]
 
     @classmethod
+    def check_engaged_time(cls) -> None:
+        nodes = cls.finder.find_online_nodes(timeout_sec=0.1)
+        if len(cls.finder.node.node.nodes) < 1:
+            print("No nodes found")
+            return
+        for node in nodes:
+            params_interface = ParametersInterface(node.node, target_node_id=node.node_id)
+            params = params_interface.get_all()
+            if "stats.engaged_time" in params.keys():
+                cls.state["engaged_time"] = params["stats.engaged_time"]
+
+    @classmethod
     def connect(cls, logging_interval_s: int = 10) -> None:
         cls.node = DronecanNode()
         cls.finder = NodeFinder(cls.node.node)
         cls.logging_interval_s = logging_interval_s
         cls.last_logging_time = 0
         cls.messages: Dict[str, messages.Message] = {}
-        cls.state = Dict[str, Any] = {}
         cls.start_time = -1
 
     @classmethod
@@ -75,42 +85,36 @@ class DronecanCommander:
 
     @classmethod
     def check_conditions(cls) -> int:
-        # print(cls.states)
-        throttle_ex = False
-        temp_ex = False
-        rpm_ex = False
-        vin_ex = False
-
+        state = {"throttle": False, "temp": False, "rpm": False, "vin": False, "time": False}
+        cls.configuration = RaspberryMqttClient.configuration
         if messages.ICEReciprocatingStatus.name in cls.messages.keys():
             recip_status: messages.ICEReciprocatingStatus = cls.messages[messages.ICEReciprocatingStatus.name]
             # check if conditions are exeeded
-            throttle_ex = cls.configuration.max_gas_throttle < recip_status.engine_load_percent
-            temp_ex = cls.configuration.max_temperature < recip_status.oil_temperature
+            state["throttle"] = cls.configuration.max_gas_throttle < recip_status.engine_load_percent
+            state["temp"] = cls.configuration.max_temperature < recip_status.oil_temperature
 
-            rpm_ex = cls.configuration.rpm < recip_status.engine_speed_rpm
-            vin_ex = cls.configuration.min_vin_voltage < recip_status.oil_pressure
+            state["rpm"] = cls.configuration.rpm < recip_status.engine_speed_rpm
+            state["vin"] = cls.configuration.min_vin_voltage > recip_status.oil_pressure
         else:
             print("No ICE status")
+            cls.stop()
             return -1
         #  TODO: add fuel volume check
         # cls.configuration.min_fuel_volume
-        time_ex = False
+        state["time"] = False
         if cls.start_time > 0:
-            time_ex = cls.configuration.time > time.time() - cls.start_time
+            state["time"] = cls.configuration.time > time.time() - cls.start_time
 
-        vibration_ex = False
+        state["vibration"] = False
         if messages.ImuVibrations.name in cls.messages.keys():
             imu_status: messages.ImuVibrations = cls.messages[messages.ImuVibrations.name]
-            vibration_ex = cls.configuration.max_vibration < imu_status.vibration
+            state["vibration"] = cls.configuration.max_vibration < imu_status.vibration
 
         # Some of the conditions are exeeded
-        if throttle_ex or temp_ex or vibration_ex or time_ex or rpm_ex or vin_ex:
-            conditions = [throttle_ex, temp_ex, vibration_ex, time_ex, rpm_ex, vin_ex]
-            for i in range(len(conditions)):
-                if conditions[i]:
-                    print(f"Real temperature: {recip_status.oil_temperature}, configured temperature: {cls.configuration.max_temperature}")
-                    print(f"Condition {i} is exeeded")
-            return -1
+        for confition, exeeded in state.items():
+            if exeeded:
+                print(f"Condition {confition} is exeeded")
+                return -1
 
         rpm_smaller = recip_status.engine_speed_rpm < cls.configuration.rpm
 
@@ -125,9 +129,9 @@ class DronecanCommander:
     def report(cls) -> None:
         if time.time() - cls.last_report_time > cls.logging_interval_s:
             cls.last_report_time = time.time()
-            logger.info(f"Ice nodes statuses:\n\t{[ice_message.to_dict() for ice_message in cls.messages.values()]}")
-            RaspberryMqttClient.publish_state(cls.messages)
-
+            RaspberryMqttClient.publish_messages(cls.messages)
+            RaspberryMqttClient.publish_state(cls.state)
+            RaspberryMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{RaspberryMqttClient.rp_id}/configuration", str(RaspberryMqttClient.configuration.to_dict()))
 
     @classmethod
     def run(cls) -> None:
@@ -160,6 +164,7 @@ class DronecanCommander:
             cls.node.publish(cls.current_rpm_command.to_dronecan())
             cls.node.publish(cls.current_raw_command.to_dronecan())
             cls.report()
+            RaspberryMqttClient.state = cls.state
             # await asyncio.sleep(0.1)
         cls.run()
 
@@ -209,15 +214,21 @@ class DronecanCommander:
                 continue
             cls.messages[mess_type.name] = mess_type.from_message(message.message)
 
-        cls.state["rpm"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_speed_rpm
-        cls.state["throttle"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_load_percent
-        cls.state["temp"] = cls.messages[messages.ICEReciprocatingStatus.name].oil_temperature
-        cls.state["voltage"] = cls.messages[messages.RawImu.name].rate_gyro_latest[0]
-        cls.state["current"] = cls.messages[messages.RawImu.name].rate_gyro_latest[1]
-        cls.state["fuel_volume"] = cls.messages[messages.FuelTankStatus.name].fuel_consumption_rate_cm3pm
+        if messages.ICEReciprocatingStatus.name in cls.messages.keys():
+            cls.state["rpm"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_speed_rpm
+            cls.state["gas_throttle"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_load_percent
+            cls.state["air_throttle"] = cls.messages[messages.ICEReciprocatingStatus.name].throttle_position_percent
+            cls.state["temp"] = cls.messages[messages.ICEReciprocatingStatus.name].oil_temperature
+            cls.state["voltage"] = cls.messages[messages.ICEReciprocatingStatus.name].oil_pressure
+            cls.state["current"] = cls.messages[messages.ICEReciprocatingStatus.name].intake_manifold_temperature
+            cls.state["state"] = cls.messages[messages.ICEReciprocatingStatus.name].state.value
+        else:
+            print("No ICE status")
+        if messages.FuelTankStatus.name in cls.messages.keys():
+            cls.state["fuel_volume"] = cls.messages[messages.FuelTankStatus.name].fuel_consumption_rate_cm3pm
         if messages.ImuVibrations.name in cls.messages.keys():
             cls.state["vibration"] = cls.messages[messages.ImuVibrations.name].vibration
         # cls.state["time"] = time.time()
+        if "stats.engaged_time" in cls.state.keys():
+            cls.state["engaged_time"]+= time.time() - cls.start_time if cls.start_time > 0 else 0
         cls.state["start_time"] = cls.start_time
-        cls.state["run_time"] = time.time() - cls.start_time
-        cls.state["state"] = cls.messages[messages.ICEReciprocatingStatus.name].state

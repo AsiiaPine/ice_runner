@@ -33,21 +33,26 @@ class BotMqttClient:
 def handle_commander_state(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     BotMqttClient.allocate_data(rp_pi_id)
-    BotMqttClient.rp_states[rp_pi_id] = message.payload.decode()
+    BotMqttClient.rp_states[rp_pi_id] = ast.literal_eval(message.payload.decode())
 
 def handle_commander_stats(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     BotMqttClient.allocate_data(rp_pi_id)
-    BotMqttClient.rp_status[rp_pi_id] = message.payload.decode()
+    state = ast.literal_eval(message.payload.decode())
+    if state is not None:
+        BotMqttClient.rp_status[rp_pi_id] = state
+        # print(f"Bot received message {message.topic}: {state}")
 
 def handle_commander_config(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     BotMqttClient.allocate_data(rp_pi_id)
+    print(f"Bot received message {message.topic}: {message.payload.decode()}")
     BotMqttClient.rp_configuration[rp_pi_id] = ast.literal_eval(message.payload.decode())
 
 async def start() -> None:
     print("start")
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/state", handle_commander_state)
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/stats", handle_commander_stats)
+    BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/config", handle_commander_config)
     BotMqttClient.client.subscribe("ice_runner/server/bot_commander/#")
     BotMqttClient.client.loop_start()

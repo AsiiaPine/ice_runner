@@ -29,9 +29,9 @@ conf_params_description = {
 "report-period":
     {"default": 600, "description": "Период публикации статус сообщения в секундах "},
 "chat-id":
-    {"default": None, "description": "Идентификатор телеграм-чата, с которым бот будет взаимодействовать."},
+    {"default": 0, "description": "Идентификатор телеграм-чата, с которым бот будет взаимодействовать."},
 "time":
-    {"default": None, "description": "Время в секундах, через которое скрипт автоматически закончит свое выполнение"},
+    {"default": 600, "description": "Время в секундах, через которое скрипт автоматически закончит свое выполнение"},
 "max-vibration":
     {"default": 1000, "description": "Максимальный допустимый уровень вибрации"},
 "min-fuel-volume":
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     if args.id is None:
         print("RP:\tNo ID provided, exiting")
         sys.exit(-1)
-    configuration = IceRunnerConfiguration.from_dict(args.__dict__)
+    configuration = IceRunnerConfiguration(args.__dict__)
     DronecanCommander.configuration = configuration
     RaspberryMqttClient.configuration = configuration
     asyncio.run(main(args.id))

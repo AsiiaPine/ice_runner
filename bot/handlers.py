@@ -4,8 +4,8 @@ import re
 import sys
 import os
 import time
-from typing import Any, Dict, List
-from aiogram import Router, Bot, Dispatcher, types, F, html
+from typing import Any, Dict
+from aiogram import Router, Bot, Dispatcher, types, F, html, methods
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
@@ -14,7 +14,7 @@ from aiogram.types import (
 )
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart, Filter, Command, CommandObject
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 import yaml
 from dotenv import load_dotenv
@@ -161,8 +161,8 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
         return
     logging.info("Cancelling state %r", current_state)
     print("Cancelling state", current_state)
-    await state.update_data(Conf.status_state, None)
-    await state.update_data(Conf.conf_state, None)
+    await state.update_data({"status_state": None, "conf_state": None})
+    # await state.update_data(Conf.conf_state, None)
 
     # await state.clear()
     await message.answer(
@@ -218,16 +218,41 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     print(f"Number of connected ICE runners: {len(mqtt_client.rp_status.keys())}")
     for rp_id, status in mqtt_client.rp_status.items():
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
-        mqtt_client.client.publish("ice_runner/bot/usr_cmd/conf", str(rp_id))
-        print(f"\tRaspberry Pi {rp_id} status:\n")
-        await asyncio.sleep(0.1)
-        message_text = f"\# Raspberry Pi {rp_id} status:\n"
-        await message.answer(message_text+f"\t{status}")
-        configuration[rp_id] = mqtt_client.rp_configuration[rp_id]
-        # if rp_id not in configuration.keys():
-            # await message.answer(f"No configuration for Raspberry Pi {rp_id}. Send /conf to configure")
-            # return
-        await message.answer("Current configuration: " + get_configuration_str(configuration[int(rp_id)]))
+        mqtt_client.client.publish("ice_runner/bot/usr_cmd/stats", str(rp_id))
+        mqtt_client.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
+        await asyncio.sleep(0.3)
+        header_str = f"\**Raspberry Pi ID: {rp_id}\**\n\t\**Status:\**\n"
+        status_str = ""
+        for name, value in status.items():
+            status_str += f"\t\t{name}: {value}\n"
+        conf_str = ""
+        if mqtt_client.rp_configuration[int(rp_id)] is None:
+            conf_str = "\t\\**No configuration stored\\**"
+        else:
+            conf_str = "\t\\**Current configuration:\\**\n" + get_configuration_str(mqtt_client.rp_configuration[int(rp_id)])
+        conf_str = f"\t\\**Current configuration:\\**\n" + get_configuration_str(mqtt_client.rp_configuration[int(rp_id)])
+        message_text = (header_str + status_str + conf_str).replace(".", "\.").replace("_", "\\_")
+        res = await message.answer(message_text, parse_mode=ParseMode.MARKDOWN_V2)
+        mes_id = res.message_id
+        prev_time = time.time()
+        report_period = 10
+        if mqtt_client.rp_configuration[int(rp_id)]:
+            report_period = int(mqtt_client.rp_configuration[int(rp_id)]["report_period"]) / 100
+            print(f"Report period {report_period}")
+        while Conf.status_state:
+            if time.time() - prev_time > report_period:
+                print("Updating status")
+                mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
+                mqtt_client.client.publish("ice_runner/bot/usr_cmd/stats", str(rp_id))
+                await asyncio.sleep(0.3)
+
+                status_str = ""
+                for name, value in status.items():
+                    status_str += f"\t\t{name}: {value}\n"
+                message_text = (header_str + status_str + conf_str).replace(".", "\.").replace("_", "\\_")
+                await res.edit_text(message_text, parse_mode=ParseMode.MARKDOWN_V2)
+                # await message.bot.edit_message_text(message_id=mes_id, text=message_text, parse_mode=ParseMode.MARKDOWN_V2)
+                prev_time = time.time()
 
 @dp.message(CommandStart(ignore_case=True))
 async def command_start_handler(message: Message) -> None:

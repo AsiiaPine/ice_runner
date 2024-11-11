@@ -14,24 +14,27 @@ class IceRunnerConfiguration:
     num_cells: int = 3
     setpoint_ch: int = 7
 
-    @classmethod
-    def from_dict(cls, conf: Dict[str, Any]) -> Any:
+    # @classmethod
+    def __init__(self, conf: Dict[str, Any]) -> Any:
         print(conf)
-        cls.rpm = conf["rpm"] if conf["rpm"] else 4500
-        cls.time = conf["time"] if conf["time"] else 0
-        cls.max_temperature = conf["max_temperature"] + 273.15 if conf["max_temperature"] else 463.15  # Kelvin
-        cls.max_gas_throttle = conf["max_gas_throttle"] if conf["max_gas_throttle"] else 0
-        cls.report_period = conf["report_period"] if conf["report_period"] else 600
-        cls.chat_id = conf["chat_id"] if "chat_id" in conf.keys() else 0
-        cls.max_vibration = conf["max_vibration"] if conf["max_vibration"] else 0
-        cls.min_fuel_volume = conf["min_fuel_volume"] if conf["min_fuel_volume"] else 0
+        self.rpm = conf["rpm"] if conf["rpm"] else 4500
+        self.time = conf["time"] if conf["time"] else 0
+        self.max_temperature = conf["max_temperature"] + 273.15 if conf["max_temperature"] else 463.15  # Kelvin
+        self.max_gas_throttle = conf["max_gas_throttle"] if conf["max_gas_throttle"] else 0
+        self.report_period = conf["report_period"] if conf["report_period"] else 600
+        self.chat_id = conf["chat_id"] if conf["chat_id"] else 0
+        self.max_vibration = conf["max_vibration"] if conf["max_vibration"] else 0
+        self.min_fuel_volume = conf["min_fuel_volume"] if conf["min_fuel_volume"] else 0
+        self.min_vin_voltage = 0
         if "min_vin_voltage" in conf.keys():
-            cls.min_vin_voltage = conf["min_vin_voltage"]
+            self.min_vin_voltage = conf["min_vin_voltage"]
         else:
             if "num_cells" in conf.keys():
-                cls.min_vin_voltage = conf["num_cells"] * 3.2
-        return cls
+                self.min_vin_voltage = conf["num_cells"] * 3.2
+        # return cls(rpm, time, max_temperature, max_gas_throttle, report_period, chat_id, max_vibration, min_fuel_volume, min_vin_voltage)
 
     def to_dict(self) -> Dict[str, Any]:
         yaml.emitter.Emitter.prepare_tag = lambda self, tag: ''
-        return yaml.dump(self, default_flow_style=False)
+        string = vars(self)
+        print(string)
+        return vars(self)
