@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 import time
@@ -8,8 +9,21 @@ from paho.mqtt.client import MQTTv311, Client
 import ast
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RPStates
+from dronecan_communication.DronecanMessages import Message
 
 SETPOINT_STEP = 10
+
+def safe_literal_eval(val):
+    try:
+        return ast.literal_eval(val)
+    except ValueError as e:
+        if 'nan' in val:
+            # Replace standalone `nan` occurrences with `math.nan`
+            val_fixed = val.replace('nan', 'math.nan')
+            global_vars = {'math': math}  # Allow use of math namespace
+            return eval(val_fixed, {"__builtins__": None}, global_vars)
+        else:
+            raise e
 
 class RPStatus:
     def __init__(self, id: int, state: int = None) -> None:
@@ -169,12 +183,12 @@ def handle_raspberry_pi_state(client, userdata, msg):
 
 def handle_raspberry_pi_dronecan_message(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
-    message_type = msg.topic.split("/")[4]
+    message_type: Message = msg.topic.split("/")[4]
     if rp_id not in ServerMqttClient.rp_messages.keys():
         ServerMqttClient.rp_messages[rp_id] = {}
     if message_type not in ServerMqttClient.rp_messages[rp_id].keys():
         ServerMqttClient.rp_messages[rp_id][message_type] = {}
-    ServerMqttClient.rp_messages[rp_id][message_type] = ast.literal_eval(msg.payload.decode())
+    ServerMqttClient.rp_messages[rp_id][message_type] = safe_literal_eval(msg.payload.decode())
 
 def handle_raspberry_pi_setpoint(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
