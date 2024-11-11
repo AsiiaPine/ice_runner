@@ -62,11 +62,11 @@ class NodeStatus(Message):
         return cls(uptime_sec, health, mode, sub_mode, vendor_specific_status_code)
 
     def to_dronecan(self) -> dronecan.uavcan.protocol.NodeStatus:
-        return self.dronecan_type(uptime_sec=self.uptime_sec, health=self.health, mode=self.mode, sub_mode=self.sub_mode, vendor_specific_status_code=self.vendor_specific_status_code)
+        return self.dronecan_type(uptime_sec=self.uptime_sec, health=self.health.value, mode=self.mode.value, sub_mode=self.sub_mode, vendor_specific_status_code=self.vendor_specific_status_code)
 
     def to_dict(self) -> Dict[str, Any]:
         super().to_dict()
-        return {"uptime_sec": self.uptime_sec, "health": self.health, "mode": self.mode, "sub_mode": self.sub_mode, "vendor_specific_status_code": self.vendor_specific_status_code}
+        return {"uptime_sec": self.uptime_sec, "health": self.health.value, "mode": self.mode.value, "sub_mode": self.sub_mode, "vendor_specific_status_code": self.vendor_specific_status_code}
 
 @dataclass
 class CylinderStatus(Message):
@@ -125,6 +125,7 @@ class ICEReciprocatingStatus(Message):
         STATE_RUNNING   = 2 # The engine is running normally.
         STATE_FAULT     = 3  # The engine can no longer function.
 
+    # TODO: use flags properly, as mask, not enum
     class Flags(enum.IntEnum):
         FLAG_GENERAL_ERROR = 1, # General error. This flag is required, and it can be used to indicate an error condition that does not fit any of the other flags.
         FLAG_CRANKSHAFT_SENSOR_ERROR_SUPPORTED = 2,
@@ -210,7 +211,7 @@ class ICEReciprocatingStatus(Message):
 
     def to_dronecan(self) -> dronecan.uavcan.equipment.ice.reciprocating.Status:
         return dronecan.uavcan.equipment.ice.reciprocating.Status(
-            state=self.state,
+            state=self.state.value,
             flags=self.flags,
             engine_load_percent=self.engine_load_percent,
             engine_speed_rpm=self.engine_speed_rpm,
@@ -226,12 +227,12 @@ class ICEReciprocatingStatus(Message):
             estimated_consumed_fuel_volume_cm3=self.estimated_consumed_fuel_volume_cm3,
             throttle_position_percent=self.throttle_position_percent,
             ecu_index=self.ecu_index,
-            spark_plug_usage=self.spark_plug_usage,
+            spark_plug_usage=self.spark_plug_usage.value,
             cylinder_status=self.cylinder_status)
 
     def to_dict(self) -> Dict[str, Any]:
         super().to_dict()
-        return {"state": self.state,
+        return {"state": self.state.value,
                 "flags": self.flags,                
                 "engine_load_percent": self.engine_load_percent,
                 "engine_speed_rpm": self.engine_speed_rpm,
@@ -247,7 +248,7 @@ class ICEReciprocatingStatus(Message):
                 "estimated_consumed_fuel_volume_cm3": self.estimated_consumed_fuel_volume_cm3,
                 "throttle_position_percent": self.throttle_position_percent,
                 "ecu_index": self.ecu_index,
-                "spark_plug_usage": self.spark_plug_usage,
+                "spark_plug_usage": self.spark_plug_usage.value,
                 "cylinder_status": [cylinder_status.to_dict() for cylinder_status in self.cylinder_status]}
 
 @dataclass
@@ -362,7 +363,7 @@ class ESCRPMCommand(Message):
 
     def to_dronecan(self) -> dronecan.uavcan.equipment.esc.RPMCommand:
         return dronecan.uavcan.equipment.esc.RPMCommand(
-            command=self.command
+            rpm=self.command
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -384,7 +385,7 @@ class ESCRawCommand(Message):
         return cls(command)
 
     def to_dronecan(self) -> dronecan.uavcan.equipment.esc.RawCommand:
-        return dronecan.uavcan.equipment.esc.RawCommand(command=self.command)
+        return dronecan.uavcan.equipment.esc.RawCommand(cmd=self.command)
 
     def to_dict(self) -> Dict[str, Any]:
         super().to_dict()
@@ -552,12 +553,12 @@ class ImuVibrations(Message):
     accel_dominant_magnitude: float|None
     accel_dominant_srn: float|None
     rate_gyro_latest: List[float]|None                 # Latest sample, radian/second
-    rate_gyro_integral: List[float]|None               # Integrated samples, radian/second
+    # rate_gyro_integral: List[float]|None               # Integrated samples, radian/second
 
     accelerometer_latest: List[float]|None             # Latest sample, meter/(second^2)
-    accelerometer_integral: List[float]|None             # Latest sample, meter/(second^2)# Integrated samples, meter/(second^2)
+    # accelerometer_integral: List[float]|None             # Latest sample, meter/(second^2)# Integrated samples, meter/(second^2)
 
-    covariance: float
+    # covariance: float
 
     @classmethod
     def from_message(cls, msg: dronecan.uavcan.equipment.ahrs.RawIMU):

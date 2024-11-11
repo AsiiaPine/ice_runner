@@ -33,6 +33,14 @@ class NodeInterface:
     rx_mes_types = [DronecanMessages.NodeStatus]
     tx_mes_types = []
 
+    @classmethod
+    def get_rx_mes_types(cls) -> List[DronecanMessages.Message]:
+        return cls.rx_mes_types
+
+    @classmethod
+    def get_tx_mes_types(cls) -> List[DronecanMessages.Message]:
+        return cls.tx_mes_types
+
     def __init__(self, destination_node_id: int, node: DronecanNode|None = None) -> None:
         self.interface_node = node if node is not None else DronecanNode()
         self.node_id = destination_node_id
@@ -130,6 +138,7 @@ class ICENode(NodeInterface):
 
     def __init__(self, destination_node_id: int, node: DronecanNode|None = None):
         super().__init__(destination_node_id=destination_node_id, node=node)
+        self.control_idx = self.parameters["air.cmd"]
 
 class MiniNode(NodeInterface):
     """Class for communication with mini nodes"""
@@ -137,11 +146,12 @@ class MiniNode(NodeInterface):
     unique_param = "pwm.cmd_type"
 
     rx_mes_types = [DronecanMessages.NodeStatus,
-                    DronecanMessages.ActuatorStatus,
+                    # DronecanMessages.ActuatorStatus,
                     DronecanMessages.ESCStatus]
-    tx_mes_types = [DronecanMessages.ActuatorCommand,
-                    DronecanMessages.ArrayCommand,
-                    DronecanMessages.ESCRawCommand]
+    tx_mes_types = []
+    # tx_mes_types = [DronecanMessages.ActuatorCommand,
+    #                 # DronecanMessages.ArrayCommand,
+    #                 DronecanMessages.ESCRawCommand]
 
     class FeedbackTypes(enum.IntEnum):
         DISABLED    = 0,
@@ -157,12 +167,19 @@ class MiniNode(NodeInterface):
         super().__init__(destination_node_id=destination_node_id, node=node)
         self.__get_parameters__()
         self.has_imu = True
+        self.rx_mes_types = self.get_rx_mes_types()
+        self.tx_mes_types = self.get_tx_mes_types()
+        print("Mini id", destination_node_id)
+
         for param in self.parameters.keys():
             if param == 'imu.mode':
                 self.has_imu = True
                 logger.info(f"MiniNode {self.node_id} has IMU")
-                self.tx_mes_types.append(DronecanMessages.RawImu)
-                self.tx_mes_types.append(DronecanMessages.ImuVibrations)
+                # self.tx_mes_types.append(DronecanMessages.RawImu)
+                self.rx_mes_types.append(DronecanMessages.ImuVibrations)
+                self.set_param(Parameter(name="imu.mode", value=16))
+                self._commander.store_persistent_states()
+                self._commander.restart()
                 return
         logger.info(f"MiniNode {self.node_id} does not have IMU")
 

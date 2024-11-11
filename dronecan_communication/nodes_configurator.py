@@ -58,7 +58,7 @@ class NodesConfigurator:
             else:
                 self.nodes[node_type].append(self.node_types[node_type](node_id, node=self.node))
         for node_type in NodeType:
-            print(f"Found {node_type.name} nodes: {len(self.nodes[node_type])}")
+            print(f"Found {node_type.name} nodes: {len(self.nodes[node_type])} ids: {[node.node_id for node in self.nodes[node_type]]}")
         self.node.node.mode = dronecan.uavcan.protocol.NodeStatus().MODE_OPERATIONAL
 
     def get_nodes_list(self, node_type: NodeType| None = None) -> List[MiniNode]|List[ICENode]:
@@ -66,7 +66,7 @@ class NodesConfigurator:
         if node_type is None:
             nodes = []
             for node_type in NodeType:
-                nodes += self.nodes[node_type]
+                nodes.append(self.nodes[node_type])
             return nodes
         if node_type >= NodeType.UNKNOWN.value:
             raise Exception(f"Unknown node type: {node_type}")

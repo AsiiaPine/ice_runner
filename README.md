@@ -35,6 +35,12 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
         ```bash
         python server/main.py
         ```
+2.1 Bot start
+    - Run the script
+
+        ```bash
+        python bot/main.py
+        ```
 
 ## Project structure
 Server is the main controller of the project.

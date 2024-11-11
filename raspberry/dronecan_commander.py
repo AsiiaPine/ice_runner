@@ -1,66 +1,234 @@
-
 import logging
 import os
 import sys
 import time
-from typing import Any, Dict
+from typing import Any, Dict, List
 
+from mqtt_client import RaspberryMqttClient
+from raccoonlab_tools.dronecan.global_node import DronecanNode
+from raccoonlab_tools.dronecan.utils import NodeFinder, ParametersInterface
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../dronecan_communication')))
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from dronecan_communication.nodes_communicator import NodesCommunicator, NodeType
+from common.IceRunnerConfiguration import IceRunnerConfiguration
+from dronecan_communication.nodes_communicator import NodeType
 import dronecan_communication.DronecanMessages as messages
 logger = logging.getLogger(__name__)
 
+CMDChannel = 7
+
+RAWCmdStep = 100
+RPMCmdStep = 100
+
+RPMMax = 6000
+RPMMin = 3000
+
+RAWMax = 6000
+RAWMin = 3000
+
 class DronecanCommander:
-    def __init__(self, logging_interval_s: int = 10) -> None:
-        self.communicator = NodesCommunicator(mes_timeout_sec=2.0)
-        while self.communicator.configurator.get_nodes_list(node_type=NodeType.ICE) is None:
-            print("No ice nodes found, waiting")
-            self.communicator.find_nodes()
+    stop_message = messages.ESCRPMCommand(command=[0]*CMDChannel)
+    current_rpm_command = messages.ESCRPMCommand(command=[0]*CMDChannel)
+    current_raw_command = messages.ESCRawCommand(command=[0]*CMDChannel)
+    configuration: IceRunnerConfiguration
+    node: DronecanNode
+    finder: NodeFinder
+    last_report_time = 0
+    is_started = False
+    state: Dict[str, Any] = {}
+    # to_run: bool = 0
+    rx_mes_types: list[messages.Message] = [messages.NodeStatus,
+                    messages.ICEReciprocatingStatus,
+                    messages.FuelTankStatus,
+                    messages.ActuatorStatus,
+                    messages.ImuVibrations,
+                    messages.ESCStatus]
 
-        # self.communicator.set_parameters_to_nodes(parameters_dir="default_params")
-        self.stop_message = messages.ESCRPMCommand(command=[0, 0, 0])
-        self.current_prm_command = self.stop_message
-        self.ice_node = self.communicator.configurator.get_nodes_list(node_type=NodeType.ICE)[0]
-        self.mini_nodes = self.communicator.configurator.get_nodes_list(node_type=NodeType.MINI)[0]
-        self.logging_interval_s = logging_interval_s
-        self.last_logging_time = 0
-        if self.ice_node is None:
-            print("No ice nodes found")
+    @classmethod
+    def check_engaged_time(cls) -> None:
+        nodes = cls.finder.find_online_nodes(timeout_sec=0.1)
+        if len(cls.finder.node.node.nodes) < 1:
+            print("No nodes found")
+            return
+        for node in nodes:
+            params_interface = ParametersInterface(node.node, target_node_id=node.node_id)
+            params = params_interface.get_all()
+            if "stats.engaged_time" in params.keys():
+                cls.state["engaged_time"] = params["stats.engaged_time"]
 
-    def set_parameters(self, parameters: Dict[str, Any]) -> None:
-        self.communicator.set_parameters_to_nodes(parameters, NodeType.ICE)
+    @classmethod
+    def connect(cls, logging_interval_s: int = 10) -> None:
+        cls.node = DronecanNode()
+        cls.finder = NodeFinder(cls.node.node)
+        cls.logging_interval_s = logging_interval_s
+        cls.last_logging_time = 0
+        cls.messages: Dict[str, messages.Message] = {}
+        cls.start_time = -1
 
-    def start(self) -> None:
+    @classmethod
+    def set_parameters(cls, parameters: Dict[str, Any]) -> None:
+        cls.communicator.set_parameters_to_nodes(parameters, NodeType.ICE)
+
+    @classmethod
+    def start(cls) -> None:
         print("Start")
-        self.current_prm_command = messages.ESCRPMCommand(command=[1000, 1000, 1000])
-        self.communicator.broadcast_message(message=self.current_prm_command, timeout_sec=2.0)
+        cls.start_time = time.time()
 
-    def stop(self) -> None:
+        cls.set_raw_command(RAWMin)
+        cls.set_rpm(RPMMin)
+        cls.node.publish(cls.current_rpm_command.to_dronecan())
+        cls.node.publish(cls.current_raw_command.to_dronecan())
+
+    @classmethod
+    def stop(cls) -> None:
         print("Stop")
-        self.communicator.send_message(message=self.stop_message, node_id=39, timeout_sec=2.0)
+        cls.node.publish(cls.stop_message.to_dronecan())
 
-    def run(self) -> None:
-        self.communicator.broadcast_message(message=self.current_prm_command)
-        ice_messages = self.communicator.get_ice_nodes_states()
-        mini_messages = self.communicator.get_mini_nodes_states()
-        for message in ice_messages:
-            if isinstance(message, messages.NodeStatus):
-                print(f"Ice node status: {message.to_dict()}")
+    @classmethod
+    def check_conditions(cls) -> int:
+        state = {"throttle": False, "temp": False, "rpm": False, "vin": False, "time": False}
+        cls.configuration = RaspberryMqttClient.configuration
+        if messages.ICEReciprocatingStatus.name in cls.messages.keys():
+            recip_status: messages.ICEReciprocatingStatus = cls.messages[messages.ICEReciprocatingStatus.name]
+            # check if conditions are exeeded
+            state["throttle"] = cls.configuration.max_gas_throttle < recip_status.engine_load_percent
+            state["temp"] = cls.configuration.max_temperature < recip_status.oil_temperature
 
-        for message in mini_messages:
-            if isinstance(message, messages.NodeStatus):
-                print(f"Mini node status: {message.to_dict()}")
-        if time.time() - self.last_logging_time > self.logging_interval_s:
-            self.last_logging_time = time.time()
-            logger.info(f"Ice nodes statuses:\n\t{[ice_message.to_dict() for ice_message in ice_messages]}")
-            logger.info(f"Mini nodes statuses:\n\t{[mini_message.to_dict() for mini_message in mini_messages]}")
-            logger.info(f"current PRM command: {self.current_prm_command.to_dict()}")
-        self.ice_messages = ice_messages
-        self.mini_messages = mini_messages
+            state["rpm"] = cls.configuration.rpm < recip_status.engine_speed_rpm
+            state["vin"] = cls.configuration.min_vin_voltage > recip_status.oil_pressure
+        else:
+            print("No ICE status")
+            cls.stop()
+            return -1
+        #  TODO: add fuel volume check
+        # cls.configuration.min_fuel_volume
+        state["time"] = False
+        if cls.start_time > 0:
+            state["time"] = cls.configuration.time > time.time() - cls.start_time
 
-    def set_rpm(self, rpm: int) -> None:
-        self.current_prm_command = messages.ESCRPMCommand(command=[rpm, rpm, rpm])
+        state["vibration"] = False
+        if messages.ImuVibrations.name in cls.messages.keys():
+            imu_status: messages.ImuVibrations = cls.messages[messages.ImuVibrations.name]
+            state["vibration"] = cls.configuration.max_vibration < imu_status.vibration
 
-    def set_raw_command(self, value: int) -> None:
-        self.current_prm_command = messages.ESCRawCommand(command=[value, value, value])
+        # Some of the conditions are exeeded
+        for confition, exeeded in state.items():
+            if exeeded:
+                print(f"Condition {confition} is exeeded")
+                return -1
+
+        rpm_smaller = recip_status.engine_speed_rpm < cls.configuration.rpm
+
+        # RPM is smaller than configured
+        if rpm_smaller:
+            return 1
+
+        # All is ok
+        return 0
+
+    @classmethod
+    def report(cls) -> None:
+        if time.time() - cls.last_report_time > cls.logging_interval_s:
+            cls.last_report_time = time.time()
+            RaspberryMqttClient.publish_messages(cls.messages)
+            RaspberryMqttClient.publish_state(cls.state)
+            RaspberryMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{RaspberryMqttClient.rp_id}/configuration", str(RaspberryMqttClient.configuration.to_dict()))
+
+    @classmethod
+    def run(cls) -> None:
+        if RaspberryMqttClient.to_stop:
+            cls.stop()
+            RaspberryMqttClient.to_stop = 0
+        if RaspberryMqttClient.to_run:
+            if cls.is_started:
+                cls.stop()
+            cls.start()
+            RaspberryMqttClient.to_run = 0
+        to_start = True
+        if to_start:
+            cls.start()
+            cls.is_started = True
+
+        while cls.is_started:
+            cls.get_states()
+            res = cls.check_conditions()
+            if res == -1:
+                cls.reduce_setpoint()
+            elif res == 1:
+                cls.increase_setpoint()
+            if res == 0:
+                print("No conditions are exeeded")
+            if res == -1:
+                print("Conditions are exeeded")
+            if res == 1:
+                print("RPM ", cls.messages[messages.ICEReciprocatingStatus.name].engine_speed_rpm, " is slower then", cls.configuration.rpm)
+            cls.node.publish(cls.current_rpm_command.to_dronecan())
+            cls.node.publish(cls.current_raw_command.to_dronecan())
+            cls.report()
+            RaspberryMqttClient.state = cls.state
+            # await asyncio.sleep(0.1)
+        cls.run()
+
+    @classmethod
+    def set_setpoint(cls, rpm: int) -> None:
+        cls.current_raw_command = messages.ESCRawCommand(command=[rpm]*CMDChannel)
+        cls.current_rpm_command = messages.ESCRPMCommand(command=[rpm]*CMDChannel)
+
+    @classmethod
+    def reduce_setpoint(cls) -> None:
+        curr_prm_cmd = cls.current_rpm_command.command[0]
+        curr_raw_cmd = cls.current_raw_command.command[0]
+        if cls.current_rpm_command.command[0] > RPMMin:
+            curr_prm_cmd -= RPMCmdStep
+        if cls.current_raw_command.command[0] > RAWMin:
+            curr_raw_cmd -= RAWCmdStep
+
+        cls.set_raw_command(curr_raw_cmd)
+        cls.set_rpm(curr_prm_cmd)
+
+    @classmethod
+    def increase_setpoint(cls) -> None:
+        curr_prm_cmd = cls.current_rpm_command.command[0]
+        curr_raw_cmd = cls.current_raw_command.command[0]
+        if cls.current_rpm_command.command[0] < RPMMax:
+            curr_prm_cmd += RPMCmdStep
+
+        if cls.current_raw_command.command[0] < RAWMax:
+            curr_raw_cmd += RAWCmdStep
+
+        cls.set_raw_command(curr_raw_cmd)
+        cls.set_rpm(curr_prm_cmd)
+
+    @classmethod
+    def set_raw_command(cls, value: int) -> None:
+        cls.current_raw_command = messages.ESCRawCommand(command=[value] * CMDChannel)
+
+    @classmethod
+    def set_rpm(cls, value: int) -> None:
+        cls.current_rpm_command = messages.ESCRawCommand(command=[value]*CMDChannel)
+
+    @classmethod
+    def get_states(cls):
+        for mess_type in cls.rx_mes_types:
+            message = cls.node.sub_once(mess_type.dronecan_type)
+            if message is None:
+                continue
+            cls.messages[mess_type.name] = mess_type.from_message(message.message)
+
+        if messages.ICEReciprocatingStatus.name in cls.messages.keys():
+            cls.state["rpm"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_speed_rpm
+            cls.state["gas_throttle"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_load_percent
+            cls.state["air_throttle"] = cls.messages[messages.ICEReciprocatingStatus.name].throttle_position_percent
+            cls.state["temp"] = cls.messages[messages.ICEReciprocatingStatus.name].oil_temperature
+            cls.state["voltage"] = cls.messages[messages.ICEReciprocatingStatus.name].oil_pressure
+            cls.state["current"] = cls.messages[messages.ICEReciprocatingStatus.name].intake_manifold_temperature
+            cls.state["state"] = cls.messages[messages.ICEReciprocatingStatus.name].state.value
+        else:
+            print("No ICE status")
+        if messages.FuelTankStatus.name in cls.messages.keys():
+            cls.state["fuel_volume"] = cls.messages[messages.FuelTankStatus.name].fuel_consumption_rate_cm3pm
+        if messages.ImuVibrations.name in cls.messages.keys():
+            cls.state["vibration"] = cls.messages[messages.ImuVibrations.name].vibration
+        # cls.state["time"] = time.time()
+        if "stats.engaged_time" in cls.state.keys():
+            cls.state["engaged_time"]+= time.time() - cls.start_time if cls.start_time > 0 else 0
+        cls.state["start_time"] = cls.start_time
