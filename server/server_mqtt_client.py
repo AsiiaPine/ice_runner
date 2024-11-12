@@ -8,25 +8,10 @@ from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
 import ast
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.RPStates import RPStates
+from common.RPStates import RPStates, safe_literal_eval
 from dronecan_communication.DronecanMessages import Message
 
 SETPOINT_STEP = 10
-
-def safe_literal_eval(val):
-    try:
-        res = ast.literal_eval(val)
-        return res
-    except ValueError as e:
-        print("val ",val)
-        if 'nan' in val:
-            # Replace standalone `nan` occurrences with `math.nan`
-            val_fixed = val.replace('nan', 'math.nan')
-            val_fixed = val_fixed.replace('null', 'math.nan')
-            global_vars = {'math': math}  # Allow use of math namespace
-            return eval(val_fixed, {"__builtins__": None}, global_vars)
-        else:
-            raise e
 
 class RPStatus:
     def __init__(self, id: int, state: int = None) -> None:
@@ -196,7 +181,7 @@ def handle_raspberry_pi_dronecan_message(client, userdata, msg):
 
 def handle_raspberry_pi_stats(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
-    # print(f"Got stats msg for Raspberry Pi {rp_id}: {msg.payload.decode()}")
+    print(f"Got stats msg for Raspberry Pi {rp_id}: {msg.payload.decode()}")
     ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id]["state"])
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats", str(ServerMqttClient.rp_status[rp_id]))
@@ -247,6 +232,7 @@ def handle_bot_configure(client, userdata, msg):
         ServerMqttClient.rp_configuration[rp_id][name] = value
 
 def handle_bot_config(client, userdata, msg):
+    print("handle_bot_config ", msg.payload.decode())
     rp_id = int(msg.payload.decode())
     print(f"Bot waiting for configuration for Raspberry Pi {rp_id}")
     if rp_id not in ServerMqttClient.rp_configuration.keys():

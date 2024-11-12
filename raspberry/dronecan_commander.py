@@ -12,6 +12,13 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from dronecan_communication.nodes_communicator import NodeType
 import dronecan_communication.DronecanMessages as messages
+
+# # GPIO setup
+# import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
+# GPIO.setwarnings(False) # Ignore warning for now
+# GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
+# GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin 10 to be an input pin and set initial value to be pulled low (off)
+
 logger = logging.getLogger(__name__)
 
 CMDChannel = 7
@@ -34,8 +41,7 @@ class DronecanCommander:
     finder: NodeFinder
     last_report_time = 0
     is_started = False
-    state: Dict[str, Any] = {}
-    # to_run: bool = 0
+    status: Dict[str, Any] = {}
     rx_mes_types: list[messages.Message] = [messages.NodeStatus,
                     messages.ICEReciprocatingStatus,
                     messages.FuelTankStatus,
@@ -53,7 +59,7 @@ class DronecanCommander:
             params_interface = ParametersInterface(node.node, target_node_id=node.node_id)
             params = params_interface.get_all()
             if "stats.engaged_time" in params.keys():
-                cls.state["engaged_time"] = params["stats.engaged_time"]
+                cls.status["engaged_time"] = params["stats.engaged_time"]
 
     @classmethod
     def connect(cls, logging_interval_s: int = 10) -> None:
@@ -82,6 +88,18 @@ class DronecanCommander:
     def stop(cls) -> None:
         print("Stop")
         cls.node.publish(cls.stop_message.to_dronecan())
+
+    @classmethod
+    def prestart_check(cls) -> bool:
+        if messages.ICEReciprocatingStatus.name in cls.messages.keys():
+            recip_status: messages.ICEReciprocatingStatus = cls.messages[messages.ICEReciprocatingStatus.name]
+            if cls.configuration.min_vin_voltage > recip_status.oil_pressure:
+                # TODO: start beep, not enough battery voltage
+                return False
+            return True
+        else:
+            # TODO: start beep, no ICE is connected
+            return False
 
     @classmethod
     def check_conditions(cls) -> int:
@@ -130,11 +148,18 @@ class DronecanCommander:
         if time.time() - cls.last_report_time > cls.logging_interval_s:
             cls.last_report_time = time.time()
             RaspberryMqttClient.publish_messages(cls.messages)
-            RaspberryMqttClient.publish_state(cls.state)
+            RaspberryMqttClient.publish_stats(cls.status)
             RaspberryMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{RaspberryMqttClient.rp_id}/configuration", str(RaspberryMqttClient.configuration.to_dict()))
 
     @classmethod
     def run(cls) -> None:
+        # if GPIO.input(10) == GPIO.HIGH:
+        #     print("Button was pushed!")
+        #     if cls.is_started:
+        #         cls.stop()
+        #     else:
+        #         cls.start()
+
         if RaspberryMqttClient.to_stop:
             cls.stop()
             RaspberryMqttClient.to_stop = 0
@@ -149,24 +174,27 @@ class DronecanCommander:
             cls.is_started = True
 
         while cls.is_started:
-            cls.get_states()
-            res = cls.check_conditions()
-            if res == -1:
-                cls.reduce_setpoint()
-            elif res == 1:
-                cls.increase_setpoint()
-            if res == 0:
-                print("No conditions are exeeded")
-            if res == -1:
-                print("Conditions are exeeded")
-            if res == 1:
-                print("RPM ", cls.messages[messages.ICEReciprocatingStatus.name].engine_speed_rpm, " is slower then", cls.configuration.rpm)
-            cls.node.publish(cls.current_rpm_command.to_dronecan())
-            cls.node.publish(cls.current_raw_command.to_dronecan())
-            cls.report()
-            RaspberryMqttClient.state = cls.state
-            # await asyncio.sleep(0.1)
-        cls.run()
+            try:   
+                cls.get_states()
+                res = cls.check_conditions()
+                if res == -1:
+                    cls.reduce_setpoint()
+                elif res == 1:
+                    cls.increase_setpoint()
+                if res == 0:
+                    print("No conditions are exeeded")
+                if res == -1:
+                    print("Conditions are exeeded")
+                if res == 1:
+                    print("RPM ", cls.messages[messages.ICEReciprocatingStatus.name].engine_speed_rpm, " is slower then", cls.configuration.rpm)
+                cls.node.publish(cls.current_rpm_command.to_dronecan())
+                cls.node.publish(cls.current_raw_command.to_dronecan())
+                cls.report()
+                RaspberryMqttClient.status = cls.status
+                # await asyncio.sleep(0.1)
+            except Exception as e:
+                print(e)
+            cls.run()
 
     @classmethod
     def set_setpoint(cls, rpm: int) -> None:
@@ -215,20 +243,20 @@ class DronecanCommander:
             cls.messages[mess_type.name] = mess_type.from_message(message.message)
 
         if messages.ICEReciprocatingStatus.name in cls.messages.keys():
-            cls.state["rpm"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_speed_rpm
-            cls.state["gas_throttle"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_load_percent
-            cls.state["air_throttle"] = cls.messages[messages.ICEReciprocatingStatus.name].throttle_position_percent
-            cls.state["temp"] = cls.messages[messages.ICEReciprocatingStatus.name].oil_temperature
-            cls.state["voltage"] = cls.messages[messages.ICEReciprocatingStatus.name].oil_pressure
-            cls.state["current"] = cls.messages[messages.ICEReciprocatingStatus.name].intake_manifold_temperature
-            cls.state["state"] = cls.messages[messages.ICEReciprocatingStatus.name].state.value
+            cls.status["rpm"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_speed_rpm
+            cls.status["gas_throttle"] = cls.messages[messages.ICEReciprocatingStatus.name].engine_load_percent
+            cls.status["air_throttle"] = cls.messages[messages.ICEReciprocatingStatus.name].throttle_position_percent
+            cls.status["temp"] = cls.messages[messages.ICEReciprocatingStatus.name].oil_temperature
+            cls.status["voltage"] = cls.messages[messages.ICEReciprocatingStatus.name].oil_pressure
+            cls.status["current"] = cls.messages[messages.ICEReciprocatingStatus.name].intake_manifold_temperature
+            cls.status["state"] = cls.messages[messages.ICEReciprocatingStatus.name].state.value
         else:
             print("No ICE status")
         if messages.FuelTankStatus.name in cls.messages.keys():
-            cls.state["fuel_volume"] = cls.messages[messages.FuelTankStatus.name].fuel_consumption_rate_cm3pm
+            cls.status["fuel_volume"] = cls.messages[messages.FuelTankStatus.name].fuel_consumption_rate_cm3pm
         if messages.ImuVibrations.name in cls.messages.keys():
-            cls.state["vibration"] = cls.messages[messages.ImuVibrations.name].vibration
+            cls.status["vibration"] = cls.messages[messages.ImuVibrations.name].vibration
         # cls.state["time"] = time.time()
-        if "stats.engaged_time" in cls.state.keys():
-            cls.state["engaged_time"]+= time.time() - cls.start_time if cls.start_time > 0 else 0
-        cls.state["start_time"] = cls.start_time
+        if "stats.engaged_time" in cls.status.keys():
+            cls.status["engaged_time"]+= time.time() - cls.start_time if cls.start_time > 0 else 0
+        cls.status["start_time"] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(cls.start_time))

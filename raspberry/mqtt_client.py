@@ -10,7 +10,6 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from dronecan_communication.DronecanMessages import Message
 from common.RPStates import RPStates
-# from dronecan_commander import DronecanCommander
 
 class RaspberryMqttClient:
     client = mqtt.client.Client(client_id="raspberry_0", clean_session=True, userdata=None, protocol=MQTTv311)
@@ -20,6 +19,7 @@ class RaspberryMqttClient:
     to_run: bool = 0
     to_stop: bool = 0
     state = RPStates.WAITING
+    status: Dict[str, Any] = {}
     configuration: IceRunnerConfiguration
     # = IceRunnerConfiguration.from_dict({})
 
@@ -49,9 +49,10 @@ class RaspberryMqttClient:
         # cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/setpoint", cls.setpoint_command)
 
     @classmethod
-    def publish_state(cls, state: Dict[str, Any]) -> None:
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/stats", str(state))
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", state["state"])
+    def publish_stats(cls, status: Dict[str, Any]) -> None:
+        print(f"RP:\t{cls.state}\n{status}")
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/stats", str(status))
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", cls.state)
 
 def handle_command(client, userdata, message):
     print(f"RP:\t{message.topic}: {message.payload.decode()}")
@@ -60,12 +61,10 @@ def handle_command(client, userdata, message):
         print("RP:\tStart")
         RaspberryMqttClient.state = RPStates.STARTING
         RaspberryMqttClient.to_run = 1
-        # DronecanCommander.to_run = 1
     if mes_text == "stop":
         print("RP:\tStop")
         RaspberryMqttClient.state = RPStates.STOPPING
         RaspberryMqttClient.to_stop = 1
-        # DronecanCommander.to_run = 0
 
     if mes_text == "run":
         if RaspberryMqttClient.state < RPStates.STARTING:
@@ -76,7 +75,7 @@ def handle_command(client, userdata, message):
         RaspberryMqttClient.last_message_receive_time = time.time()
 
     if mes_text == "status":
-        RaspberryMqttClient.publish_state(RaspberryMqttClient.state)
+        RaspberryMqttClient.publish_stats(RaspberryMqttClient.status)
 
 def handle_configuration(client, userdata, message):
     print("RP:\tConfiguration")

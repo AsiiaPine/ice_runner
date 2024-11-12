@@ -1,8 +1,10 @@
-import ast
+import os
+import sys
 from typing import Any, Dict
 from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
-
+sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from common.RPStates import RPStates, safe_literal_eval
 
 class BotMqttClient:
     client = Client(client_id="bot", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
@@ -21,33 +23,23 @@ class BotMqttClient:
     def get_client(cls) -> mqtt.client.Client:
         return cls.client
 
-    @classmethod
-    def allocate_data(cls, rp_id: int) -> None:
-        if rp_id in cls.rp_states.keys():
-            cls.rp_states[rp_id] = None
-        if rp_id in cls.rp_status.keys():
-            cls.rp_status[rp_id] = None
-        if rp_id in cls.rp_configuration.keys():
-            cls.rp_configuration[rp_id] = None
-
 def handle_commander_state(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
-    BotMqttClient.allocate_data(rp_pi_id)
-    BotMqttClient.rp_states[rp_pi_id] = ast.literal_eval(message.payload.decode())
+    BotMqttClient.rp_states[rp_pi_id] = safe_literal_eval(message.payload.decode())
+    BotMqttClient.rp_states[rp_pi_id] = RPStates(int(BotMqttClient.rp_states[rp_pi_id]))
 
 def handle_commander_stats(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
-    BotMqttClient.allocate_data(rp_pi_id)
-    state = ast.literal_eval(message.payload.decode())
+    state = safe_literal_eval(message.payload.decode())
     if state is not None:
         BotMqttClient.rp_status[rp_pi_id] = state
         # print(f"Bot received message {message.topic}: {state}")
 
 def handle_commander_config(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
-    BotMqttClient.allocate_data(rp_pi_id)
     print(f"Bot received message {message.topic}: {message.payload.decode()}")
-    BotMqttClient.rp_configuration[rp_pi_id] = ast.literal_eval(message.payload.decode())
+    BotMqttClient.rp_configuration[rp_pi_id] = safe_literal_eval(message.payload.decode())
+
 
 async def start() -> None:
     print("start")
