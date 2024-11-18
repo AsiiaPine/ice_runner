@@ -1,9 +1,11 @@
+from enum import IntEnum
 import logging
 import os
 import sys
 import time
 from typing import Any, Dict, List
 
+from common.RPStates import RPStates
 from mqtt_client import RaspberryMqttClient
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.dronecan.utils import NodeFinder, ParametersInterface
@@ -17,7 +19,7 @@ import dronecan_communication.DronecanMessages as messages
 # import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 # GPIO.setwarnings(False) # Ignore warning for now
 # GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
-# GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin 10 to be an input pin and set initial value to be pulled low (off)
+# GPIO.setup(14, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin 14 to be an input pin and set initial value to be pulled low (off)
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,11 @@ RPMMin = 3000
 RAWMax = 6000
 RAWMin = 3000
 
+class Command(IntEnum):
+    STOP = 0,
+    START = 1,
+    RUN = 2,
+
 class DronecanCommander:
     stop_message = messages.ESCRPMCommand(command=[0]*CMDChannel)
     current_rpm_command = messages.ESCRPMCommand(command=[0]*CMDChannel)
@@ -41,6 +48,7 @@ class DronecanCommander:
     finder: NodeFinder
     last_report_time = 0
     is_started = False
+    ice_status = ICEState()
     status: Dict[str, Any] = {}
     rx_mes_types: list[messages.Message] = [messages.NodeStatus,
                     messages.ICEReciprocatingStatus,
@@ -59,6 +67,7 @@ class DronecanCommander:
             params_interface = ParametersInterface(node.node, target_node_id=node.node_id)
             params = params_interface.get_all()
             if "stats.engaged_time" in params.keys():
+                cls.ice_status.engaged_time = params["stats.engaged_time"]
                 cls.status["engaged_time"] = params["stats.engaged_time"]
 
     @classmethod
@@ -101,55 +110,6 @@ class DronecanCommander:
             # TODO: start beep, no ICE is connected
             return False
 
-    @classmethod
-    def check_conditions(cls) -> int:
-        state = {"throttle": False, "temp": False, "rpm": False, "vin": False, "time": False}
-        cls.configuration = RaspberryMqttClient.configuration
-        if messages.ICEReciprocatingStatus.name in cls.messages.keys():
-            recip_status: messages.ICEReciprocatingStatus = cls.messages[messages.ICEReciprocatingStatus.name]
-            # check if conditions are exeeded
-            state["throttle"] = cls.configuration.max_gas_throttle < recip_status.engine_load_percent
-            state["temp"] = cls.configuration.max_temperature < recip_status.oil_temperature
-
-            state["rpm"] = cls.configuration.rpm < recip_status.engine_speed_rpm
-            state["vin"] = cls.configuration.min_vin_voltage > recip_status.oil_pressure
-        else:
-            print("No ICE status")
-            cls.stop()
-            return -1
-        #  TODO: add fuel volume check
-        # cls.configuration.min_fuel_volume
-        state["time"] = False
-        if cls.start_time > 0:
-            state["time"] = cls.configuration.time > time.time() - cls.start_time
-
-        state["vibration"] = False
-        if messages.ImuVibrations.name in cls.messages.keys():
-            imu_status: messages.ImuVibrations = cls.messages[messages.ImuVibrations.name]
-            state["vibration"] = cls.configuration.max_vibration < imu_status.vibration
-
-        # Some of the conditions are exeeded
-        for confition, exeeded in state.items():
-            if exeeded:
-                print(f"Condition {confition} is exeeded")
-                return -1
-
-        rpm_smaller = recip_status.engine_speed_rpm < cls.configuration.rpm
-
-        # RPM is smaller than configured
-        if rpm_smaller:
-            return 1
-
-        # All is ok
-        return 0
-
-    @classmethod
-    def report(cls) -> None:
-        if time.time() - cls.last_report_time > cls.logging_interval_s:
-            cls.last_report_time = time.time()
-            RaspberryMqttClient.publish_messages(cls.messages)
-            RaspberryMqttClient.publish_stats(cls.status)
-            RaspberryMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{RaspberryMqttClient.rp_id}/configuration", str(RaspberryMqttClient.configuration.to_dict()))
 
     @classmethod
     def run(cls) -> None:
@@ -256,7 +216,83 @@ class DronecanCommander:
             cls.status["fuel_volume"] = cls.messages[messages.FuelTankStatus.name].fuel_consumption_rate_cm3pm
         if messages.ImuVibrations.name in cls.messages.keys():
             cls.status["vibration"] = cls.messages[messages.ImuVibrations.name].vibration
-        # cls.state["time"] = time.time()
         if "stats.engaged_time" in cls.status.keys():
             cls.status["engaged_time"]+= time.time() - cls.start_time if cls.start_time > 0 else 0
         cls.status["start_time"] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(cls.start_time))
+
+
+class ICEState:
+    def __init__(self) -> None:
+        self.is_exceeded = {"throttle": False, "temp": False, "rpm": False, "vin": False, "time": False}
+
+        self.state = RPStates.FAULT
+        self.rpm: int = None
+        self.throttle: int = None
+        self.temp: int = None
+
+        self.gas_throttle: int = None
+        self.air_throttle: int = None
+
+        self.current: float = None
+
+        self.voltage_in: float = None
+        self.voltage_out: float = None
+
+        self.vibration: float = None
+
+        self.engaged_time: float = None
+        self.start_time: int = None
+        self.command: Command = Command.STOP
+
+    def update_with_resiprocating_status(self, status: messages.ICEReciprocatingStatus) -> None:
+        self.state = status.state
+        self.rpm = status.engine_speed_rpm
+        self.gas_throttle = status.engine_load_percent
+        self.air_throttle = status.throttle_position_percent
+        self.temp = status.oil_temperature
+        self.current = status.intake_manifold_temperature
+        self.voltage_out = status.fuel_pressure
+        self.voltage_in = status.oil_pressure
+
+    def update_with_raw_imu(self, status: messages.RawImu) -> None:
+        self.vibrations = status.integration_interval
+
+    def check_conditions(self, configuration: IceRunnerConfiguration) -> int:
+        if messages.ICEReciprocatingStatus.name in DronecanCommander.messages.keys():
+            recip_status: messages.ICEReciprocatingStatus = DronecanCommander.messages[messages.ICEReciprocatingStatus.name]
+            # check if conditions are exeeded
+            self.is_exceeded["throttle"] = configuration.max_gas_throttle < recip_status.engine_load_percent
+            self.is_exceeded["temp"] = configuration.max_temperature < recip_status.oil_temperature
+
+            self.is_exceeded["rpm"] = configuration.rpm < recip_status.engine_speed_rpm
+            self.is_exceeded["vin"] = configuration.min_vin_voltage > recip_status.oil_pressure
+        else:
+            print("No ICE status")
+            self.command = Command.STOP
+            return
+        #  TODO: add fuel volume check
+        # cls.configuration.min_fuel_volume
+        self.is_exceeded["time"] = False
+        if self.start_time > 0:
+            self.is_econfiguration.time > time.time() - self.start_time
+
+        self.is_exceeded["vibration"] = False
+        if messages.ImuVibrations.name in DronecanCommander.messages.keys():
+            imu_status: messages.ImuVibrations = DronecanCommander.messages[messages.ImuVibrations.name]
+            self.is_exceeded["vibration"] = configuration.max_vibration < imu_status.vibration
+
+        # Some of the conditions are exeeded
+        for confition, exeeded in self.is_exceeded.items():
+            if exeeded:
+                print(f"Condition {confition} is exeeded")
+                self.command = Command.STOP
+
+        return configuration.rpm - recip_status.engine_speed_rpm
+
+    @classmethod
+    def report(cls) -> None:
+        if time.time() - cls.last_report_time > cls.logging_interval_s:
+            cls.last_report_time = time.time()
+            RaspberryMqttClient.publish_messages(cls.messages)
+            RaspberryMqttClient.publish_stats(cls.status)
+            RaspberryMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{RaspberryMqttClient.rp_id}/configuration", str(RaspberryMqttClient.configuration.to_dict()))

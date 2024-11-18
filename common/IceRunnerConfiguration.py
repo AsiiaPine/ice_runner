@@ -14,7 +14,6 @@ class IceRunnerConfiguration:
     num_cells: int = 3
     setpoint_ch: int = 7
 
-    # @classmethod
     def __init__(self, conf: Dict[str, Any]) -> Any:
         print(conf)
         self.rpm = conf["rpm"] if conf["rpm"] else 4500

@@ -1,0 +1,1585 @@
+### Message from 39 to All  ts_mono=166109.666266  ts_real=1731916756.448132
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166109.766222  ts_real=1731916756.548087
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0781
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166109.866296  ts_real=1731916756.648163
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166109.966289  ts_real=1731916756.748155
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8867
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.067134  ts_real=1731916756.848999
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8789
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0153
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.167184  ts_real=1731916756.949049
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8867
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.267295  ts_real=1731916757.049161
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.367328  ts_real=1731916757.149194
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.467129  ts_real=1731916757.248995
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.567128  ts_real=1731916757.348993
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.667220  ts_real=1731916757.449085
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.767185  ts_real=1731916757.549051
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.867161  ts_real=1731916757.649026
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0153
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166110.967183  ts_real=1731916757.749051
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.067145  ts_real=1731916757.849010
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.167206  ts_real=1731916757.949071
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.267074  ts_real=1731916758.048939
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.367085  ts_real=1731916758.148951
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.467249  ts_real=1731916758.249115
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.567316  ts_real=1731916758.349182
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.667127  ts_real=1731916758.448993
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0781
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.767454  ts_real=1731916758.549320
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.868181  ts_real=1731916758.650047
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166111.968241  ts_real=1731916758.750107
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8789
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166112.068137  ts_real=1731916758.850003
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166137.181239  ts_real=1731916783.963104
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166137.281230  ts_real=1731916784.063095
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166137.381219  ts_real=1731916784.163084
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.9062
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166137.481316  ts_real=1731916784.263181
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166137.581285  ts_real=1731916784.363151
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166137.682264  ts_real=1731916784.464129
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166137.781300  ts_real=1731916784.563165
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8867
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166137.881268  ts_real=1731916784.663133
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166137.981274  ts_real=1731916784.763140
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0153
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.081272  ts_real=1731916784.863137
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.181217  ts_real=1731916784.963083
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.281286  ts_real=1731916785.063151
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.381246  ts_real=1731916785.163111
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.481200  ts_real=1731916785.263067
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.581224  ts_real=1731916785.363091
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.682262  ts_real=1731916785.464129
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.782262  ts_real=1731916785.564129
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.882306  ts_real=1731916785.664173
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166138.982244  ts_real=1731916785.764111
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.082335  ts_real=1731916785.864201
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0312
+oil_temperature: 623.0000
+fuel_pressure: 0.0153
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.182196  ts_real=1731916785.964061
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0153
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.282253  ts_real=1731916786.064119
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.382230  ts_real=1731916786.164095
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.9062
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.482280  ts_real=1731916786.264146
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.582207  ts_real=1731916786.364073
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.683265  ts_real=1731916786.465131
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.782285  ts_real=1731916786.564151
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.882316  ts_real=1731916786.664181
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8750
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166139.982270  ts_real=1731916786.764135
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8789
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.082162  ts_real=1731916786.864028
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.182230  ts_real=1731916786.964096
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.282210  ts_real=1731916787.064076
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.382230  ts_real=1731916787.164095
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.9023
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.482323  ts_real=1731916787.264189
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.583248  ts_real=1731916787.365113
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0153
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.683252  ts_real=1731916787.465119
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8789
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.783171  ts_real=1731916787.565037
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.883210  ts_real=1731916787.665076
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166140.983203  ts_real=1731916787.765069
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8867
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.083236  ts_real=1731916787.865102
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.183231  ts_real=1731916787.965097
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.283208  ts_real=1731916788.065074
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.383245  ts_real=1731916788.165111
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0781
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.483183  ts_real=1731916788.265054
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.583165  ts_real=1731916788.365034
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.684142  ts_real=1731916788.466008
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.783152  ts_real=1731916788.565020
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.883164  ts_real=1731916788.665030
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166141.983177  ts_real=1731916788.765044
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.083158  ts_real=1731916788.865024
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8789
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.183235  ts_real=1731916788.965101
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8789
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.283142  ts_real=1731916789.065008
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8789
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.384161  ts_real=1731916789.166026
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.484279  ts_real=1731916789.266144
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8984
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.584234  ts_real=1731916789.366099
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8906
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.685180  ts_real=1731916789.467045
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.784123  ts_real=1731916789.565989
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.884274  ts_real=1731916789.666140
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166142.984340  ts_real=1731916789.766208
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8867
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166143.084278  ts_real=1731916789.866144
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8945
+intake_manifold_temperature: 0.0000
+coolant_temperature: 301.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166143.184351  ts_real=1731916789.966218
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8828
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0469
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166143.284189  ts_real=1731916790.066056
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8789
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []### Message from 39 to All  ts_mono=166143.384177  ts_real=1731916790.166044
+state: 0 # STOPPED
+flags: 66841756
+engine_load_percent: 0
+engine_speed_rpm: 0
+spark_dwell_time_ms: 0.0000
+atmospheric_pressure_kpa: 0.0000
+intake_manifold_pressure_kpa: 4.8789
+intake_manifold_temperature: 0.0000
+coolant_temperature: 302.0000
+oil_pressure: 5.0625
+oil_temperature: 623.0000
+fuel_pressure: 0.0000
+fuel_consumption_rate_cm3pm: 0.000000
+estimated_consumed_fuel_volume_cm3: 0.000000
+throttle_position_percent: 100
+ecu_index: 7
+spark_plug_usage: 0
+cylinder_status: []

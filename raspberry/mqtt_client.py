@@ -21,7 +21,6 @@ class RaspberryMqttClient:
     state = RPStates.WAITING
     status: Dict[str, Any] = {}
     configuration: IceRunnerConfiguration
-    # = IceRunnerConfiguration.from_dict({})
 
     @classmethod
     def get_client(cls) -> mqtt.client.Client:

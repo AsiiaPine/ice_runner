@@ -59,6 +59,8 @@ commands_discription : Dict[str, str] = {
     "/conf": "Начать процесс настройки параметров\. После нажатия кнопки бот отправит сообщение с текущей конфигурацией и ждет в ответе новые параметры в формате \-\-имя значение\. Используйте комманду /cancel чтобы отменить конфигурирование и оставить старые параметры/\nStarts configuration process, after call you have specify configuration parameters in format \-\-name value\. Use /cancel to cancel the action\n",
     "/cancel": "Отменить последнее действие/\nCancel any action\n"}
 
+state_emoji = {"STOPPED": "🛑", "RUNNING": "🚀", "WAITING": "⏳"}
+
 rp_id = None
 
 configuration: Dict[int, Dict[str, Any]] = {}
@@ -94,7 +96,7 @@ async def get_rp_status(rp_id: int) -> Dict[str, Any]:
     if rp_id not in mqtt_client.rp_status.keys():
         return "\tNo status from the node\n"
     status = mqtt_client.rp_status[rp_id]
-    status_str = "\t\tState: " + RPStates(status["state"]).name + '<span style\="color:blue">some *blue* text</span>\n'
+    status_str = "\t\tState: " + RPStates(status["state"]).name + state_emoji[RPStates(status["state"]).name] + '\n'
     for name, value in status.items():
         status_str += f"\t\t{name}: {value}\n"
     return status_str
@@ -277,21 +279,22 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
     await asyncio.sleep(0.3)
 
-    header_str = f"\**Raspberry Pi ID: {rp_id}\**\n\t\**Status:\**\n"
+    header_str = fr"<b>Raspberry Pi ID: {rp_id}</b>\n\t<b>Status:</b>\n"
     status_str = await get_rp_status(rp_id)
     conf_str = ""
 
     if rp_id not in mqtt_client.rp_configuration.keys():
+        conf_str = "\tNo configuration stored"
         conf_str = "\t\\**No configuration stored\\**"
     else:
         conf_result = get_configuration_str(mqtt_client.rp_configuration[int(rp_id)])
         if conf_result:
-            conf_str = "\t\\**Current configuration:\\**\n" + conf_result
+            conf_str = "\t\\*\\*Current configuration:\\*\\*\n" + conf_result
             if "report_period" in mqtt_client.rp_configuration[int(rp_id)].keys():
                 report_period = int(mqtt_client.rp_configuration[int(rp_id)]["report_period"]) / 100
 
     message_text = (header_str + status_str + conf_str).replace(".", "\.").replace("_", "\\_").replace("-", "\\-")
-    res = await message.answer(message_text, parse_mode=ParseMode.MARKDOWN_V2)
+    res = await message.answer(message_text, parse_mode=ParseMode.HTML)
     prev_time = time.time()
     while Conf.status_state:
         if time.time() - prev_time > report_period:
@@ -300,7 +303,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
             mqtt_client.client.publish("ice_runner/bot/usr_cmd/stats", str(rp_id))
             await asyncio.sleep(0.3)
             status_str = await get_rp_status(rp_id)
-            message_text = (header_str + status_str + conf_str).replace(".", "\.").replace("_", "\\_")
+            message_text = (header_str + status_str + conf_str + f"update_time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}").replace(".", "\.").replace("_", "\\_").replace("-", "\\-")
             await res.edit_text(message_text, parse_mode=ParseMode.MARKDOWN_V2)
             prev_time = time.time()
 

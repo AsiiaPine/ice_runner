@@ -37,19 +37,6 @@ class RPStatus:
         yaml.emitter.Emitter.prepare_tag = lambda self, tag: ''
         return yaml.dump(self, default_flow_style=False)
 
-    def update_with_resiprocating_status(self, status: Dict[str, Any]) -> None:
-        self.state = status["state"]
-        self.rpm = status["engine_speed_rpm"]
-        self.gas_throttle = status["engine_load_percent"]
-        self.air_throttle = status["throttle_position_percent"]
-        self.temperature = status["oil_temperature"]
-        self.current = status["intake_manifold_temperature"]
-        self.voltage_out = status["fuel_pressure"]
-        self.run_time = time.time() - self.start_time
-
-    def update_with_raw_imu(self, status: Dict[str, Any]) -> None:
-        self.vibrations = status["integration_interval"]
-
 class IceRunnerConfiguration:
     rpm: int = 4500
     time: int = 0
@@ -97,51 +84,6 @@ class ServerMqttClient:
     @classmethod
     def get_client(cls) -> mqtt.client.Client:
         return cls.client
-
-    # @classmethod
-    # def analyse_rp_messages(cls, rp_id: int) -> None:
-    #     stats = cls.rp_status[rp_id]
-
-    #     for topic in ServerMqttClient.rp_messages[rp_id].keys():
-    #         sub_topic_mes = ServerMqttClient.rp_messages[rp_id][topic]
-    #         if topic == "setpoint":
-    #             ServerMqttClient.rp_cur_setpoint[rp_id] = int(sub_topic_mes)
-    #         elif topic == "state":
-    #             stats.state = int(sub_topic_mes)
-    #             cls.client.publish(f"ice_runner/bot_commander/rp_states/{rp_id}/state", stats.state)
-    #         if topic == "dronecan":
-    #             for dronecan_type in sub_topic_mes.keys():
-    #                 dronecan_message = sub_topic_mes[dronecan_type]
-    #                 if dronecan_type == "uavcan.equipment.ice.reciprocating.Status":
-    #                     stats.update_with_resiprocating_status(dronecan_message)
-    #                 if dronecan_type == "uavcan.equipment.ahrs.RawIMU":
-    #                     stats.update_with_raw_imu(dronecan_message)
-
-    #     topic = f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats"
-    #     cls.client.publish(topic, stats).wait_for_publish()
-
-    # @classmethod
-    # def control_ice_runner(cls, rp_id: int) -> None:
-    #     if rp_id not in cls.rp_setpoint.keys():
-    #         cls.rp_setpoint[rp_id] = 0
-    #     # throttle_ex = cls.rp_configuration[rp_id].max_gas_throttle < cls.rp_status[rp_id].gas_throttle
-    #     # temp_ex = cls.rp_configuration[rp_id].max_temperature < cls.rp_status[rp_id].temperature
-    #     # vibration_ex = cls.rp_configuration[rp_id].max_vibration < cls.rp_status[rp_id].vibrations
-    #     # time_ex = cls.rp_configuration[rp_id].time < cls.rp_status[rp_id].run_time
-    #     # if throttle_ex or temp_ex or vibration_ex or time_ex:
-    #     #     cls.rp_setpoint[rp_id] = 0
-
-    #     elif cls.rp_status[rp_id].state == RPStates.RUNNING.value:
-    #         if cls.rp_status[rp_id].rpm < cls.rp_configuration[rp_id].rpm:
-    #             cls.rp_setpoint[rp_id] = cls.rp_cur_setpoint[rp_id] + SETPOINT_STEP
-
-    #         elif cls.rp_status[rp_id].rpm > cls.rp_configuration[rp_id].rpm:
-    #             cls.rp_setpoint[rp_id] = cls.rp_cur_setpoint[rp_id] - SETPOINT_STEP
-
-    #     command = f"{cls.rp_setpoint[rp_id]}"
-    #     print(f"Sending command {command} to Raspberry Pi {rp_id}")
-    #     topic = f"ice_runner/server/raspberry_pi_commander/{rp_id}/setpoint"
-    #     cls.client.publish(topic, command).wait_for_publish()
 
     @classmethod
     def publish_rp_state(cls, rp_id: int) -> None:
