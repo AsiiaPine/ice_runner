@@ -3,9 +3,9 @@ from os import path
 import yaml
 
 # disable existing modules
-for name, logger in logging.root.manager.loggerDict.items():
-    logger.disabled=True
-    logger.propagate=False
+# for name, logger in logging.root.manager.loggerDict.items():
+#     logger.disabled=True
+#     logger.propagate=False
 
 # open the file in read mode
 log_conf_file = None

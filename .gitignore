@@ -2,3 +2,4 @@ __*
 *.env
 *.log*
 lats_config.yml
+*.txt

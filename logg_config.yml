@@ -20,26 +20,10 @@ loggers:
   root:
     level: DEBUG
     handlers: [fileHandler, consoleHandler]
-  DronecanMessages:
-    level: DEBUG
-    handlers: [fileHandler]
-    propagate: 0
-  nodes_types:
-    level: DEBUG
-    handlers: [fileHandler]
-    propagate: 0
-  nodes_configurator:
-    level: DEBUG
-    handlers: [fileHandler]
-    propagate: 0
-  communication_with_nodes:
-    level: DEBUG
-    handlers: [fileHandler]
-    propagate: 0
-  dronecan_commander:
+  ice_commander:
     level: DEBUG
     handlers: [rawMessageHandler]
-    propagate: 0
+    propagate: 1
 
 # Root logger should be specified if common settings are needed
 root:

@@ -3,10 +3,12 @@ from enum import IntEnum
 import math
 
 class RPStates(IntEnum):
-    STOPPED  = 0
-    RUNNING  = 1
-    WAITING  = 2
-    FAULT    = 3
+    NOT_CONNECTED = -1
+    RUNNING  = 0
+    STARTING = 1
+    STOPPED  = 2
+    STOPPING = 3
+    FAULT    = 4
 
 def safe_literal_eval(val):
     try:
