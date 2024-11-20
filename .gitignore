@@ -1,4 +1,5 @@
 __*
 *.env
 *.log*
-last_config.yml
+lats_config.yml
+*.txt

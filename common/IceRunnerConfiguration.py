@@ -13,6 +13,7 @@ class IceRunnerConfiguration:
     chat_id: int = 0
     num_cells: int = 3
     setpoint_ch: int = 7
+    mode: int = 0
 
     # @classmethod
     def __init__(self, conf: Dict[str, Any]) -> Any:
@@ -31,10 +32,7 @@ class IceRunnerConfiguration:
         else:
             if "num_cells" in conf.keys():
                 self.min_vin_voltage = conf["num_cells"] * 3.2
-        # return cls(rpm, time, max_temperature, max_gas_throttle, report_period, chat_id, max_vibration, min_fuel_volume, min_vin_voltage)
+        self.mode = conf["mode"] if "mode" in conf.keys() else 0
 
     def to_dict(self) -> Dict[str, Any]:
-        yaml.emitter.Emitter.prepare_tag = lambda self, tag: ''
-        string = vars(self)
-        print(string)
         return vars(self)

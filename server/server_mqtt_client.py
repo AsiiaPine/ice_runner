@@ -8,25 +8,10 @@ from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
 import ast
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.RPStates import RPStates
+from common.RPStates import RPStates, safe_literal_eval
 from dronecan_communication.DronecanMessages import Message
 
 SETPOINT_STEP = 10
-
-def safe_literal_eval(val):
-    try:
-        res = ast.literal_eval(val)
-        return res
-    except ValueError as e:
-        print("val ",val)
-        if 'nan' in val:
-            # Replace standalone `nan` occurrences with `math.nan`
-            val_fixed = val.replace('nan', 'math.nan')
-            val_fixed = val_fixed.replace('null', 'math.nan')
-            global_vars = {'math': math}  # Allow use of math namespace
-            return eval(val_fixed, {"__builtins__": None}, global_vars)
-        else:
-            raise e
 
 class RPStatus:
     def __init__(self, id: int, state: int = None) -> None:
@@ -113,51 +98,6 @@ class ServerMqttClient:
     def get_client(cls) -> mqtt.client.Client:
         return cls.client
 
-    # @classmethod
-    # def analyse_rp_messages(cls, rp_id: int) -> None:
-    #     stats = cls.rp_status[rp_id]
-
-    #     for topic in ServerMqttClient.rp_messages[rp_id].keys():
-    #         sub_topic_mes = ServerMqttClient.rp_messages[rp_id][topic]
-    #         if topic == "setpoint":
-    #             ServerMqttClient.rp_cur_setpoint[rp_id] = int(sub_topic_mes)
-    #         elif topic == "state":
-    #             stats.state = int(sub_topic_mes)
-    #             cls.client.publish(f"ice_runner/bot_commander/rp_states/{rp_id}/state", stats.state)
-    #         if topic == "dronecan":
-    #             for dronecan_type in sub_topic_mes.keys():
-    #                 dronecan_message = sub_topic_mes[dronecan_type]
-    #                 if dronecan_type == "uavcan.equipment.ice.reciprocating.Status":
-    #                     stats.update_with_resiprocating_status(dronecan_message)
-    #                 if dronecan_type == "uavcan.equipment.ahrs.RawIMU":
-    #                     stats.update_with_raw_imu(dronecan_message)
-
-    #     topic = f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats"
-    #     cls.client.publish(topic, stats).wait_for_publish()
-
-    # @classmethod
-    # def control_ice_runner(cls, rp_id: int) -> None:
-    #     if rp_id not in cls.rp_setpoint.keys():
-    #         cls.rp_setpoint[rp_id] = 0
-    #     # throttle_ex = cls.rp_configuration[rp_id].max_gas_throttle < cls.rp_status[rp_id].gas_throttle
-    #     # temp_ex = cls.rp_configuration[rp_id].max_temperature < cls.rp_status[rp_id].temperature
-    #     # vibration_ex = cls.rp_configuration[rp_id].max_vibration < cls.rp_status[rp_id].vibrations
-    #     # time_ex = cls.rp_configuration[rp_id].time < cls.rp_status[rp_id].run_time
-    #     # if throttle_ex or temp_ex or vibration_ex or time_ex:
-    #     #     cls.rp_setpoint[rp_id] = 0
-
-    #     elif cls.rp_status[rp_id].state == RPStates.RUNNING.value:
-    #         if cls.rp_status[rp_id].rpm < cls.rp_configuration[rp_id].rpm:
-    #             cls.rp_setpoint[rp_id] = cls.rp_cur_setpoint[rp_id] + SETPOINT_STEP
-
-    #         elif cls.rp_status[rp_id].rpm > cls.rp_configuration[rp_id].rpm:
-    #             cls.rp_setpoint[rp_id] = cls.rp_cur_setpoint[rp_id] - SETPOINT_STEP
-
-    #     command = f"{cls.rp_setpoint[rp_id]}"
-    #     print(f"Sending command {command} to Raspberry Pi {rp_id}")
-    #     topic = f"ice_runner/server/raspberry_pi_commander/{rp_id}/setpoint"
-    #     cls.client.publish(topic, command).wait_for_publish()
-
     @classmethod
     def publish_rp_state(cls, rp_id: int) -> None:
         if rp_id not in cls.rp_status.keys():
@@ -182,12 +122,13 @@ class ServerMqttClient:
 
 def handle_raspberry_pi_dronecan_message(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
+    print(f"Got dronecan msg for Raspberry Pi {rp_id}: {msg.payload.decode()}")
     message_type: Message = msg.topic.split("/")[4]
     if rp_id not in ServerMqttClient.rp_messages.keys():
         ServerMqttClient.rp_messages[rp_id] = {}
     if message_type not in ServerMqttClient.rp_messages[rp_id].keys():
         ServerMqttClient.rp_messages[rp_id][message_type] = {}
-    ServerMqttClient.rp_messages[rp_id][message_type] = safe_literal_eval(msg.payload.decode())
+    ServerMqttClient.rp_messages[rp_id][message_type] = yaml.safe_load(msg.payload.decode())
 
 # def handle_raspberry_pi_setpoint(client, userdata, msg):
 #     rp_id = int(msg.topic.split("/")[2])
@@ -196,7 +137,7 @@ def handle_raspberry_pi_dronecan_message(client, userdata, msg):
 
 def handle_raspberry_pi_stats(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
-    # print(f"Got stats msg for Raspberry Pi {rp_id}: {msg.payload.decode()}")
+    print(f"Got stats msg for Raspberry Pi {rp_id}: {msg.payload.decode()}")
     ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id]["state"])
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats", str(ServerMqttClient.rp_status[rp_id]))
@@ -247,6 +188,7 @@ def handle_bot_configure(client, userdata, msg):
         ServerMqttClient.rp_configuration[rp_id][name] = value
 
 def handle_bot_config(client, userdata, msg):
+    print("handle_bot_config ", msg.payload.decode())
     rp_id = int(msg.payload.decode())
     print(f"Bot waiting for configuration for Raspberry Pi {rp_id}")
     if rp_id not in ServerMqttClient.rp_configuration.keys():
