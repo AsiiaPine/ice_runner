@@ -33,7 +33,7 @@ def handle_commander_stats(client, userdata, message):
     state = safe_literal_eval(message.payload.decode())
     if state is not None:
         BotMqttClient.rp_status[rp_pi_id] = state
-        # print(f"Bot received message {message.topic}: {state}")
+        print(f"Bot received message {message.topic}: {state}")
 
 def handle_commander_config(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])

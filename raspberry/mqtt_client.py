@@ -31,6 +31,7 @@ class RaspberryMqttClient:
         cls.is_connected = False
         cls.rp_id = rp_id
         cls.client = Client(client_id=f"raspberry_{rp_id}", clean_session=True, protocol=MQTTv311, reconnect_on_failure=True)
+        print(f"RP:\tConnecting to {server_ip}:{port}")
         cls.client.connect(server_ip, port, 60)
         cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", RPStates.STOPPED.value)
         print(f"ice_runner/raspberry_pi/{rp_id}/state")

@@ -15,9 +15,11 @@ configuration: Dict[str, Any] = {}
 connected_nodes = {'ice': [], 'mini': []}
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
+SERVER_IP = os.getenv("SERVER_IP")
+SERVER_PORT = int(os.getenv("SERVER_PORT"))
 
 def start_server() -> None:
-    ServerMqttClient.connect("localhost", 1883)
+    ServerMqttClient.connect(SERVER_IP, SERVER_PORT)
     start()
     last_keep_alive = time.time()
     while True:

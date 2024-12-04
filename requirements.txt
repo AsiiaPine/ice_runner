@@ -1,15 +1,20 @@
-raccoonlab-tools
 # common
+netifaces
+paho-mqtt
 pyserial
 python-can == 4.3
 pytest
+python-dotenv
 
 # dronecan related
 pydronecan
+raccoonlab-tools
 
 # cyphal related
 pycyphal
-pytest-asyncio
 yakut
+
+pytest-asyncio
+# bot
 pyTelegramBotAPI
 aiogram<3.0
