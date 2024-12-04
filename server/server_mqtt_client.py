@@ -9,7 +9,6 @@ from paho.mqtt.client import MQTTv311, Client
 import ast
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RPStates, safe_literal_eval
-from dronecan_communication.DronecanMessages import Message
 
 SETPOINT_STEP = 10
 
@@ -104,6 +103,8 @@ class ServerMqttClient:
             print(f"No status for Raspberry Pi {rp_id}")
             return
         print("publishing rp state")
+        if cls.rp_status[rp_id] is None:
+            return
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", cls.rp_status[rp_id]["state"])
 
     @classmethod
@@ -123,7 +124,7 @@ class ServerMqttClient:
 def handle_raspberry_pi_dronecan_message(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
     print(f"Got dronecan msg for Raspberry Pi {rp_id}: {msg.payload.decode()}")
-    message_type: Message = msg.topic.split("/")[4]
+    message_type: str = msg.topic.split("/")[4]
     if rp_id not in ServerMqttClient.rp_messages.keys():
         ServerMqttClient.rp_messages[rp_id] = {}
     if message_type not in ServerMqttClient.rp_messages[rp_id].keys():
@@ -141,6 +142,8 @@ def handle_raspberry_pi_stats(client, userdata, msg):
     ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id]["state"])
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats", str(ServerMqttClient.rp_status[rp_id]))
+    ServerMqttClient.rp_status[rp_id] = None
+
 
 def handle_raspberry_pi_configuration(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])

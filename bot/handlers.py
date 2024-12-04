@@ -302,6 +302,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
             message_text = (header_str + status_str + conf_str)
             await res.edit_text(message_text, parse_mode=ParseMode.HTML)
             prev_time = time.time()
+        await asyncio.sleep(1)
 
 # @dp.message(Command(commands=["start", "запустить"], ignore_case=True))
 # async def command_start_handler(message: Message) -> None:

@@ -23,7 +23,7 @@ loggers:
   ice_commander:
     level: DEBUG
     handlers: [rawMessageHandler]
-    propagate: 1
+    propagate: 0
 
 # Root logger should be specified if common settings are needed
 root:
