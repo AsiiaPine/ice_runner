@@ -4,10 +4,10 @@ import logging
 import os
 from pathlib import Path
 import sys
-
+import datetime
 from dotenv import load_dotenv
-import dronecan
 from mqtt_client import RaspberryMqttClient, start
+import subprocess
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../dronecan_communication')))
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -43,23 +43,13 @@ conf_params_description = {
     {"default": 0, "help": "Команда на N оборотов (RPMCommand) без ПИД-регулятора"}
 }
 
-def msg_handler(msg: dronecan.node.TransferEvent) -> None:
-    with open("test.txt", "a") as myfile:
-        myfile.write(dronecan.to_yaml(msg))
-
-def dump_can_messages(node: dronecan.node.Node) -> None:
-    node_monitor = dronecan.app.node_monitor.NodeMonitor(node)
-    # callback for printing all messages in human-readable YAML format.
-    # node.add_handler(None, lambda msg: print(dronecan.to_yaml(msg)))
-    node.add_handler(None, msg_handler)
-
 async def main(id: int) -> None:
     print(f"RP:\tStarting raspberry {id}")
     os.environ.clear()
     dotenv_path = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env')))
     print(dotenv_path)
     load_dotenv(dotenv_path, verbose=True)
-
+    subprocess.run(["candump", "can0", ">", f"candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"])
     print(os.environ.values())
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
