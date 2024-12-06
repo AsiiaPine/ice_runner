@@ -49,7 +49,7 @@ async def main(id: int) -> None:
     dotenv_path = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env')))
     print(dotenv_path)
     load_dotenv(dotenv_path, verbose=True)
-    subprocess.run(["candump", "can0", ">", f"candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"])
+    # subprocess.run(["candump", "can0", ">", f"candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"])
     print(os.environ.values())
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))

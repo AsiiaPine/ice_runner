@@ -197,8 +197,8 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     await message.answer("Конфигурация обкатки: " + get_configuration_str(rp_id))
     await message.answer(f"Отправьте /cancel или /отмена чтобы отменить запуск обкатки. После запуска отправьте /stop или /стоп чтобы остановить ее")
     i = 0
-    while i < 3:
-        await message.answer(f"Запуск через {3-i}")
+    while i < 10:
+        await message.answer(f"Запуск через {10-i}")
         i += 1
         time.sleep(1)
     await message.answer(f"Запущено")

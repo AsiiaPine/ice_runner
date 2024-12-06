@@ -108,7 +108,7 @@ class DronecanCommander:
         cls.prev_broadcast_time = 0
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
-    
+
     def dump_msg(msg: dronecan.node.TransferEvent) -> None:
         with open("test.txt", "a") as myfile:
             myfile.write(dronecan.to_yaml(msg))
@@ -217,6 +217,8 @@ class ICECommander:
               eng_time_ex = state.engaged_time > 40 * 60 * 60
               if eng_time_ex:
                   print(f"Engaged time {state.engaged_time} is exeeded")
+            if self.flags.vin_ex or self.flags.temp_ex or eng_time_ex:
+                print(f"Flags: {self.flags.vin_ex} {self.flags.temp_ex} {eng_time_ex}")
             return sum([self.flags.vin_ex, self.flags.temp_ex,eng_time_ex])
 
         self.flags.throttle_ex = self.configuration.max_gas_throttle < state.throttle
@@ -225,6 +227,8 @@ class ICECommander:
         self.flags.time_ex = self.start_time > 0 and self.configuration.time > time.time() - self.start_time
         self.flags.vibration_ex = self.dronecan_commander.has_imu and self.configuration.max_vibration < state.vibration
         flags_attr = vars(self.flags)
+        if self.flags.vibration_ex or self.flags.time_ex or self.flags.rpm_ex or self.flags.throttle_ex or self.flags.temp_ex:
+            print(f"Flags: {self.flags.vibration_ex} {self.flags.time_ex} {self.flags.rpm_ex} {self.flags.throttle_ex} {self.flags.temp_ex}")
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
