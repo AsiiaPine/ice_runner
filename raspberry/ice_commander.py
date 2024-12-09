@@ -206,7 +206,7 @@ class ICECommander:
             self.rp_state = RPStates.NOT_CONNECTED
             print("ice not connected")
             return 0
-
+        print("ice connected")
         if self.start_time <= 0 or state.ice_state > RPStates.STARTING:
             self.flags.vin_ex = self.configuration.min_vin_voltage > state.voltage_in
             self.flags.temp_ex = self.configuration.max_temperature < state.temp
@@ -296,4 +296,5 @@ class ICECommander:
             RaspberryMqttClient.to_stop = 0
         if RaspberryMqttClient.to_run:
             self.rp_state = RPStates.STARTING if self.rp_state > RPStates.STARTING else self.rp_state
+            print("RaspberryPi.to_run, state: " + str(self.rp_state))
             RaspberryMqttClient.to_run = 0

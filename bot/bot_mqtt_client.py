@@ -17,7 +17,6 @@ class BotMqttClient:
         cls.client = Client(client_id="bot", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
         cls.client.connect(server_ip, port, 60)
         cls.client.publish("ice_runner/bot", "ready")
-        print("BotMqttClient connected")
 
     @classmethod
     def get_client(cls) -> mqtt.client.Client:
@@ -33,12 +32,9 @@ def handle_commander_stats(client, userdata, message):
     state = safe_literal_eval(message.payload.decode())
     if state is not None:
         BotMqttClient.rp_status[rp_pi_id] = state
-        print(f"Bot received message {message.topic}: {state}")
 
 def handle_commander_config(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
-    print(f"Bot received message {message.topic}: {message.payload.decode()}")
-    BotMqttClient.rp_configuration[rp_pi_id] = safe_literal_eval(message.payload.decode())
 
 
 async def start() -> None:

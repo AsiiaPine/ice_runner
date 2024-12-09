@@ -76,8 +76,11 @@ def get_configuration_from_file(path: str) -> None:
         configuration = yaml.safe_load(file)
 
 def get_configuration_str(rp_id: int) -> str:
+    if rp_id not in mqtt_client.rp_configuration.keys():
+        return "No configuration for Raspberry Pi " + str(rp_id)
     conf = mqtt_client.rp_configuration[int(rp_id)]
     conf_str = ""
+    print("/hi")
     if conf:
         if pprint.isrecursive(conf):
             for rp_id, config in conf.items():
@@ -111,6 +114,7 @@ class Conf(StatesGroup):
     conf_state = State()
     status_state = State()
     show_all_state = State()
+    starting_state = State()
 
 @form_router.message(Conf.conf_state)
 async def process_configuration(message: types.Message, state: FSMContext):
@@ -175,8 +179,7 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
         return
     logging.info("Cancelling state %r", current_state)
     print("Cancelling state", current_state)
-    await state.update_data({"status_state": None, "conf_state": None})
-    # await state.update_data(Conf.conf_state, None)
+    await state.update_data({"status_state": None, "conf_state": None, "starting_state": None})
 
     # await state.clear()
     await message.answer(
@@ -197,6 +200,7 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     await message.answer("Конфигурация обкатки: " + get_configuration_str(rp_id))
     await message.answer(f"Отправьте /cancel или /отмена чтобы отменить запуск обкатки. После запуска отправьте /stop или /стоп чтобы остановить ее")
     i = 0
+    state.set_state(Conf.starting_state)
     while i < 10:
         await message.answer(f"Запуск через {10-i}")
         i += 1
