@@ -244,10 +244,10 @@ class ICECommander:
         print("Set command: ", self.dronecan_commander.cmd.cmd)
 
     async def spin(self) -> None:
-        rp_state = self.rp_state 
         ice_state = self.dronecan_commander.state.ice_state
         # self.check_buttons()
         self.check_mqtt_cmd()
+        rp_state = self.rp_state
         cond_exceeded = self.check_conditions()
         if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
             self.start_time = 0
