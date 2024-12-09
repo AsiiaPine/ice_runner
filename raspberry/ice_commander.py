@@ -232,6 +232,9 @@ class ICECommander:
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
+        if self.rp_state > RPStates.STARTING:
+            self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
+            return
         if self.mode == ICERunnerMode.SIMPLE:
             self.dronecan_commander.cmd.cmd = [self.configuration.rpm] *ICE_CMD_CHANNEL
         elif self.mode == ICERunnerMode.PID:
@@ -243,29 +246,20 @@ class ICECommander:
     async def spin(self) -> None:
         rp_state = self.rp_state 
         ice_state = self.dronecan_commander.state.ice_state
-        RaspberryMqttClient.state = rp_state
         # self.check_buttons()
         self.check_mqtt_cmd()
         cond_exceeded = self.check_conditions()
-        if ice_state == RecipState.STOPPED:
-            self.start_time = 0
-            self.rp_state = RPStates.STOPPED
-            self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
-
         if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
             self.start_time = 0
             rp_state = RPStates.STOPPED
             self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
-        if rp_state == RPStates.RUNNING:
-            self.set_command()
         if rp_state == RPStates.STARTING:
-            self.set_command()
             if time.time() - self.start_time > 4:
                 self.rp_state = RPStates.STOPPED
-                self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
             if self.dronecan_commander.state.ice_state == 1 and time.time() - self.prev_waiting_state_time > 2:
                 self.rp_state = RPStates.RUNNING
                 self.start_time = time.time()
+        self.set_command()
         self.dronecan_commander.spin()
         await asyncio.sleep(0.01)
 
@@ -278,6 +272,7 @@ class ICECommander:
             RaspberryMqttClient.publish_messages(self.dronecan_commander.messages)
             RaspberryMqttClient.publish_stats(state_dict)
             self.prev_report_time = time.time()
+
             print("state: ", self.rp_state)
 
 
