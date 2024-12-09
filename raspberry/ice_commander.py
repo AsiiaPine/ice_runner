@@ -277,6 +277,7 @@ class ICECommander:
             RaspberryMqttClient.publish_messages(self.dronecan_commander.messages)
             RaspberryMqttClient.publish_stats(state_dict)
             self.prev_report_time = time.time()
+            print("state: ", self.rp_state)
 
 
     async def run(self) -> None:
