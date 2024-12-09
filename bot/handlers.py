@@ -80,7 +80,6 @@ def get_configuration_str(rp_id: int) -> str:
         return "No configuration for Raspberry Pi " + str(rp_id)
     conf = mqtt_client.rp_configuration[int(rp_id)]
     conf_str = ""
-    print("/hi")
     if conf:
         if pprint.isrecursive(conf):
             for rp_id, config in conf.items():
@@ -202,9 +201,9 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     i = 0
     state.set_state(Conf.starting_state)
     while i < 10:
-        await message.answer(f"Запуск через {10-i}")
+        await message.answer(f"Запуск через {10-i}, {time.time()}")
         i += 1
-        asyncio.sleep(1)
+        await asyncio.sleep(1)
     await message.answer(f"Запущено")
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
 

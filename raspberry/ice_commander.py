@@ -254,10 +254,13 @@ class ICECommander:
             self.start_time = 0
             rp_state = RPStates.STOPPED
             self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
+            print("stop")
         if rp_state == RPStates.STARTING:
             if time.time() - self.start_time > 4:
                 self.rp_state = RPStates.STOPPED
+                print("start time exceeded")
             if self.dronecan_commander.state.ice_state == 1 and time.time() - self.prev_waiting_state_time > 2:
+                print("started successfully")
                 self.rp_state = RPStates.RUNNING
         self.set_command()
         self.dronecan_commander.spin()
@@ -277,6 +280,7 @@ class ICECommander:
         self.rp_state = rp_state
         if self.rp_state != rp_state_start:
             print("State changed: ", self.rp_state)
+
     async def run(self) -> None:
         while True:
             await self.spin()
