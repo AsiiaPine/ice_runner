@@ -300,5 +300,5 @@ class ICECommander:
             if self.rp_state > RPStates.STARTING:
                 self.rp_state = RPStates.STARTING
                 self.start_time = time.time()
-            print("RaspberryPi.to_run, state: " + str(self.rp_state), self.start_time)
+            print("RaspberryPi.to_run, state: " + str(self.rp_state), self.start_time, time.time() - self.start_time)
             RaspberryMqttClient.to_run = 0
