@@ -252,20 +252,20 @@ class ICECommander:
             self.rp_state = RPStates.STOPPED
             self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
 
-        if cond_exceeded or self.start_time <= 0 or rp_state > RPStates.STARTING or ice_state > 2:
+        if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
             self.start_time = 0
+            rp_state = RPStates.STOPPED
             self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
-        else:
-            if rp_state == RPStates.RUNNING:
-                self.set_command()
-            if rp_state == RPStates.STARTING:
-                self.set_command()
-                if time.time() - self.start_time > 4:
-                    self.rp_state = RPStates.STOPPED
-                    self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
-                if self.dronecan_commander.state.ice_state == 1 and time.time() - self.prev_waiting_state_time > 2:
-                    self.rp_state = RPStates.RUNNING
-                    self.start_time = time.time()
+        if rp_state == RPStates.RUNNING:
+            self.set_command()
+        if rp_state == RPStates.STARTING:
+            self.set_command()
+            if time.time() - self.start_time > 4:
+                self.rp_state = RPStates.STOPPED
+                self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
+            if self.dronecan_commander.state.ice_state == 1 and time.time() - self.prev_waiting_state_time > 2:
+                self.rp_state = RPStates.RUNNING
+                self.start_time = time.time()
         self.dronecan_commander.spin()
         await asyncio.sleep(0.01)
 
