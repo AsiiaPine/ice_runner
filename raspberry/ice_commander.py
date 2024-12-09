@@ -234,9 +234,12 @@ class ICECommander:
     def set_command(self) -> None:
         if self.rp_state.value == -1 or self.rp_state > RPStates.STARTING:
             self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
+            print("Set command: ", self.dronecan_commander.cmd.cmd)
             return
         if self.rp_state == RPStates.STARTING:
             self.dronecan_commander.cmd.cmd = [3000]*ICE_CMD_CHANNEL
+            print("Set command: ", self.dronecan_commander.cmd.cmd)
+            return
         if self.mode == ICERunnerMode.SIMPLE:
             self.dronecan_commander.cmd.cmd = [self.configuration.rpm] *ICE_CMD_CHANNEL
         elif self.mode == ICERunnerMode.PID:
