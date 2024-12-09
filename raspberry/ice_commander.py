@@ -261,7 +261,7 @@ class ICECommander:
             self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
             print("stop")
         if rp_state == RPStates.STARTING:
-            if time.time() - self.start_time > 4:
+            if time.time() - self.start_time > 30:
                 self.rp_state = RPStates.STOPPED
                 print("start time exceeded")
             if self.dronecan_commander.state.ice_state == 1 and time.time() - self.prev_waiting_state_time > 2:
