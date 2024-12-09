@@ -35,7 +35,7 @@ def handle_commander_stats(client, userdata, message):
 
 def handle_commander_config(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
-
+    BotMqttClient.rp_configuration[rp_pi_id] = safe_literal_eval(message.payload.decode())
 
 async def start() -> None:
     print("start")
