@@ -229,6 +229,7 @@ class ICECommander:
         flags_attr = vars(self.flags)
         if self.flags.vibration_ex or self.flags.time_ex or self.flags.rpm_ex or self.flags.throttle_ex or self.flags.temp_ex:
             print(f"Flags: {self.flags.vibration_ex} {self.flags.time_ex} {self.flags.rpm_ex} {self.flags.throttle_ex} {self.flags.temp_ex}")
+            print("Time: ", time.time() - self.start_time)
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
@@ -254,12 +255,12 @@ class ICECommander:
             self.start_time = 0
             rp_state = RPStates.STOPPED
             self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
+            print("Conditions exceeded, state: ", self.rp_state, time.time() - self.start_time)
         if rp_state == RPStates.STARTING:
             if time.time() - self.start_time > 4:
                 self.rp_state = RPStates.STOPPED
             if self.dronecan_commander.state.ice_state == 1 and time.time() - self.prev_waiting_state_time > 2:
                 self.rp_state = RPStates.RUNNING
-                self.start_time = time.time()
         self.set_command()
         self.dronecan_commander.spin()
         await asyncio.sleep(0.01)
