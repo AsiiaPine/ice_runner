@@ -244,6 +244,7 @@ class ICECommander:
         print("Set command: ", self.dronecan_commander.cmd.cmd)
 
     async def spin(self) -> None:
+        rp_state_start = self.rp_state
         ice_state = self.dronecan_commander.state.ice_state
         # self.check_buttons()
         self.check_mqtt_cmd()
@@ -275,7 +276,8 @@ class ICECommander:
 
             print("state: ", self.rp_state)
         self.rp_state = rp_state
-
+        if self.rp_state != rp_state_start:
+            print("State changed: ", self.rp_state)
     async def run(self) -> None:
         while True:
             await self.spin()
@@ -295,6 +297,8 @@ class ICECommander:
             self.rp_state = RPStates.STOPPING
             RaspberryMqttClient.to_stop = 0
         if RaspberryMqttClient.to_run:
-            self.rp_state = RPStates.STARTING if self.rp_state > RPStates.STARTING else self.rp_state
+            if self.rp_state > RPStates.STARTING:
+                self.rp_state = RPStates.STARTING
+                self.start_time = time.time()
             print("RaspberryPi.to_run, state: " + str(self.rp_state))
             RaspberryMqttClient.to_run = 0
