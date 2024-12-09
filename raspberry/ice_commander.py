@@ -13,15 +13,15 @@ from raccoonlab_tools.dronecan.global_node import DronecanNode
 import logging
 import logging_configurator
 logger = logging.getLogger(__name__)
-# # GPIO setup
-# import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-# GPIO.setwarnings(False) # Ignore warning for now
-# GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
+# GPIO setup
+import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
+GPIO.setwarnings(False) # Ignore warning for now
+GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
 # on_off_pin = 10
-# start_stop_pin = 11
+start_stop_pin = 24
 
 # GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button
-# GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button TODO: check pin
+GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button TODO: check pin
 
 ICE_CMD_CHANNEL = 7 + 1
 
@@ -290,15 +290,17 @@ class ICECommander:
         while True:
             await self.spin()
 
-    # def check_buttons(self):
-    #     start_switch = GPIO.input(start_stop_pin)
-    #     power_switch = GPIO.input(on_off_pin)
-    #     if not power_switch:
-    #         self.rp_state = RPStates.STOPPING
-    #     if start_switch:
-    #         self.rp_state = RPStates.STARTING if self.rp_state > RPStates.STARTING else self.rp_state
-    #     else:
-    #         self.rp_state = RPStates.STOPPING
+    def check_buttons(self):
+        start_switch = GPIO.input(start_stop_pin)
+        # power_switch = GPIO.input(on_off_pin)
+        # if not power_switch:
+        #     self.rp_state = RPStates.STOPPING
+        if start_switch:
+            self.rp_state = RPStates.STARTING if self.rp_state > RPStates.STARTING else self.rp_state
+            print("start")
+        else:
+            print("stop")
+            self.rp_state = RPStates.STOPPING
 
     def check_mqtt_cmd(self):
         if RaspberryMqttClient.to_stop:
