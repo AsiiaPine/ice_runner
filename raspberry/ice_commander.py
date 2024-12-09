@@ -199,14 +199,12 @@ class ICECommander:
             self.pid_controller = PIDController(configuration.rpm)
 
     def check_conditions(self) -> int:
-        print("Checking conditions")
         state = self.dronecan_commander.state
         # check if conditions are exeeded
         if state.ice_state == RecipState.NOT_CONNECTED:
             self.rp_state = RPStates.NOT_CONNECTED
             print("ice not connected")
             return 0
-        print("ice connected")
         if self.start_time <= 0 or state.ice_state > RPStates.STARTING:
             self.flags.vin_ex = self.configuration.min_vin_voltage > state.voltage_in
             self.flags.temp_ex = self.configuration.max_temperature < state.temp
@@ -240,6 +238,7 @@ class ICECommander:
             self.dronecan_commander.cmd.cmd = [self.pid_controller.get_pid_command()] *ICE_CMD_CHANNEL
         elif self.mode == ICERunnerMode.RPM:
             self.dronecan_commander.cmd.cmd = [self.configuration.rpm] *ICE_CMD_CHANNEL
+        print("Set command: ", self.dronecan_commander.cmd.cmd)
 
     async def spin(self) -> None:
         rp_state = self.rp_state 
