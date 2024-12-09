@@ -48,11 +48,9 @@ class RaspberryMqttClient:
 
     @classmethod
     def publish_stats(cls, status: Dict[str, Any]) -> None:
-        print(f"RP:\t{cls.state}\n{status}")
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/stats", str(status))
 
 def handle_command(client, userdata, message):
-    print(f"RP:\t{message.topic}: {message.payload.decode()}")
     mes_text = message.payload.decode()
     if mes_text == "start":
         print("RP:\tStart")
@@ -63,11 +61,11 @@ def handle_command(client, userdata, message):
         RaspberryMqttClient.state = RPStates.STOPPING
         RaspberryMqttClient.to_stop = 1
 
-    if mes_text == "run":
-        if RaspberryMqttClient.state < RPStates.STARTING:
-            print("RP:\tCall Start first")
-        else:
-            print("RP:\tRun")
+    # if mes_text == "run":
+    #     if RaspberryMqttClient.state < RPStates.STARTING:
+    #         print("RP:\tCall Start first")
+    #     else:
+    #         print("RP:\tRun")
     if mes_text == "keep alive":
         RaspberryMqttClient.last_message_receive_time = time.time()
 

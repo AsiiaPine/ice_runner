@@ -200,7 +200,7 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     while i < 10:
         await message.answer(f"Запуск через {10-i}")
         i += 1
-        time.sleep(1)
+        asyncio.sleep(1)
     await message.answer(f"Запущено")
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
 

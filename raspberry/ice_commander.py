@@ -118,7 +118,6 @@ class DronecanCommander:
         cls.node.node.spin(1)
         # self.node
         if time.time() - cls.prev_broadcast_time > 0.1:
-            print("Broadcasting")
             cls.prev_broadcast_time = time.time()
             cls.node.publish(cls.cmd)
 
@@ -200,10 +199,12 @@ class ICECommander:
             self.pid_controller = PIDController(configuration.rpm)
 
     def check_conditions(self) -> int:
+        print("Checking conditions")
         state = self.dronecan_commander.state
         # check if conditions are exeeded
         if state.ice_state == RecipState.NOT_CONNECTED:
             self.rp_state = RPStates.NOT_CONNECTED
+            print("ice not connected")
             return 0
 
         if self.start_time <= 0 or state.ice_state > RPStates.STARTING:
