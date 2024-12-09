@@ -233,7 +233,7 @@ class ICECommander:
 
     def set_command(self) -> None:
         if self.mode == ICERunnerMode.SIMPLE:
-            self.dronecan_commander.cmd.cmd = self.configuration.rpm
+            self.dronecan_commander.cmd.cmd = [self.configuration.rpm] *ICE_CMD_CHANNEL
         elif self.mode == ICERunnerMode.PID:
             self.dronecan_commander.cmd.cmd = [self.pid_controller.get_pid_command()] *ICE_CMD_CHANNEL
         elif self.mode == ICERunnerMode.RPM:
