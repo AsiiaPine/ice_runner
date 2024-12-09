@@ -274,7 +274,7 @@ class ICECommander:
             RaspberryMqttClient.publish_stats(state_dict)
             self.prev_report_time = time.time()
 
-            print("state: ", self.rp_state)
+            print("state: ", self.rp_state, time.time() - self.start_time)
         self.rp_state = rp_state
         if self.rp_state != rp_state_start:
             print("State changed: ", self.rp_state)
