@@ -232,9 +232,11 @@ class ICECommander:
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
-        if self.rp_state != RPStates.STARTING or self.rp_state != RPStates.RUNNING:
+        if self.rp_state.value == -1 or self.rp_state > RPStates.STARTING:
             self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
             return
+        if self.rp_state == RPStates.STARTING:
+            self.dronecan_commander.cmd.cmd = [3000]*ICE_CMD_CHANNEL
         if self.mode == ICERunnerMode.SIMPLE:
             self.dronecan_commander.cmd.cmd = [self.configuration.rpm] *ICE_CMD_CHANNEL
         elif self.mode == ICERunnerMode.PID:
