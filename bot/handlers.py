@@ -201,7 +201,7 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     i = 0
     state.set_state(Conf.starting_state)
     while i < 10:
-        await message.answer(f"Запуск через {10-i}, {time.time()}")
+        await message.answer(f"Запуск через {10-i}")
         i += 1
         await asyncio.sleep(1)
     await message.answer(f"Запущено")
