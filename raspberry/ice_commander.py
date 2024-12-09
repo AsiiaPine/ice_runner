@@ -259,6 +259,7 @@ class ICECommander:
             if rp_state == RPStates.RUNNING:
                 self.set_command()
             if rp_state == RPStates.STARTING:
+                self.set_command()
                 if time.time() - self.start_time > 4:
                     self.rp_state = RPStates.STOPPED
                     self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
