@@ -224,12 +224,11 @@ class ICECommander:
         self.flags.throttle_ex = self.configuration.max_gas_throttle < state.throttle
         self.flags.temp_ex = self.configuration.max_temperature < state.temp
         self.flags.rpm_ex = self.configuration.rpm < state.rpm
-        self.flags.time_ex = self.start_time > 0 and self.configuration.time > time.time() - self.start_time
+        self.flags.time_ex = self.start_time > 0 and self.configuration.time < time.time() - self.start_time
         self.flags.vibration_ex = self.dronecan_commander.has_imu and self.configuration.max_vibration < state.vibration
         flags_attr = vars(self.flags)
         if self.flags.vibration_ex or self.flags.time_ex or self.flags.rpm_ex or self.flags.throttle_ex or self.flags.temp_ex:
             print(f"Flags: {self.flags.vibration_ex} {self.flags.time_ex} {self.flags.rpm_ex} {self.flags.throttle_ex} {self.flags.temp_ex}")
-            print("Time: ", time.time() - self.start_time)
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
@@ -255,7 +254,6 @@ class ICECommander:
             self.start_time = 0
             rp_state = RPStates.STOPPED
             self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
-            print("Conditions exceeded, state: ", self.rp_state, time.time() - self.start_time)
         if rp_state == RPStates.STARTING:
             if time.time() - self.start_time > 4:
                 self.rp_state = RPStates.STOPPED
