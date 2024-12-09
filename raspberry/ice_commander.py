@@ -217,6 +217,10 @@ class ICECommander:
                   print(f"Engaged time {state.engaged_time} is exeeded")
             if self.flags.vin_ex or self.flags.temp_ex or eng_time_ex:
                 print(f"Flags: {self.flags.vin_ex} {self.flags.temp_ex} {eng_time_ex}")
+            if sum([self.flags.vin_ex, self.flags.temp_ex,eng_time_ex]) > 0:
+                print("Flags exeeded")
+            else:
+                print("Flags not exeeded")
             return sum([self.flags.vin_ex, self.flags.temp_ex,eng_time_ex])
 
         self.flags.throttle_ex = self.configuration.max_gas_throttle < state.throttle
