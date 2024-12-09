@@ -274,7 +274,7 @@ class ICECommander:
             self.prev_report_time = time.time()
 
             print("state: ", self.rp_state)
-
+        self.rp_state = rp_state
 
     async def run(self) -> None:
         while True:
