@@ -131,19 +131,16 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
         DronecanCommander.param_interface._target_node_id = msg.message.source_node_id
         param = DronecanCommander.param_interface.get("stats.engaged_time")
         DronecanCommander.state.engaged_time = param.value
-    print("Got IMU")
     DronecanCommander.dump_msg(msg)
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_node_status(msg)
-    print("Got node status")
 
 def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.state.update_with_resiprocating_status(msg)
     DronecanCommander.messages['uavcan.equipment.ice.reciprocating.Status'] = dronecan.to_yaml(msg.message)
     DronecanCommander.dump_msg(msg)
-    print("Got recip status")
 
 def start_dronecan_handlers() -> None:
     DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ice.reciprocating.Status, ice_reciprocating_status_handler)
