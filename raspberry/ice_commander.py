@@ -332,7 +332,7 @@ class ICECommander:
                 print("state: " + self.rp_state.name, self.start_time)
             else:
                 print("state: " + self.rp_state.name)
-        
+        self.last_button_cmd = stop_switch
 
     def check_mqtt_cmd(self):
         if RaspberryMqttClient.to_stop:
