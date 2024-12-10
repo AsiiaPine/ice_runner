@@ -4,7 +4,7 @@ GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
 # on_off_pin = 10
 start_stop_pin = 24
 
-GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button TODO: check pin
+GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Start/Stop button TODO: check pin
 
 def check_buttons():
     start_switch = GPIO.input(start_stop_pin)
