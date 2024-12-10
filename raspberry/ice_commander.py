@@ -240,7 +240,7 @@ class ICECommander:
 
     def set_command(self) -> None:
         if self.rp_state.value == -1 or self.rp_state > RPStates.STARTING:
-            self.dronecan_commander.cmd.cmd = [0]* ICE_AIR_CHANNEL
+            self.dronecan_commander.cmd.cmd = [0]* (ICE_AIR_CHANNEL + 1)
             print("Set command: ", self.dronecan_commander.cmd.cmd)
             return
 
@@ -268,7 +268,7 @@ class ICECommander:
         if ice_state == RecipState.NOT_CONNECTED:
             print("No ICE connected")
             await asyncio.sleep(1)
-            self.dronecan_commander.cmd.cmd = [0] * ICE_CMD_CHANNEL
+            self.dronecan_commander.cmd.cmd = [0] * (ICE_AIR_CHANNEL + 1)
             self.dronecan_commander.spin()
             return
 
