@@ -201,6 +201,7 @@ class ICECommander:
         self.prev_report_time = 0
         if self.mode == ICERunnerMode.PID:
             self.pid_controller = PIDController(configuration.rpm)
+        self.last_button_cmd = 1
 
     def check_conditions(self) -> int:
         state = self.dronecan_commander.state
@@ -301,6 +302,8 @@ class ICECommander:
     def check_buttons(self):
         """If we"""
         stop_switch = GPIO.input(start_stop_pin)
+        if self.last_button_cmd == stop_switch:
+            return
         if stop_switch:
             print("Button released")
             if self.rp_state == RPStates.STARTING or self.rp_state == RPStates.RUNNING:
@@ -314,6 +317,7 @@ class ICECommander:
                 print("state: " + self.rp_state.name, self.start_time)
             else:
                 print("state: " + self.rp_state.name)
+        
 
     def check_mqtt_cmd(self):
         if RaspberryMqttClient.to_stop:
