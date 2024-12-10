@@ -14,14 +14,17 @@ import logging
 import logging_configurator
 logger = logging.getLogger(__name__)
 # GPIO setup
-# import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-# GPIO.setwarnings(False) # Ignore warning for now
-# GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
-# on_off_pin = 10
-# start_stop_pin = 24
+import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
+GPIO.setwarnings(True) # Ignore warning for now
+GPIO.setmode(GPIO.BCM) # Use physical pin numbering
+on_off_pin = 10
+start_stop_pin = 24
+resistor_pin = 23
+GPIO.setup(resistor_pin, GPIO.OUT)
+GPIO.output(resistor_pin, GPIO.HIGH)
 
-# GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button
-# GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button TODO: check pin
+GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button
+GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button TODO: check pin
 
 ICE_CMD_CHANNEL = 7 + 1
 
@@ -251,14 +254,14 @@ class ICECommander:
     async def spin(self) -> None:
         rp_state_start = self.rp_state
         ice_state = self.dronecan_commander.state.ice_state
-        # self.check_buttons()
+        self.check_buttons()
         self.check_mqtt_cmd()
         rp_state = self.rp_state
         cond_exceeded = self.check_conditions()
         if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
             self.start_time = 0
-            rp_state = RPStates.STOPPED
-            self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
+            # rp_state = RPStates.STOPPED
+            # self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
             print("stop")
         if rp_state == RPStates.STARTING:
             if time.time() - self.start_time > 30:
@@ -290,22 +293,23 @@ class ICECommander:
         while True:
             await self.spin()
 
-    # def check_buttons(self):
-    #     start_switch = GPIO.input(start_stop_pin)
-    #     # power_switch = GPIO.input(on_off_pin)
-    #     # if not power_switch:
-    #     #     self.rp_state = RPStates.STOPPING
-    #     if start_switch:
-    #         self.rp_state = RPStates.STARTING if self.rp_state > RPStates.STARTING else self.rp_state
-    #         print("start")
-    #     else:
-    #         print("stop")
-    #         self.rp_state = RPStates.STOPPING
+    def check_buttons(self):
+        stop_switch = GPIO.input(start_stop_pin)
+        # power_switch = GPIO.input(on_off_pin)
+        # if not power_switch:
+        #     self.rp_state = RPStates.STOPPING
+        if stop_switch:
+            print("stop")
+            self.rp_state = RPStates.STOPPING
+        else:
+            self.rp_state = RPStates.STARTING if self.rp_state > RPStates.STARTING else self.rp_state
+            print("start")
 
     def check_mqtt_cmd(self):
         if RaspberryMqttClient.to_stop:
             self.rp_state = RPStates.STOPPING
             RaspberryMqttClient.to_stop = 0
+            print("RaspberryPi.to_stop, state: " + str(self.rp_state), self.start_time, time.time() - self.start_time)
         if RaspberryMqttClient.to_run:
             if self.rp_state > RPStates.STARTING:
                 self.rp_state = RPStates.STARTING
