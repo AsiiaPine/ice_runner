@@ -21,7 +21,7 @@ on_off_pin = 10
 start_stop_pin = 24
 resistor_pin = 23
 GPIO.setup(resistor_pin, GPIO.OUT)
-GPIO.output(resistor_pin, GPIO.HIGH)
+# GPIO.output(resistor_pin, GPIO.HIGH)
 
 GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button
 GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button TODO: check pin
