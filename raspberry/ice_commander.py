@@ -108,7 +108,7 @@ class DronecanCommander:
         cls.node = node
         cls.messages: Dict[str, Any] = {}
         cls.state: ICEState = ICEState()
-        cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*ICE_AIR_CHANNEL)
+        cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
         print("On sub", cls.node.sub_once(dronecan.uavcan.equipment.ice.reciprocating.Status))
         print("On sub", cls.node.sub_once(dronecan.uavcan.equipment.ahrs.RawIMU))
         cls.prev_broadcast_time = 0
