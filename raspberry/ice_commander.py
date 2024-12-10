@@ -304,21 +304,21 @@ class ICECommander:
         # if not power_switch:
         #     self.rp_state = RPStates.STOPPING
         if stop_switch:
-            print("Button released, state:" +  + str(self.rp_state), self.start_time, time.time() - self.start_time)
+            print("Button released, state:" +  + str(self.rp_state.name), self.start_time, time.time() - self.start_time)
             self.rp_state = RPStates.STOPPING
         else:
             self.rp_state = RPStates.STARTING if self.rp_state > RPStates.STARTING else self.rp_state
-            print("Button pressed, state: " + str(self.rp_state), self.start_time, time.time() - self.start_time)
+            print("Button pressed, state: " + str(self.rp_state.name), self.start_time, time.time() - self.start_time)
             self.start_time = time.time()
 
     def check_mqtt_cmd(self):
         if RaspberryMqttClient.to_stop:
             self.rp_state = RPStates.STOPPING
             RaspberryMqttClient.to_stop = 0
-            print("MQTT command: stop, state: " + str(self.rp_state), self.start_time, time.time() - self.start_time)
+            print("MQTT command: stop, state: " + str(self.rp_state.name), self.start_time, time.time() - self.start_time)
         if RaspberryMqttClient.to_run:
             if self.rp_state > RPStates.STARTING:
                 self.rp_state = RPStates.STARTING
                 self.start_time = time.time()
-            print("MQTT command: run, state: " + str(self.rp_state), self.start_time, time.time() - self.start_time)
+            print("MQTT command: run, state: " + str(self.rp_state.name), self.start_time, time.time() - self.start_time)
             RaspberryMqttClient.to_run = 0
