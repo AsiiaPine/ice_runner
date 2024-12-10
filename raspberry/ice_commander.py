@@ -278,9 +278,9 @@ class ICECommander:
         self.check_mqtt_cmd()
         rp_state = self.rp_state
         cond_exceeded = self.check_conditions()
-        if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
-            self.start_time = 0
-            print("stop", cond_exceeded, rp_state > RPStates.STARTING, ice_state == RecipState.FAULT)
+        # if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
+        #     self.start_time = 0
+        #     print("stop", cond_exceeded, rp_state > RPStates.STARTING, ice_state == RecipState.FAULT)
         if rp_state == RPStates.STARTING:
             if time.time() - self.start_time > 30:
                 self.rp_state = RPStates.STOPPING
