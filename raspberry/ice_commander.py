@@ -271,6 +271,8 @@ class ICECommander:
             self.dronecan_commander.cmd.cmd = [0] * (ICE_AIR_CHANNEL + 1)
             self.dronecan_commander.spin()
             return
+        if ice_state == RecipState.STOPPED:
+            self.rp_state = RPStates.STOPPED
 
         self.check_buttons()
         self.check_mqtt_cmd()
@@ -279,11 +281,14 @@ class ICECommander:
         if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
             self.start_time = 0
             print("stop")
+        if ice_state == RecipState.WAITING:
+            self.prev_waiting_state_time = time.time()
+            print("waiting state")
         if rp_state == RPStates.STARTING:
             if time.time() - self.start_time > 30:
-                self.rp_state = RPStates.STOPPED
+                self.rp_state = RPStates.STOPPING
                 print("start time exceeded")
-            if self.dronecan_commander.state.ice_state == 1 and time.time() - self.prev_waiting_state_time > 2:
+            if ice_state == 1 and time.time() - self.prev_waiting_state_time > 2:
                 print("started successfully")
                 self.rp_state = RPStates.RUNNING
         self.set_command()
