@@ -254,6 +254,10 @@ class ICECommander:
     async def spin(self) -> None:
         rp_state_start = self.rp_state
         ice_state = self.dronecan_commander.state.ice_state
+        if ice_state == RecipState.NOT_CONNECTED:
+            print("No ICE connected")
+            await asyncio.sleep(1)
+            return
         self.check_buttons()
         self.check_mqtt_cmd()
         rp_state = self.rp_state
