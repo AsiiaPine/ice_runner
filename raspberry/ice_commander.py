@@ -280,7 +280,7 @@ class ICECommander:
         cond_exceeded = self.check_conditions()
         if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
             self.start_time = 0
-            print("stop")
+            print("stop", cond_exceeded, rp_state > RPStates.STARTING, ice_state == RecipState.FAULT)
         if ice_state == RecipState.WAITING:
             self.prev_waiting_state_time = time.time()
             print("waiting state")
