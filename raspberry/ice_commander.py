@@ -17,14 +17,15 @@ logger = logging.getLogger(__name__)
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 GPIO.setwarnings(True) # Ignore warning for now
 GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-on_off_pin = 10
+on_off_pin = 25
 start_stop_pin = 24
+# Setup CAN terminator
 resistor_pin = 23
 GPIO.setup(resistor_pin, GPIO.OUT)
-GPIO.output(resistor_pin, GPIO.LOW)
+GPIO.output(resistor_pin, GPIO.HIGH)
 
-# GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button
-GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button TODO: check pin
+# GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
+GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
 
 ICE_CMD_CHANNEL = 7 + 1
 
@@ -257,6 +258,8 @@ class ICECommander:
         if ice_state == RecipState.NOT_CONNECTED:
             print("No ICE connected")
             await asyncio.sleep(1)
+            self.dronecan_commander.cmd = [0] * ICE_CMD_CHANNEL
+            self.dronecan_commander.spin()
             return
         self.check_buttons()
         self.check_mqtt_cmd()
@@ -264,8 +267,6 @@ class ICECommander:
         cond_exceeded = self.check_conditions()
         if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
             self.start_time = 0
-            # rp_state = RPStates.STOPPED
-            # self.dronecan_commander.cmd.cmd = [0]*ICE_CMD_CHANNEL
             print("stop")
         if rp_state == RPStates.STARTING:
             if time.time() - self.start_time > 30:
