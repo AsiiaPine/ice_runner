@@ -258,7 +258,7 @@ class ICECommander:
         if ice_state == RecipState.NOT_CONNECTED:
             print("No ICE connected")
             await asyncio.sleep(1)
-            self.dronecan_commander.cmd = [0] * ICE_CMD_CHANNEL
+            self.dronecan_commander.cmd.cmd = [0] * ICE_CMD_CHANNEL
             self.dronecan_commander.spin()
             return
         self.check_buttons()
