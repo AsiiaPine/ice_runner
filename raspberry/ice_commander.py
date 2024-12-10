@@ -299,17 +299,21 @@ class ICECommander:
             await self.spin()
 
     def check_buttons(self):
+        """If we"""
         stop_switch = GPIO.input(start_stop_pin)
-        # power_switch = GPIO.input(on_off_pin)
-        # if not power_switch:
-        #     self.rp_state = RPStates.STOPPING
         if stop_switch:
-            print("Button released, STOPPING, state:" + self.rp_state.name, self.start_time, time.time() - self.start_time)
-            self.rp_state = RPStates.STOPPING
+            print("Button released")
+            if self.rp_state == RPStates.STARTING or self.rp_state == RPStates.RUNNING:
+                self.rp_state = RPStates.STOPPING
+            print("state:" + self.rp_state.name)
         else:
-            self.rp_state = RPStates.STARTING if self.rp_state > RPStates.STARTING else self.rp_state
-            print("Button pressed STARTING state: " + self.rp_state.name, self.start_time, time.time() - self.start_time)
-            self.start_time = time.time()
+            print("Button pressed")
+            if self.rp_state > RPStates.STARTING:
+                self.rp_state = RPStates.STARTING
+                self.start_time = time.time()
+                print("state: " + self.rp_state.name, self.start_time)
+            else:
+                print("state: " + self.rp_state.name)
 
     def check_mqtt_cmd(self):
         if RaspberryMqttClient.to_stop:
