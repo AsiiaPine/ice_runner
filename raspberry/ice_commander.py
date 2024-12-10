@@ -23,7 +23,7 @@ resistor_pin = 23
 GPIO.setup(resistor_pin, GPIO.OUT)
 GPIO.output(resistor_pin, GPIO.LOW)
 
-GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button
+# GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button
 GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button TODO: check pin
 
 ICE_CMD_CHANNEL = 7 + 1
