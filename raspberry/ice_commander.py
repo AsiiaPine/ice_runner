@@ -27,8 +27,8 @@ GPIO.output(resistor_pin, GPIO.HIGH)
 # GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
 GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
 
-ICE_CMD_CHANNEL = 7 + 1
-ICE_AIR_CHANNEL = 10 + 1
+ICE_CMD_CHANNEL = 7
+ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
 class Mode(IntEnum):
