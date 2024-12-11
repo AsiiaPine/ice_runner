@@ -44,7 +44,7 @@ conf_params_description = {
 }
 
 def run_candump():
-    output_filename = f"candump_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    output_filename = f"candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     with open(output_filename, "w") as outfile:
         subprocess.run(["candump", "can0"], stdout=outfile)
 
