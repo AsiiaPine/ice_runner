@@ -123,7 +123,7 @@ class DronecanCommander:
 
     def dump_msg(msg: dronecan.node.TransferEvent, output_filename) -> None:
         with open(output_filename, "a") as myfile:
-            myfile.write(dronecan.to_yaml(msg))
+            myfile.write(dronecan.to_yaml(msg) + "\n")
 
     @classmethod
     def spin(cls) -> None:
