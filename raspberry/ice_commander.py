@@ -57,7 +57,7 @@ class ICEState:
         self.rpm: int = None
         self.throttle: int = None
         self.temp: int = None
-
+        self.fuel_level: int = None
         self.gas_throttle: int = None
         self.air_throttle: int = None
 
@@ -92,6 +92,9 @@ class ICEState:
         if self.mode > Mode.MODE_SOFTWARE_UPDATE or self.health > Health.HEALTH_WARNING:
             self.ice_state = RecipState.FAULT
 
+    def update_with_fuel_tank_status(self, msg) -> None:
+        self.fuel_level = msg.message.available_fuel_volume_cm3
+
     def to_dict(self) -> Dict[str, Any]:
         vars_dict = vars(self)
         vars_dict["ice_state"] = RecipState(vars_dict["ice_state"]).value
@@ -116,7 +119,7 @@ class DronecanCommander:
         cls.has_imu = False
 
     def dump_msg(msg: dronecan.node.TransferEvent) -> None:
-        with open("test.txt", "a") as myfile:
+        with open("all_messages.txt", "a") as myfile:
             myfile.write(dronecan.to_yaml(msg))
 
     @classmethod
@@ -127,6 +130,10 @@ class DronecanCommander:
             cls.prev_broadcast_time = time.time()
             cls.node.publish(cls.cmd)
 
+def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
+    DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
+    DronecanCommander.state.update_with_fuel_tank_status(msg)
+    DronecanCommander.dump_msg(msg)
 
 def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['uavcan.equipment.ahrs.RawIMU'] = dronecan.to_yaml(msg.message)
@@ -151,6 +158,7 @@ def start_dronecan_handlers() -> None:
     DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ice.reciprocating.Status, ice_reciprocating_status_handler)
     DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ahrs.RawIMU, raw_imu_handler)
     DronecanCommander.node.node.add_handler(dronecan.uavcan.protocol.NodeStatus, node_status_handler)
+    DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ice.FuelTankStatus, fuel_tank_status_handler)
 
 
 class ICEFlags:
