@@ -118,11 +118,11 @@ class DronecanCommander:
         cls.prev_broadcast_time = 0
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
-        cls.output_filename = f"messages_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+        cls.output_filename = f"messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
         print("all messages will be in ", cls.output_filename)
 
-    def dump_msg(cls, msg: dronecan.node.TransferEvent) -> None:
-        with open(cls.output_filename, "a") as myfile:
+    def dump_msg(msg: dronecan.node.TransferEvent, output_filename) -> None:
+        with open(output_filename, "a") as myfile:
             myfile.write(dronecan.to_yaml(msg))
 
     @classmethod
@@ -136,7 +136,7 @@ class DronecanCommander:
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_fuel_tank_status(msg)
-    DronecanCommander.dump_msg(msg)
+    DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
 
 def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['uavcan.equipment.ahrs.RawIMU'] = dronecan.to_yaml(msg.message)
@@ -146,16 +146,17 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
         DronecanCommander.param_interface._target_node_id = msg.message.source_node_id
         param = DronecanCommander.param_interface.get("stats.engaged_time")
         DronecanCommander.state.engaged_time = param.value
-    DronecanCommander.dump_msg(msg)
+    DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_node_status(msg)
+    DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
 
 def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.state.update_with_resiprocating_status(msg)
     DronecanCommander.messages['uavcan.equipment.ice.reciprocating.Status'] = dronecan.to_yaml(msg.message)
-    DronecanCommander.dump_msg(msg)
+    DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
 
 def start_dronecan_handlers() -> None:
     DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ice.reciprocating.Status, ice_reciprocating_status_handler)
