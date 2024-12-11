@@ -119,6 +119,7 @@ class DronecanCommander:
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
         cls.output_filename = f"messages_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+        print("all messages will be in ", cls.output_filename)
 
     def dump_msg(cls, msg: dronecan.node.TransferEvent) -> None:
         with open(cls.output_filename, "a") as myfile:
