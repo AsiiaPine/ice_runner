@@ -273,7 +273,8 @@ class ICECommander:
             return
 
         if ice_state == RecipState.STOPPED:
-            self.rp_state = RPStates.STOPPED
+            if self.rp_state == RPStates.RUNNING:
+                self.rp_state = RPStates.STOPPED
 
         self.check_buttons()
         self.check_mqtt_cmd()
