@@ -54,7 +54,7 @@ async def main(id: int) -> None:
     dotenv_path = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env')))
     print(dotenv_path)
     load_dotenv(dotenv_path, verbose=True)
-    run_candump()
+    # run_candump()
     print(os.environ.values())
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
