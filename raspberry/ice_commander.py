@@ -297,19 +297,20 @@ class ICECommander:
         self.dronecan_commander.spin()
         await asyncio.sleep(0.01)
 
+    async def report_state(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
             state_dict = self.dronecan_commander.state.to_dict()
             state_dict["start_time"] = self.start_time
-            state_dict["state"] = rp_state.value
-            RaspberryMqttClient.get_client().publish("ice_runner/raspberry_pi/{rp_id}/state", rp_state.value)
+            state_dict["state"] = self.rp_state.value
+            RaspberryMqttClient.get_client().publish("ice_runner/raspberry_pi/{rp_id}/state", self.rp_state.value)
             RaspberryMqttClient.status = state_dict
             RaspberryMqttClient.publish_messages(self.dronecan_commander.messages)
             RaspberryMqttClient.publish_stats(state_dict)
             self.prev_report_time = time.time()
 
             print("state: ", self.rp_state)
-        self.rp_state = rp_state
-        if self.rp_state != rp_state_start:
+        self.rp_state = self.rp_state
+        if self.rp_state != self.rp_state_start:
             print("State changed: ", self.rp_state)
 
     async def run(self) -> None:
