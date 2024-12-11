@@ -273,7 +273,7 @@ class ICECommander:
             return
 
         if ice_state == RecipState.STOPPED:
-            if self.rp_state == RPStates.RUNNING:
+            if self.rp_state != RPStates.STARTING:
                 self.rp_state = RPStates.STOPPED
 
         self.check_buttons()
@@ -287,11 +287,11 @@ class ICECommander:
             if time.time() - self.start_time > 30:
                 self.rp_state = RPStates.STOPPING
                 print("start time exceeded")
-            if ice_state == RecipState.RUNNING and time.time() - self.prev_waiting_state_time > 2:
+            if ice_state == RecipState.RUNNING and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
                 print("started successfully")
                 self.rp_state = RPStates.RUNNING
             if ice_state == RecipState.WAITING:
-                self.prev_waiting_state_time = time.time()
+                self.prev_waiting_state_time = time.time_ns()
                 print("waiting state")
         self.set_command()
         self.dronecan_commander.spin()
