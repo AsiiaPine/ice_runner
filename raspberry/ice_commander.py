@@ -118,11 +118,10 @@ class DronecanCommander:
         cls.prev_broadcast_time = 0
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
+        cls.output_filename = f"messages_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
 
-    def dump_msg(msg: dronecan.node.TransferEvent) -> None:
-        output_filename = f"messages_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-
-        with open(output_filename, "a") as myfile:
+    def dump_msg(cls, msg: dronecan.node.TransferEvent) -> None:
+        with open(cls.output_filename, "a") as myfile:
             myfile.write(dronecan.to_yaml(msg))
 
     @classmethod
