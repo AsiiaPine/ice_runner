@@ -306,7 +306,7 @@ class ICECommander:
             RaspberryMqttClient.publish_stats(state_dict)
             self.prev_report_time = time.time()
 
-            print("state: ", self.rp_state, time.time() - self.start_time)
+            print("state: ", self.rp_state)
         self.rp_state = rp_state
         if self.rp_state != rp_state_start:
             print("State changed: ", self.rp_state)
@@ -330,7 +330,7 @@ class ICECommander:
             if self.rp_state > RPStates.STARTING:
                 self.rp_state = RPStates.STARTING
                 self.start_time = time.time()
-                print("state: " + self.rp_state.name, self.start_time)
+                print("state: " + self.rp_state.name)
             else:
                 print("state: " + self.rp_state.name)
         self.last_button_cmd = stop_switch
@@ -339,10 +339,10 @@ class ICECommander:
         if RaspberryMqttClient.to_stop:
             self.rp_state = RPStates.STOPPING
             RaspberryMqttClient.to_stop = 0
-            print("MQTT command: stop, state: " + self.rp_state.name, self.start_time, time.time() - self.start_time)
+            print("MQTT command: stop, state: " + self.rp_state.name)
         if RaspberryMqttClient.to_run:
             if self.rp_state > RPStates.STARTING:
                 self.rp_state = RPStates.STARTING
                 self.start_time = time.time()
-            print("MQTT command: run, state: " + self.rp_state.name, self.start_time, time.time() - self.start_time)
+            print("MQTT command: run, state: " + self.rp_state.name)
             RaspberryMqttClient.to_run = 0
