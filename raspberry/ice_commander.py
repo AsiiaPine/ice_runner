@@ -281,7 +281,7 @@ class ICECommander:
         cond_exceeded = self.check_conditions()
         if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
             self.start_time = 0
-            print(f"stop ex {cond_exceeded}, rp state {rp_state}, ice state {ice_state}")
+            print(f"stop ex {cond_exceeded}, rp state {rp_state.name}, ice state {ice_state.name}")
         if rp_state == RPStates.STARTING:
             if time.time() - self.start_time > 30:
                 self.rp_state = RPStates.STOPPING
