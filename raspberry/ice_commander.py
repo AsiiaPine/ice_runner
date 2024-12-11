@@ -1,5 +1,6 @@
 
 import asyncio
+import datetime
 from enum import IntEnum
 import time
 from typing import Any, Dict
@@ -119,7 +120,9 @@ class DronecanCommander:
         cls.has_imu = False
 
     def dump_msg(msg: dronecan.node.TransferEvent) -> None:
-        with open("all_messages.txt", "a") as myfile:
+        output_filename = f"messages_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+
+        with open(output_filename, "a") as myfile:
             myfile.write(dronecan.to_yaml(msg))
 
     @classmethod
