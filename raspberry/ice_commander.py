@@ -306,6 +306,7 @@ class ICECommander:
                 self.prev_waiting_state_time = time.time_ns()
                 print("waiting state")
         self.set_command()
+        self.report_state()
         self.dronecan_commander.spin()
         await asyncio.sleep(0.01)
 
