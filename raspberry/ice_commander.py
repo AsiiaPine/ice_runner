@@ -275,7 +275,7 @@ class ICECommander:
         print("Set command: ", self.dronecan_commander.cmd.cmd)
 
     async def spin(self) -> None:
-        rp_state_start = self.rp_state
+        self.rp_state_start = self.rp_state
         ice_state = self.dronecan_commander.state.ice_state
         if ice_state == RecipState.NOT_CONNECTED:
             print("No ICE connected")
