@@ -127,7 +127,7 @@ class DronecanCommander:
 
     @classmethod
     def spin(cls) -> None:
-        cls.node.node.spin(0.01)
+        cls.node.node.spin(0.05)
         # self.node
         if time.time() - cls.prev_broadcast_time > 0.1:
             cls.prev_broadcast_time = time.time()
