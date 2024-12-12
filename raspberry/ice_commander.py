@@ -311,6 +311,7 @@ class ICECommander:
         await asyncio.sleep(0.01)
 
     async def report_state(self) -> None:
+        print(f"report state, {self.reporting_period}")
         if self.prev_report_time + self.reporting_period < time.time():
             state_dict = self.dronecan_commander.state.to_dict()
             state_dict["start_time"] = self.start_time
