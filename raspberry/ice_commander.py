@@ -30,7 +30,7 @@ GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop but
 
 ICE_CMD_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
-MAX_AIR_OPEN = 8191
+MAX_AIR_OPEN = 0
 
 class Mode(IntEnum):
     MODE_OPERATIONAL      = 0         # Normal operating mode.
