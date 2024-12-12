@@ -92,6 +92,7 @@ class ServerMqttClient:
         cls.client.publish("ice_runner/server/raspberry_pi_commander", "ready")
         cls.client.publish("ice_runner/server/bot_commander", "ready")
         print("started server")
+        print(f"ServerMqttClient connected")
 
     @classmethod
     def get_client(cls) -> mqtt.client.Client:

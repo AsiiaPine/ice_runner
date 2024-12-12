@@ -48,6 +48,7 @@ class RaspberryMqttClient:
 
     @classmethod
     def publish_stats(cls, status: Dict[str, Any]) -> None:
+        print("publish stats ice_runner/raspberry_pi/{cls.rp_id}/stats: {status}")
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/stats", str(status))
 
 def handle_command(client, userdata, message):
