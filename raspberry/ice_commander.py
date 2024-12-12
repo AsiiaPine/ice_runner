@@ -308,7 +308,7 @@ class ICECommander:
         self.set_command()
         await self.report_state()
         self.dronecan_commander.spin()
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.05)
 
     async def report_state(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
