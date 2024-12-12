@@ -82,7 +82,7 @@ class ICEState:
         self.air_throttle = msg.message.throttle_position_percent
         self.current = msg.message.intake_manifold_temperature
         self.voltage_in = msg.message.oil_pressure
-        self.voltage_out = msg.message.oil_pressure
+        self.voltage_out = msg.message.fuel_pressure
 
     def update_with_raw_imu(self, msg) -> None:
         self.vibration = msg.message.integration_interval
