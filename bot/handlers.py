@@ -93,7 +93,7 @@ def get_configuration_str(rp_id: int) -> str:
 
 async def get_rp_status(rp_id: int) -> Dict[str, Any]:
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/stats", str(rp_id))
+    mqtt_client.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
     await asyncio.sleep(0.4)
     if rp_id not in mqtt_client.rp_status.keys():
         return "\tNo status from the node\n"
@@ -299,7 +299,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
         if time.time() - prev_time > report_period:
             print("Updating status")
             mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
-            mqtt_client.client.publish("ice_runner/bot/usr_cmd/stats", str(rp_id))
+            mqtt_client.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
             await asyncio.sleep(0.3)
             status_str = await get_rp_status(rp_id)
             message_text = (header_str + status_str + conf_str)
@@ -324,11 +324,15 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
 #     for id, state in mqtt_client.rp_states.items():
 #         await message.answer(f"\t{id}: state - {state}")
 
-@dp.message(Command(commands=["stop", "стоп"]))
-async def command_stop_handler(message: Message) -> None:
+@form_router.message(Command(commands=["stop", "стоп"]))
+async def command_stop_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/stop` command
     """
+    if rp_id is None:
+        await message.answer("Выберите Raspberry Pi ID. Напишите RP ID")
+        await state.set_state(Conf.rp_id)
+        return
     await message.answer(f"Stopping")
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}").wait_for_publish()
     rp_status = int(mqtt_client.rp_status[rp_id])

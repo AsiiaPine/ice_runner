@@ -14,19 +14,19 @@ from raccoonlab_tools.dronecan.global_node import DronecanNode
 import logging
 import logging_configurator
 logger = logging.getLogger(__name__)
-# GPIO setup
-import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-GPIO.setwarnings(True) # Ignore warning for now
-GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-on_off_pin = 25
-start_stop_pin = 24
-# Setup CAN terminator
-resistor_pin = 23
-GPIO.setup(resistor_pin, GPIO.OUT)
-GPIO.output(resistor_pin, GPIO.HIGH)
+# # GPIO setup
+# import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
+# GPIO.setwarnings(True) # Ignore warning for now
+# GPIO.setmode(GPIO.BCM) # Use physical pin numbering
+# on_off_pin = 25
+# start_stop_pin = 24
+# # Setup CAN terminator
+# resistor_pin = 23
+# GPIO.setup(resistor_pin, GPIO.OUT)
+# GPIO.output(resistor_pin, GPIO.HIGH)
 
-# GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
-GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
+# # GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
+# GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
 
 ICE_CMD_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
@@ -118,7 +118,7 @@ class DronecanCommander:
         cls.prev_broadcast_time = 0
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
-        cls.output_filename = f"messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
         print("all messages will be in ", cls.output_filename)
 
     def dump_msg(msg: dronecan.node.TransferEvent, output_filename) -> None:
@@ -144,7 +144,7 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.has_imu = True
     if DronecanCommander.state.engaged_time is None:
         DronecanCommander.param_interface._target_node_id = msg.message.source_node_id
-        param = DronecanCommander.param_interface.get("stats.engaged_time")
+        param = DronecanCommander.param_interface.get("status.engaged_time")
         DronecanCommander.state.engaged_time = param.value
     DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
 
@@ -277,6 +277,7 @@ class ICECommander:
     async def spin(self) -> None:
         self.rp_state_start = self.rp_state
         ice_state = self.dronecan_commander.state.ice_state
+        rpm = self.dronecan_commander.state.rpm
         if ice_state == RecipState.NOT_CONNECTED:
             print("No ICE connected")
             await asyncio.sleep(1)
@@ -288,7 +289,7 @@ class ICECommander:
             if self.rp_state != RPStates.STARTING:
                 self.rp_state = RPStates.STOPPED
 
-        self.check_buttons()
+        # self.check_buttons()
         self.check_mqtt_cmd()
         rp_state = self.rp_state
         cond_exceeded = self.check_conditions()
@@ -299,12 +300,13 @@ class ICECommander:
             if time.time() - self.start_time > 30:
                 self.rp_state = RPStates.STOPPING
                 print("start time exceeded")
-            if ice_state == RecipState.RUNNING and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
+            if ice_state == RecipState.RUNNING and rpm > 1500 and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
                 print("started successfully")
                 self.rp_state = RPStates.RUNNING
-            if ice_state == RecipState.WAITING:
-                self.prev_waiting_state_time = time.time_ns()
-                print("waiting state")
+        if ice_state == RecipState.WAITING:
+            self.prev_waiting_state_time = time.time_ns()
+            self.rp_state = RPStates.STARTING
+            print("waiting state")
         self.set_command()
         await self.report_state()
         self.dronecan_commander.spin()
@@ -318,7 +320,7 @@ class ICECommander:
             RaspberryMqttClient.get_client().publish("ice_runner/raspberry_pi/{rp_id}/state", self.rp_state.value)
             RaspberryMqttClient.status = state_dict
             RaspberryMqttClient.publish_messages(self.dronecan_commander.messages)
-            RaspberryMqttClient.publish_stats(state_dict)
+            RaspberryMqttClient.publish_status(state_dict)
             self.prev_report_time = time.time()
 
             print("state: ", self.rp_state)
@@ -330,7 +332,7 @@ class ICECommander:
         while True:
             await self.spin()
 
-    def check_buttons(self):
+    # def check_buttons(self):
         """If we"""
         stop_switch = GPIO.input(start_stop_pin)
         if self.last_button_cmd == stop_switch:

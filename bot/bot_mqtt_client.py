@@ -27,7 +27,7 @@ def handle_commander_state(client, userdata, message):
     BotMqttClient.rp_states[rp_pi_id] = safe_literal_eval(message.payload.decode())
     BotMqttClient.rp_states[rp_pi_id] = RPStates(int(BotMqttClient.rp_states[rp_pi_id]))
 
-def handle_commander_stats(client, userdata, message):
+def handle_commander_status(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     state = safe_literal_eval(message.payload.decode())
     if state is not None:
@@ -40,7 +40,7 @@ def handle_commander_config(client, userdata, message):
 async def start() -> None:
     print("start")
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/state", handle_commander_state)
-    BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/stats", handle_commander_stats)
+    BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/status", handle_commander_status)
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/config", handle_commander_config)
     BotMqttClient.client.subscribe("ice_runner/server/bot_commander/#")
     BotMqttClient.client.loop_start()

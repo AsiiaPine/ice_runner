@@ -47,9 +47,9 @@ class RaspberryMqttClient:
             cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/dronecan/{dronecan_type}", str(messages[dronecan_type]))
 
     @classmethod
-    def publish_stats(cls, status: Dict[str, Any]) -> None:
-        print("publish stats ice_runner/raspberry_pi/{cls.rp_id}/stats: {status}")
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/stats", str(status))
+    def publish_status(cls, status: Dict[str, Any]) -> None:
+        print("publish status ice_runner/raspberry_pi/{cls.rp_id}/status: {status}")
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/status", str(status))
 
 def handle_command(client, userdata, message):
     mes_text = message.payload.decode()
@@ -71,7 +71,7 @@ def handle_command(client, userdata, message):
         RaspberryMqttClient.last_message_receive_time = time.time()
 
     if mes_text == "status":
-        RaspberryMqttClient.publish_stats(RaspberryMqttClient.status)
+        RaspberryMqttClient.publish_status(RaspberryMqttClient.status)
 
 def handle_configuration(client, userdata, message):
     print("RP:\tConfiguration")

@@ -9,6 +9,9 @@ from paho.mqtt.client import MQTTv311, Client
 import ast
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RPStates, safe_literal_eval
+import logging
+import logging_configurator
+logger = logging.getLogger(__name__)
 
 SETPOINT_STEP = 10
 
@@ -91,8 +94,7 @@ class ServerMqttClient:
         cls.client.connect(server_ip, port, 60)
         cls.client.publish("ice_runner/server/raspberry_pi_commander", "ready")
         cls.client.publish("ice_runner/server/bot_commander", "ready")
-        print("started server")
-        print(f"ServerMqttClient connected")
+        logger.info("started server")
 
     @classmethod
     def get_client(cls) -> mqtt.client.Client:
@@ -101,20 +103,20 @@ class ServerMqttClient:
     @classmethod
     def publish_rp_state(cls, rp_id: int) -> None:
         if rp_id not in cls.rp_status.keys():
-            print(f"No status for Raspberry Pi {rp_id}")
+            logger.info(f"Published\t| Raspberry Pi {rp_id} is not connected ")
             return
-        print("publishing rp state")
         if cls.rp_status[rp_id] is None:
+            logger.info(f"Published\t|Raspberry Pi {rp_id} no state set")
             return
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", cls.rp_status[rp_id]["state"])
 
     @classmethod
     def publish_rp_status(cls, rp_id: int) -> None:
         if rp_id not in cls.rp_status.keys():
+            logger.info(f"Published\t| Raspberry Pi is not connected")
             return
-        stats = cls.rp_status[rp_id]
-        print("publishing rp status")
-        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats", str(stats))
+        status = cls.rp_status[rp_id]
+        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", str(status))
 
     @classmethod
     def publish_rp_states(cls) -> None:
@@ -126,45 +128,39 @@ def handle_raspberry_pi_dronecan_message(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
     print(f"Got dronecan msg for Raspberry Pi {rp_id}: {msg.payload.decode()}")
     message_type: str = msg.topic.split("/")[4]
+    logger.info(f"Published\t| Raspberry Pi {rp_id} send {message_type}")
     if rp_id not in ServerMqttClient.rp_messages.keys():
         ServerMqttClient.rp_messages[rp_id] = {}
     if message_type not in ServerMqttClient.rp_messages[rp_id].keys():
         ServerMqttClient.rp_messages[rp_id][message_type] = {}
     ServerMqttClient.rp_messages[rp_id][message_type] = yaml.safe_load(msg.payload.decode())
 
-# def handle_raspberry_pi_setpoint(client, userdata, msg):
-#     rp_id = int(msg.topic.split("/")[2])
-#     # print(f"Got setpoint msg for Raspberry Pi {rp_id}")
-#     ServerMqttClient.rp_cur_setpoint[rp_id] = float(msg.payload.decode())
-
-def handle_raspberry_pi_stats(client, userdata, msg):
+def handle_raspberry_pi_status(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
-    print(f"Got stats msg for Raspberry Pi {rp_id}: {msg.payload.decode()}")
+    print(f"Recieved\t| Raspberry Pi {rp_id} send status")
     ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id]["state"])
-    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/stats", str(ServerMqttClient.rp_status[rp_id]))
+    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", str(ServerMqttClient.rp_status[rp_id]))
     ServerMqttClient.rp_status[rp_id] = None
 
 
 def handle_raspberry_pi_configuration(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
-    print("Hi")
-    print(f"Got configuration msg for Raspberry Pi {rp_id}: {msg.payload.decode()}")
+    print(f"Received\t| Raspberry Pi {rp_id} send configuration")
     ServerMqttClient.rp_configuration[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/config", str(ServerMqttClient.rp_configuration[rp_id]))
-    print(f"Bot got configuration for Raspberry Pi {str(ServerMqttClient.rp_configuration[rp_id])}")
+    print(f"Published\t| Bot received configuration for Raspberry Pi")
 
 
 def handle_bot_usr_cmd_state(client, userdata,  msg):
     # print("got bot usr cmd state")
     rp_id = int(msg.payload.decode())
+    logger.info(f"Recieved\t| Bot send command {rp_id} get_conf")
     ServerMqttClient.client.publish("ice_runner/server/rp_commander/get_conf", str(rp_id))
-    # time.sleep(0.1)
-    # ServerMqttClient.publish_rp_status(rp_id)
-    # ServerMqttClient.publish_rp_state(rp_id)
 
 def handle_bot_usr_cmd_stop(client, userdata,  msg):
     print("got bot usr cmd stop")
+    logger.info(f"Recieved\t| Bot send command {rp_id} stop")
     rp_id = int(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/command", "stop")
     ServerMqttClient.rp_setpoint[rp_id] = 0
@@ -192,16 +188,15 @@ def handle_bot_configure(client, userdata, msg):
         ServerMqttClient.rp_configuration[rp_id][name] = value
 
 def handle_bot_config(client, userdata, msg):
-    print("handle_bot_config ", msg.payload.decode())
+    logger.info(f"Recieved\t| Bot send configuration")
     rp_id = int(msg.payload.decode())
-    print(f"Bot waiting for configuration for Raspberry Pi {rp_id}")
     if rp_id not in ServerMqttClient.rp_configuration.keys():
         ServerMqttClient.rp_configuration[rp_id] = {}
     ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/config", str(rp_id))
-    print(f"waiting for configuration for Raspberry Pi {rp_id}")
+    logger.info(f"Published\t| Bot waiting for configuration for Raspberry Pi {rp_id}")
 
 def start() -> None:
-    ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/stats", handle_raspberry_pi_stats)
+    ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/status", handle_raspberry_pi_status)
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/dronecan/#", handle_raspberry_pi_dronecan_message)
 
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/configuration", handle_raspberry_pi_configuration)
