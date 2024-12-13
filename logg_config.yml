@@ -2,28 +2,19 @@ version: 1
 disable_existing_loggers: true
 
 handlers:
-  fileHandler: 
-    class: logging.handlers.TimedRotatingFileHandler
+  fileHandler:
+    class: logging.FileHandler  # Change to FileHandler programmatically
     formatter: brief
-    filename: logs/root.log
+    filename: placeholder.log  # Placeholder to be replaced programmatically
 
   consoleHandler:
     class: logging.StreamHandler
     formatter: precise
 
-  rawMessageHandler:
-    class: logging.handlers.TimedRotatingFileHandler
-    formatter: rawMessage
-    filename: logs/raw_messages.log
-
 loggers:
   root:
     level: DEBUG
     handlers: [fileHandler, consoleHandler]
-  ice_commander:
-    level: DEBUG
-    handlers: [rawMessageHandler]
-    propagate: 0
 
 # Root logger should be specified if common settings are needed
 root:
@@ -35,7 +26,7 @@ formatters:
     format: "%(asctime)s | %(levelname)-8s | %(filename)s-%(lineno)04d | %(message)s"
     datefmt: "%Y-%m-%d %H:%M:%S"
   precise:
-    format: "%(asctime)s | %(levelname)-8s | %(filename)s-%(funcName)s-%(lineno)04d | %(message)s"
+    format: "%(asctime)s | %(levelname)-8s | %(filename)s | %(message)s"
     datefmt: "%H:%M:%S"
   rawMessage:
     format: "%(asctime)s | %(message)s"

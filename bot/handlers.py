@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 import sys
 import os
@@ -23,6 +22,9 @@ from bot_mqtt_client import BotMqttClient
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RPStates
 import pprint
+import logging_configurator
+logger = logging_configurator.AsyncLogger(__name__)
+
 
 conf_params_description = '''
 *rpm*:
@@ -144,14 +146,22 @@ async def choose_rp_id(message: types.Message, state: FSMContext) -> None:
     await message.answer("Выберите Raspberry Pi ID. Напишите RP ID")
 
 @form_router.message(Conf.rp_id)
-async def choose_rp_id_handler(message: types.Message, state: FSMContext) -> None:
+async def rp_id_handler(message: types.Message, state: FSMContext) -> None:
     print("Configure RP ID")
-    if int(message.text) not in mqtt_client.rp_status.keys():
+    if not message.text.isdigit():
+        if message.text.casefold() in ("/cancel", "cancel"):
+            await cancel_handler(message, state)
+        else:
+            await message.reply("Пожалуйста, введите числовой RP ID или отмените команду с помощью /cancel.")
+        return
+    rp_id_num = int(message.text)
+
+    if rp_id_num not in mqtt_client.rp_status.keys():
         await message.reply("Raspberry Pi с таким ID не найден")
         return
     global rp_id
-    rp_id = int(message.text)
-    await message.reply(f"Выбранный Raspberry Pi ID: {rp_id}")
+    rp_id = rp_id_num
+    await message.reply(f"Выбранный Raspberry Pi ID: {rp_id_num}")
     await state.clear()
 
 # Commands handlers
@@ -168,19 +178,17 @@ async def command_conf_handler(message: types.Message, state: FSMContext):
 
 # You can use state='*' if you want to handle all states
 @form_router.message(Command(commands=["cancel", "отмена"]))
-@form_router.message(F.text.casefold() == "cancel")
 async def cancel_handler(message: Message, state: FSMContext) -> None:
     """
     Allow user to cancel any action
     """
     current_state = await state.get_state()
     if current_state is None:
+        await message.answer("Нет активных действий для отмены.", reply_markup=ReplyKeyboardRemove())
         return
-    logging.info("Cancelling state %r", current_state)
-    print("Cancelling state", current_state)
-    await state.update_data({"status_state": None, "conf_state": None, "starting_state": None})
 
-    # await state.clear()
+    logging.info("Cancelling state %r", current_state)
+    await state.clear()
     await message.answer(
         "Cancelled.",
         reply_markup=ReplyKeyboardRemove(),
@@ -191,6 +199,8 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/run` command
     """
+    global rp_id
+    print(rp_id)
     if rp_id is None:
         await message.answer("Выберите Raspberry Pi ID. Напишите RP ID")
         await state.set_state(Conf.rp_id)
@@ -200,12 +210,22 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     await message.answer(f"Отправьте /cancel или /отмена чтобы отменить запуск обкатки. После запуска отправьте /stop или /стоп чтобы остановить ее")
     i = 0
     await state.set_state(Conf.starting_state)
-    while i < 10:
+    is_starting = await state.get_state()
+
+    logger.info(f"STATUS\t| received CMD START from user {message.from_user.username}")
+    while i < 1 and is_starting:
         await message.answer(f"Запуск через {10-i}")
         i += 1
         await asyncio.sleep(1)
-    await message.answer(f"Запущено")
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
+        is_starting = await state.get_state()
+        if is_starting is None:
+            logger.info(f"STATUS\t| CMD START aborted by user")
+            time.sleep(0.1)
+            continue
+    if is_starting:
+        await message.answer(f"Запущено")
+        logger.info(f"STATUS\t| CMD START send to Raspberry Pi {rp_id}")
+        mqtt_client.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
 
 @dp.message(Command(commands=["help", "помощь"]))
 async def command_help_handler(message: Message) -> None:
@@ -307,35 +327,19 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
             prev_time = time.time()
         await asyncio.sleep(1)
 
-# @dp.message(Command(commands=["start", "запустить"], ignore_case=True))
-# async def command_start_handler(message: Message) -> None:
-#     """
-#     This handler receives messages with `/start` command
-#     """
-#     print("TG:\tStart handler")
-#     await message.answer(f"Hello, {html.bold(message.from_user.full_name)}!")
-#     if not configuration:
-#         print("TG:\tNo configuration stored")
-#         await message.answer(f"No configuration stored. Send configuration with /conf command")
-#     else:
-#         print("TG:\tConfiguration stored")
-#         await message.answer("Previous configuration: " + get_configuration_str(configuration))
-#     await message.answer(f"Connected Raspberry Pi IDs:")
-#     for id, state in mqtt_client.rp_states.items():
-#         await message.answer(f"\t{id}: state - {state}")
-
 @form_router.message(Command(commands=["stop", "стоп"]))
 async def command_stop_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/stop` command
     """
+    global rp_id
     if rp_id is None:
         await message.answer("Выберите Raspberry Pi ID. Напишите RP ID")
         await state.set_state(Conf.rp_id)
         return
     await message.answer(f"Stopping")
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}").wait_for_publish()
-    rp_status = int(mqtt_client.rp_status[rp_id])
+    rp_status = int(mqtt_client.rp_status[rp_id]["state"])
     while True:
         if rp_status != RPStates.RUNNING.value:
             break
@@ -355,6 +359,7 @@ async def main() -> None:
     TOKEN = os.getenv("BOT_TOKEN")
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     print("TG:\t" + configuration_file_path)
+    logger.info(f"STATUS\t| Bot started")
     dp.include_router(form_router)
     await dp.start_polling(bot)
 

@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import logging
 import os
 from pathlib import Path
 import sys
@@ -9,17 +8,13 @@ from dotenv import load_dotenv
 from mqtt_client import RaspberryMqttClient, start
 import subprocess
 
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../dronecan_communication')))
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from ice_commander import ICECommander
+import logging
 import logging_configurator
-from can import Printer
+logger = logging_configurator.AsyncLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
-printer = Printer("test_printer.txt", append=True)
-# printer.on_message_received
 conf_params_description = {
 "rpm":
     {"default": 4500, "help": "Целевые обороты ДВС"},
@@ -82,7 +77,6 @@ if __name__ == "__main__":
     if args.id is None:
         print("RP:\tNo ID provided, exiting")
         sys.exit(-1)
-    os.system("echo ''")
 
     configuration = IceRunnerConfiguration(args.__dict__)
     RaspberryMqttClient.configuration = configuration

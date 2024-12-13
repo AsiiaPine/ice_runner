@@ -7,10 +7,9 @@ from typing import Any, Dict
 from dotenv import load_dotenv
 from paho.mqtt.client import MQTTv311
 from server_mqtt_client import ServerMqttClient, start
-
+import logging_configurator
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../common')))
-config_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'last_config.yml'))
-logger = logging.getLogger(__name__)
+logger = logging_configurator.getLogger(__file__)
 configuration: Dict[str, Any] = {}
 connected_nodes = {'ice': [], 'mini': []}
 load_dotenv()

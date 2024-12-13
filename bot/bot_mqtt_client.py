@@ -5,6 +5,9 @@ from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RPStates, safe_literal_eval
+import logging
+import logging_configurator
+logger = logging_configurator.AsyncLogger(__name__)
 
 class BotMqttClient:
     client = Client(client_id="bot", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
@@ -26,16 +29,19 @@ def handle_commander_state(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     BotMqttClient.rp_states[rp_pi_id] = safe_literal_eval(message.payload.decode())
     BotMqttClient.rp_states[rp_pi_id] = RPStates(int(BotMqttClient.rp_states[rp_pi_id]))
+    logger.info(f"STATUS\t| received RP state from Raspberry Pi {rp_pi_id}")
 
 def handle_commander_status(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     state = safe_literal_eval(message.payload.decode())
     if state is not None:
         BotMqttClient.rp_status[rp_pi_id] = state
+        logger.info(f"STATUS\t| received RP status from Raspberry Pi {rp_pi_id}")
 
 def handle_commander_config(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     BotMqttClient.rp_configuration[rp_pi_id] = safe_literal_eval(message.payload.decode())
+    logger.info(f"STATUS\t| received RP configuration from Raspberry Pi {rp_pi_id}")
 
 async def start() -> None:
     print("start")

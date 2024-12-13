@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import sys
 from typing import Any, Dict
 from aiogram import Bot
@@ -11,8 +10,11 @@ import os
 import handlers as handlers
 from bot_mqtt_client import BotMqttClient, start
 
+sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import logging
+import logging_configurator
+logger = logging_configurator.AsyncLogger(__name__)
 
-logger = logging.getLogger(__name__)
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 SERVER_IP = os.getenv("SERVER_IP")
