@@ -9,6 +9,7 @@ from paho.mqtt.client import MQTTv311, Client
 import ast
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RPStates, safe_literal_eval
+from common.ICEState import Mode, Health, ICEState, RecipState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 import logging
 import logging_configurator
@@ -18,7 +19,6 @@ class ServerMqttClient:
     client = Client(client_id="server", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
     rp_messages: Dict[int, Dict[str, Dict[str, Any]]] = {}
     rp_status: Dict[int, Any] = {}
-    rp_setpoint: Dict[int, float] = {}
     rp_cur_setpoint: Dict[int, float] = {}
 
     last_ready_transmit = 0
@@ -72,6 +72,7 @@ def handle_raspberry_pi_dronecan_message(client, userdata, msg):
 
 def handle_raspberry_pi_status(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
+    print(msg.payload.decode())
     logging.info(f"Recieved\t| Raspberry Pi {rp_id} send status")
     ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id]["state"])
@@ -111,9 +112,13 @@ def handle_bot_usr_cmd_stop(client, userdata,  msg):
 
 def handle_bot_usr_cmd_start(client, userdata,  msg):
     rp_id = int(msg.payload.decode())
+    logger.info(f"Recieved\t| Bot send command {rp_id} start")
     ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "start")
-    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/setpoint", 8191)
-    ServerMqttClient.rp_setpoint[rp_id] = 8191
+
+def handle_bot_usr_cmd_status(client, userdata,  msg):
+    rp_id = int(msg.payload.decode())
+    logger.info(f"Recieved\t| Bot send command {rp_id} status")
+    ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "status")
 
 def handle_bot_configure(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[-1])
@@ -140,6 +145,7 @@ def start() -> None:
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/state", handle_bot_usr_cmd_state)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/stop", handle_bot_usr_cmd_stop)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/start", handle_bot_usr_cmd_start)
+    ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/status", handle_bot_usr_cmd_status)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/config", handle_bot_config)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/configure/#", handle_bot_configure)
     ServerMqttClient.client.subscribe("ice_runner/raspberry_pi/#")

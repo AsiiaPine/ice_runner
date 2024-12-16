@@ -13,7 +13,7 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 from ice_commander import ICECommander
 import logging
 import logging_configurator
-logger = logging_configurator.AsyncLogger(__name__)
+logger = logging_configurator.getLogger(__file__)
 
 conf_params_description = {
 "rpm":

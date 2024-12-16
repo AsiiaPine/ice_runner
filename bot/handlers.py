@@ -93,18 +93,27 @@ def get_configuration_str(rp_id: int) -> str:
             conf_str += f"\t{name}: {value}\n"
         return conf_str
 
+last_status_update = time.time()
+
 async def get_rp_status(rp_id: int) -> Dict[str, Any]:
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
+    global last_status_update
     await asyncio.sleep(0.4)
     if rp_id not in mqtt_client.rp_status.keys():
         return "\tNo status from the node\n"
     status = mqtt_client.rp_status[rp_id]
-    mqtt_client.rp_status.__delitem__(rp_id)
-    status_str = "\t\tState: " + RPStates(status["state"]).name + '\n'
+    print(mqtt_client.rp_configuration[rp_id]["report_period"])
+    if time.time() - last_status_update > mqtt_client.rp_configuration[rp_id]["report_period"]:
+        mqtt_client.rp_status.__delitem__(rp_id)
+        mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
+        mqtt_client.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
+        mqtt_client.client.publish("ice_runner/bot/usr_cmd/configuration", str(rp_id))
+        status_str = "\t\tState: " + RPStates(status["state"]).name + '\n'
+        last_status_update = time.time()
+
+    update_time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(last_status_update))
     for name, value in status.items():
         status_str += f"\t\t{name}: {value}\n"
-    return status_str + "\nupdate time: " + time.strftime("%Y-%m-%d %H:%M:%S\n")
+    return status_str + "\nupdate time: " + update_time
 
 dp = Dispatcher()
 form_router = Router()
@@ -187,7 +196,7 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
         await message.answer("Нет активных действий для отмены.", reply_markup=ReplyKeyboardRemove())
         return
 
-    logging.info("Cancelling state %r", current_state)
+    logger.info("Cancelling state %r", current_state)
     await state.clear()
     await message.answer(
         "Cancelled.",
@@ -211,16 +220,16 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     i = 0
     await state.set_state(Conf.starting_state)
     is_starting = await state.get_state()
-
+    print(is_starting)
     logger.info(f"STATUS\t| received CMD START from user {message.from_user.username}")
-    while i < 1 and is_starting:
+    while i < 10 and is_starting:
         await message.answer(f"Запуск через {10-i}")
         i += 1
         await asyncio.sleep(1)
         is_starting = await state.get_state()
         if is_starting is None:
             logger.info(f"STATUS\t| CMD START aborted by user")
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
             continue
     if is_starting:
         await message.answer(f"Запущено")
@@ -338,12 +347,13 @@ async def command_stop_handler(message: Message, state: FSMContext) -> None:
         await state.set_state(Conf.rp_id)
         return
     await message.answer(f"Stopping")
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}").wait_for_publish()
+    mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
     rp_status = int(mqtt_client.rp_status[rp_id]["state"])
     while True:
         if rp_status != RPStates.RUNNING.value:
             break
         await message.answer(f"Raspberry Pi {rp_id} is stopping. Current state: {RPStates(rp_status).name}")
+        mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
         await asyncio.sleep(1)
     await message.answer(f"Stopped")
 
@@ -364,5 +374,4 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())

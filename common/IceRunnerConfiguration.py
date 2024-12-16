@@ -1,5 +1,4 @@
 from typing import Any, Dict
-import yaml
 
 class IceRunnerConfiguration:
     rpm: int = 4500

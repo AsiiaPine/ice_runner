@@ -9,8 +9,8 @@ import yaml
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import logging
-import logging_configurator
-logger = logging_configurator.AsyncLogger(__name__)
+# import logging_configurator
+# logging.getLogger(__name__) = logging_configurator.AsyncLogger(__file__)
 
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from common.RPStates import RPStates
@@ -35,10 +35,10 @@ class RaspberryMqttClient:
         cls.is_connected = False
         cls.rp_id = rp_id
         cls.client = Client(client_id=f"raspberry_{rp_id}", clean_session=True, protocol=MQTTv311, reconnect_on_failure=True)
-        logger.info(f"MQTT:\tConnecting to {server_ip}:{port}")
+        logging.getLogger(__name__).info(f"MQTT:\tConnecting to {server_ip}:{port}")
         cls.client.connect(server_ip, port, 60)
         cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", RPStates.STOPPED.value)
-        logger.info(f"MQTT:\t  PUBLISH\t| state")
+        logging.getLogger(__name__).info(f"MQTT:\t  PUBLISH\t| state")
 
     @classmethod
     def set_id(cls, rp_id: str) -> None:
@@ -49,40 +49,41 @@ class RaspberryMqttClient:
     def publish_messages(cls, messages: Dict[str, Any]) -> None:
         for dronecan_type in messages.keys():
             cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/dronecan/{dronecan_type}", str(messages[dronecan_type]))
-        logger.info(f"MQTT:\t  PUBLISH\t| dronecan messages")
+        logging.getLogger(__name__).info(f"MQTT:\t  PUBLISH\t| dronecan messages")
 
     @classmethod
     def publish_status(cls, status: Dict[str, Any]) -> None:
-        logger.info(f"MQTT:\t  PUBLISH\t| status")
+        logging.getLogger(__name__).info(f"MQTT:\t  PUBLISH\t| status")
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/status", str(status))
+        cls.status = status
 
 def handle_command(client, userdata, message):
     mes_text = message.payload.decode()
     if mes_text == "start":
-        logger.info("MQTT:\tStart")
+        logging.getLogger(__name__).info("MQTT:\tStart")
         RaspberryMqttClient.state = RPStates.STARTING
         RaspberryMqttClient.to_run = 1
     if mes_text == "stop":
-        logger.info("MQTT:\tStop")
+        logging.getLogger(__name__).info("MQTT:\tStop")
         RaspberryMqttClient.state = RPStates.STOPPING
         RaspberryMqttClient.to_stop = 1
 
     if mes_text == "keep alive":
-        logger.info("MQTT:\tKeep alive")
+        logging.getLogger(__name__).info("MQTT:\tKeep alive")
         RaspberryMqttClient.last_message_receive_time = time.time()
 
     if mes_text == "status":
-        logger.info("MQTT:\tRECEIVE:\tStatus request")
-        RaspberryMqttClient.publish_status(RaspberryMqttClient.status)
+        logging.getLogger(__name__).info("MQTT:\tRECEIVE:\tStatus request")
+        RaspberryMqttClient.publish_status(str(RaspberryMqttClient.status))
 
 def handle_configuration(client, userdata, message):
-    logger.info("MQTT:\tRECEIVE:\t Configuration request")
+    logging.getLogger(__name__).info("MQTT:\tRECEIVE:\t Configuration request")
     rp_id = int(message.payload.decode())
     if rp_id == RaspberryMqttClient.rp_id:
         RaspberryMqttClient.client.publish(f"ice_runner/raspberry_pi/{RaspberryMqttClient.rp_id}/configuration", str(RaspberryMqttClient.configuration.to_dict()))
 
 def handle_config(client, userdata, message):
-    logger.info("MQTT:\tRECEIVE:\t Configuration")
+    logging.getLogger(__name__).info("MQTT:\tRECEIVE:\t Configuration")
     RaspberryMqttClient.client.publish(f"ice_runner/raspberry_pi/{RaspberryMqttClient.rp_id}/configuration", str(RaspberryMqttClient.configuration.to_dict()))
 
 

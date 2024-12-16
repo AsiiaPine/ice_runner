@@ -63,7 +63,9 @@ class ICENODE:
         self.vibration: float = 0
         self.spark_ignition_time: float = 0
         self.engaged_time: float = 0
+        print("self.mode = Mode.MODE_OPERATIONAL", type(self.mode))
         self.mode = Mode.MODE_OPERATIONAL
+        print("self.mode = Mode.MODE_OPERATIONAL ", type(self.mode))
         self.health = Health.HEALTH_OK
 
     def random_rpm_change(self) -> int:

@@ -49,19 +49,19 @@ class AsyncLogger():
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1) 
 
     def info(self, msg, *args):
-        self.executor.submit(logging.info, msg, *args)
+        self.executor.submit(self.logger, msg, *args)
 
     def debug(self, msg, *args):
-        self.executor.submit(logging.debug, msg, *args)
+        self.executor.submit(self.logger, msg, *args)
 
     def warning(self, msg, *args):
-        self.executor.submit(logging.warning, msg, *args)
+        self.executor.submit(self.logger, msg, *args)
 
     def error(self, msg, *args):
-        self.executor.submit(logging.error, msg, *args)
+        self.executor.submit(self.logger, msg, *args)
 
     def critical(self, msg, *args):
-        self.executor.submit(logging.critical, msg, *args)
+        self.executor.submit(self.logger, msg, *args)
 
     def exception(self, msg, *args, exc_info=True):
-        self.executor.submit(logging.exception, msg, *args, exc_info=exc_info)
+        self.executor.submit(self.logger, msg, *args, exc_info=exc_info)
