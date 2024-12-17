@@ -47,6 +47,7 @@ class DronecanCommander:
         cls.node = node
         cls.messages: Dict[str, Any] = {}
         cls.state: ICEState = ICEState()
+        cls.air_cmd = dronecan.uavcan.equipment.actuator.Command(actuator_id=ICE_AIR_CHANNEL, command_value=0)
         cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
         cls.node.sub_once(dronecan.uavcan.equipment.ice.reciprocating.Status)
         cls.node.sub_once(dronecan.uavcan.equipment.ahrs.RawIMU)
@@ -66,6 +67,7 @@ class DronecanCommander:
         if time.time() - cls.prev_broadcast_time > 0.1:
             cls.prev_broadcast_time = time.time()
             cls.node.publish(cls.cmd)
+            cls.node.publish(dronecan.uavcan.equipment.actuator.ArrayCommand(commands = [cls.air_cmd]))
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
@@ -184,11 +186,14 @@ class ICECommander:
         global i
         if self.rp_state == RPStatesDict["NOT_CONNECTED"] or self.rp_state > RPStatesDict["STARTING"]:
             self.dronecan_commander.cmd.cmd = [0]* (ICE_AIR_CHANNEL + 1)
+            self.dronecan_commander.air_cmd.command_value = 0
             return
 
         if self.rp_state == RPStatesDict["STARTING"]:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = 3000
-            self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = 4000
+            self.dronecan_commander.air_cmd.command_value = 1000
+
+            # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = 4000
             i += 200
             if i > MAX_AIR_OPEN:
                 i = 0
