@@ -29,7 +29,7 @@ def getLogger(filepath):
     if not os.path.exists(dir):
         os.makedirs(dir)
     full_log_path = path.join(dir, log_filename)
-    print(full_log_path)
+
     # Update the filename in the logging configuration
     log_conf_file['handlers']['fileHandler']['filename'] = full_log_path
     # Apply the modified logging configuration

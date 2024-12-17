@@ -6,15 +6,17 @@ from enum import IntEnum
 import time
 from typing import Any, Dict
 import dronecan
-from common.ICEState import Mode, Health, ICEState, RecipState
-from common.RPStates import RPStates
+from common.ICEState import ICEState, RecipStateDict, ModeDict, HealthDict
+# from common.ICEState import Mode, Health, ICEState, RecipState
+# from common.RPStates import RPStates
+from common.RPStates import RPStatesDict
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from mqtt_client import RaspberryMqttClient
 from raccoonlab_tools.dronecan.utils import ParametersInterface
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 
 import logging
-import logging_configurator
+# import logging_configurator
 # logger = logging_configurator.AsyncLogger(__name__)
 
 # # GPIO setup
@@ -80,7 +82,6 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
-    print(msg.message.mode, msg.message.health)
     DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_node_status(msg)
     DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
@@ -134,7 +135,7 @@ class PIDController:
 
 class ICECommander:
     def __init__(self, reporting_period: float = 1, configuration: IceRunnerConfiguration = None) -> None:
-        self.rp_state = RPStates.STOPPED
+        self.rp_state = RPStatesDict["STOPPED"]
         self.reporting_period = reporting_period
         self.dronecan_commander = DronecanCommander
         self.dronecan_commander.connect()
@@ -152,12 +153,11 @@ class ICECommander:
     def check_conditions(self) -> int:
         state = self.dronecan_commander.state
         # check if conditions are exeeded
-        if state.ice_state == RecipState.NOT_CONNECTED:
-            self.rp_state = RPStates.NOT_CONNECTED
+        if state.ice_state == RecipStateDict["NOT_CONNECTED"]:
+            self.rp_state = RPStatesDict["NOT_CONNECTED"]
             logging.getLogger(__name__).warning("STATUS:\t ice not connected")
-            print("STATUS:\t ice not connected")
             return 0
-        if self.start_time <= 0 or state.ice_state > RPStates.STARTING:
+        if self.start_time <= 0 or state.ice_state > RPStatesDict["STARTING"]:
             self.flags.vin_ex = self.configuration.min_vin_voltage > state.voltage_in
             self.flags.temp_ex = self.configuration.max_temperature < state.temp
             eng_time_ex = False
@@ -165,10 +165,8 @@ class ICECommander:
               eng_time_ex = state.engaged_time > 40 * 60 * 60
               if eng_time_ex:
                   logging.getLogger(__name__).warning(f"STATUS:\t Engaged time {state.engaged_time} is exeeded")
-                  print(f"STATUS:\t Engaged time {state.engaged_time} is exeeded")
             if self.flags.vin_ex or self.flags.temp_ex or eng_time_ex:
                 logging.getLogger(__name__).warning(f"STATUS:\t Flags exceeded: vin {self.flags.vin_ex} temp {self.flags.temp_ex} engaged time {eng_time_ex}")
-                print(f"STATUS:\t Flags exceeded: vin {self.flags.vin_ex} temp {self.flags.temp_ex} engaged time {eng_time_ex}")
             return sum([self.flags.vin_ex, self.flags.temp_ex,eng_time_ex])
 
         self.flags.throttle_ex = self.configuration.max_gas_throttle < state.throttle
@@ -179,15 +177,14 @@ class ICECommander:
         flags_attr = vars(self.flags)
         if self.flags.vibration_ex or self.flags.time_ex or self.flags.rpm_ex or self.flags.throttle_ex or self.flags.temp_ex:
             logging.getLogger(__name__).warning(f"STATUS:\t Flags exceeded: vibration {self.flags.vibration_ex} time {self.flags.time_ex} rpm {self.flags.rpm_ex} throttle {self.flags.throttle_ex} temp {self.flags.temp_ex}")
-            print(f"STATUS:\t Flags exceeded: vibration {self.flags.vibration_ex} time {self.flags.time_ex} rpm {self.flags.rpm_ex} throttle {self.flags.throttle_ex} temp {self.flags.temp_ex}")
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
-        if self.rp_state.value == -1 or self.rp_state > RPStates.STARTING:
+        if self.rp_state == RPStatesDict["NOT_CONNECTED"] or self.rp_state > RPStatesDict["STARTING"]:
             self.dronecan_commander.cmd.cmd = [0]* (ICE_AIR_CHANNEL + 1)
             return
 
-        if self.rp_state == RPStates.STARTING:
+        if self.rp_state == RPStatesDict["STARTING"]:
             self.dronecan_commander.cmd.cmd[ICE_CMD_CHANNEL] = 3000
             self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
             return
@@ -207,38 +204,37 @@ class ICECommander:
         self.rp_state_start = self.rp_state
         ice_state = self.dronecan_commander.state.ice_state
         rpm = self.dronecan_commander.state.rpm
-        if ice_state == RecipState.NOT_CONNECTED:
+        if ice_state == RecipStateDict["NOT_CONNECTED"]:
             logging.getLogger(__name__).error("NOT_CONNECTED:\t No ICE connected")
             await asyncio.sleep(1)
             self.dronecan_commander.cmd.cmd = [0] * (ICE_AIR_CHANNEL + 1)
             self.dronecan_commander.spin()
             return
 
-        if ice_state == RecipState.STOPPED:
-            if self.rp_state != RPStates.STARTING:
-                self.rp_state = RPStates.STOPPED
-        print("ice comm", type(self.dronecan_commander.state.mode), type(self.dronecan_commander.state.health))
+        if ice_state == RecipStateDict["STOPPED"]:
+            if self.rp_state != RPStatesDict["STARTING"]:
+                self.rp_state = RPStatesDict["STOPPED"]
         # self.check_buttons()
         self.check_mqtt_cmd()
         rp_state = self.rp_state
         cond_exceeded = self.check_conditions()
-        if cond_exceeded or rp_state > RPStates.STARTING or ice_state == RecipState.FAULT:
+        if cond_exceeded or rp_state > RPStatesDict["STARTING"] or ice_state == RecipStateDict["FAULT"]:
             self.start_time = 0
-            logging.getLogger(__name__).info(f"STOP:\t conditions exceeded {bool(cond_exceeded)}, rp state {rp_state.name}, ice state {ice_state}")
-        if rp_state == RPStates.STARTING:
+            logging.getLogger(__name__).info(f"STOP:\t conditions exceeded {bool(cond_exceeded)}, rp state {rp_state}, ice state {ice_state}")
+        if rp_state == RPStatesDict["STARTING"]:
             if time.time() - self.start_time > 30:
-                self.rp_state = RPStates.STOPPING
+                self.rp_state = RPStatesDict["STOPPING"]
                 logging.getLogger(__name__).error("STARTING:\t start time exceeded")
-            if ice_state == RecipState.RUNNING and rpm > 1500 and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
+            if ice_state == RecipStateDict["RUNNING"] and rpm > 1500 and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
                 logging.getLogger(__name__).info("STARTING:\t started successfully")
-                self.rp_state = RPStates.RUNNING
-        if ice_state == RecipState.WAITING:
+                self.rp_state = RPStatesDict["RUNNING"]
+        if ice_state == RecipStateDict["WAITING"]:
             self.prev_waiting_state_time = time.time_ns()
-            self.rp_state = RPStates.STARTING
+            self.rp_state = RPStatesDict["STARTING"]
             logging.getLogger(__name__).info("WAITING:\t waiting state")
 
         self.set_command()
-        logging.getLogger(__name__).info(f"CMD:\t {self.dronecan_commander.cmd.cmd}")
+        logging.getLogger(__name__).info(f"CMD:\t {list(self.dronecan_commander.cmd.cmd)}")
         await self.report_state()
         self.dronecan_commander.spin()
         await asyncio.sleep(0.05)
@@ -247,10 +243,10 @@ class ICECommander:
         if self.prev_report_time + self.reporting_period < time.time():
             state_dict = self.dronecan_commander.state.to_dict()
             state_dict["start_time"] = self.start_time
-            state_dict["state"] = self.rp_state.value
+            state_dict["state"] = self.rp_state
             RaspberryMqttClient.status = state_dict
             RaspberryMqttClient.publish_status(state_dict)
-            RaspberryMqttClient.get_client().publish("ice_runner/raspberry_pi/{rp_id}/state", self.rp_state.value)
+            RaspberryMqttClient.get_client().publish("ice_runner/raspberry_pi/{rp_id}/state", self.rp_state)
             RaspberryMqttClient.publish_messages(self.dronecan_commander.messages)
             self.prev_report_time = time.time()
             logging.getLogger(__name__).info(f"SEND STATE:\t {self.rp_state}")
@@ -260,35 +256,33 @@ class ICECommander:
             await self.spin()
 
     # def check_buttons(self):
-        # """If we"""
-        # stop_switch = GPIO.input(start_stop_pin)
-        # if self.last_button_cmd == stop_switch:
-        #     return
-        # if stop_switch:
-        #     print("Button released")
-        #     if self.rp_state == RPStates.STARTING or self.rp_state == RPStates.RUNNING:
-        #         self.rp_state = RPStates.STOPPING
-        #     print("state:" + self.rp_state.name)
-        # else:
-        #     print("Button pressed")
-        #     if self.rp_state > RPStates.STARTING:
-        #         self.rp_state = RPStates.STARTING
-        #         self.start_time = time.time()
-        #         print("state: " + self.rp_state.name)
-        #     else:
-        #         print("state: " + self.rp_state.name)
-        # self.last_button_cmd = stop_switch
+    #     """If we"""
+    #     stop_switch = GPIO.input(start_stop_pin)
+    #     if self.last_button_cmd == stop_switch:
+    #         return
+    #     if stop_switch:
+    #         print("Button released")
+    #         if self.rp_state == RPStatesDict["STARTING"] or self.rp_state == RPStatesDict["RUNNING"]:
+    #             self.rp_state = RPStatesDict["STOPPING"]
+    #         print("state:" + self.rp_state)
+    #     else:
+    #         print("Button pressed")
+    #         if self.rp_state > RPStatesDict["STARTING"]:
+    #             self.rp_state = RPStatesDict["STARTING"]
+    #             self.start_time = time.time()
+    #             print("state: " + self.rp_state)
+    #         else:
+    #             print("state: " + self.rp_state)
+    #     self.last_button_cmd = stop_switch
 
     def check_mqtt_cmd(self):
         if RaspberryMqttClient.to_stop:
-            self.rp_state = RPStates.STOPPING
+            self.rp_state = RPStatesDict["STOPPING"]
             RaspberryMqttClient.to_stop = 0
-            logging.getLogger(__name__).info(f"MQTT:\t COMMAND\t| stop, state: {self.rp_state.name}")
-            print("MQTT command: stop, state: " + self.rp_state.name)
+            logging.getLogger(__name__).info(f"MQTT:\t COMMAND\t| stop, state: {self.rp_state}")
         if RaspberryMqttClient.to_run:
-            if self.rp_state > RPStates.STARTING:
-                self.rp_state = RPStates.STARTING
+            if self.rp_state > RPStatesDict["STARTING"]:
+                self.rp_state = RPStatesDict["STARTING"]
                 self.start_time = time.time()
-            logging.getLogger(__name__).info(f"MQTT:\t COMMAND\t| run, state: {self.rp_state.name}")
-            print("MQTT command: run, state: " + self.rp_state.name)
+            logging.getLogger(__name__).info(f"MQTT:\t COMMAND\t| run, state: {self.rp_state}")
             RaspberryMqttClient.to_run = 0

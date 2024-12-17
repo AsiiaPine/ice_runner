@@ -8,15 +8,20 @@ from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
 import ast
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.RPStates import RPStates, safe_literal_eval
-from common.ICEState import Mode, Health, ICEState, RecipState
+from common.RPStates import RPStatesDict, safe_literal_eval
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 import logging
-import logging_configurator
-logger = logging_configurator.AsyncLogger(__name__)
+logger = logging.getLogger(__name__)
+# import logging_configurator
+# logger = logging_configurator.AsyncLogger(__name__)
+
+def on_disconnect(client, userdata, rc):
+    if rc != 0:
+        print("Unexpected MQTT disconnection. Will auto-reconnect")
 
 class ServerMqttClient:
-    client = Client(client_id="server", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
+    client = Client(client_id="server", clean_session=False, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
+    client.disconnect_callback = on_disconnect
     rp_messages: Dict[int, Dict[str, Dict[str, Any]]] = {}
     rp_status: Dict[int, Any] = {}
     rp_cur_setpoint: Dict[int, float] = {}
@@ -72,12 +77,10 @@ def handle_raspberry_pi_dronecan_message(client, userdata, msg):
 
 def handle_raspberry_pi_status(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
-    print(msg.payload.decode())
     logging.info(f"Recieved\t| Raspberry Pi {rp_id} send status")
     ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id]["state"])
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", str(ServerMqttClient.rp_status[rp_id]))
-    ServerMqttClient.rp_status[rp_id] = None
 
 def handle_raspberry_pi_configuration(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
@@ -87,7 +90,6 @@ def handle_raspberry_pi_configuration(client, userdata, msg):
     print(f"Published\t| Bot received configuration for Raspberry Pi")
 
 def handle_bot_usr_cmd_state(client, userdata,  msg):
-    # print("got bot usr cmd state")
     rp_id = int(msg.payload.decode())
     logger.info(f"Recieved\t| Bot send command {rp_id} get_conf")
     ServerMqttClient.client.publish("ice_runner/server/rp_commander/get_conf", str(rp_id))
@@ -95,20 +97,7 @@ def handle_bot_usr_cmd_state(client, userdata,  msg):
 def handle_bot_usr_cmd_stop(client, userdata,  msg):
     rp_id = int(msg.payload.decode())
     logger.info(f"Recieved\t| Bot send command {rp_id} stop")
-    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/command", "stop")
-    ServerMqttClient.rp_setpoint[rp_id] = 0
-    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/{rp_id}/setpoint", 0)
-    while True:
-        if ServerMqttClient.rp_status[rp_id] is None:
-            logger.info(f"STATUS\t| Raspberry Pi {rp_id} did not send its status")
-            time.sleep(0.1)
-            continue
-        if ServerMqttClient.rp_status[rp_id].state != RPStates.RUNNING.value:
-            time.sleep(0.1)
-            ServerMqttClient.publish_rp_state(rp_id)
-            break
-        logging.info(f"Raspberry Pi {rp_id} is stopping. Current state: {ServerMqttClient.rp_status[rp_id].state}")
-        time.sleep(0.1)
+    ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "stop")
 
 def handle_bot_usr_cmd_start(client, userdata,  msg):
     rp_id = int(msg.payload.decode())
@@ -119,6 +108,10 @@ def handle_bot_usr_cmd_status(client, userdata,  msg):
     rp_id = int(msg.payload.decode())
     logger.info(f"Recieved\t| Bot send command {rp_id} status")
     ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "status")
+
+def handle_bot_who_alive(client, userdata,  msg):
+    logger.info(f"Recieved\t| Bot send command who_alive")
+    ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/who_alive", "who_alive")
 
 def handle_bot_configure(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[-1])
@@ -146,6 +139,7 @@ def start() -> None:
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/stop", handle_bot_usr_cmd_stop)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/start", handle_bot_usr_cmd_start)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/status", handle_bot_usr_cmd_status)
+    ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/who_alive", handle_bot_who_alive)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/config", handle_bot_config)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/configure/#", handle_bot_configure)
     ServerMqttClient.client.subscribe("ice_runner/raspberry_pi/#")

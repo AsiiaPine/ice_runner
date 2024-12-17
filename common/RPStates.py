@@ -2,13 +2,30 @@ import ast
 from enum import IntEnum
 import math
 
-class RPStates(IntEnum):
-    NOT_CONNECTED = -1
-    RUNNING  = 0
-    STARTING = 1
-    STOPPED  = 2
-    STOPPING = 3
-    FAULT    = 4
+# RPStatesDict = {
+#     -1: "NOT_CONNECTED",
+#     0: "RUNNING",
+#     1: "STARTING",
+#     2: "STOPPED",
+#     3: "STOPPING",
+#     4: "FAULT"
+# }
+RPStatesDict = {
+    "NOT_CONNECTED" : -1,
+    "RUNNING" : 0,
+    "STARTING" : 1,
+    "STOPPED" : 2,
+    "STOPPING" : 3,
+    "FAULT" : 4
+}
+
+# class RPStates(IntEnum):
+#     NOT_CONNECTED = -1
+#     RUNNING  = 0
+#     STARTING = 1
+#     STOPPED  = 2
+#     STOPPING = 3
+#     FAULT    = 4
 
 def safe_literal_eval(val):
     try:
