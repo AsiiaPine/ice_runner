@@ -7,11 +7,6 @@ import os
 import sys
 import yaml
 
-# disable existing modules
-for name, logger in logging.root.manager.loggerDict.items():
-    logger.disabled=True
-    logger.propagate=False
-
 # open the file in read mode
 log_conf_file = None
 absolute_path = path.dirname(path.abspath(__file__))

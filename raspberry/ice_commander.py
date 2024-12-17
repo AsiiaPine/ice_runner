@@ -16,10 +16,10 @@ from raccoonlab_tools.dronecan.utils import ParametersInterface
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 
 import logging
-# import logging_configurator
+import logging_configurator
 # logger = logging_configurator.AsyncLogger(__name__)
 
-# # GPIO setup
+# GPIO setup
 # import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 # GPIO.setwarnings(True) # Ignore warning for now
 # GPIO.setmode(GPIO.BCM) # Use physical pin numbering
@@ -30,12 +30,13 @@ import logging
 # GPIO.setup(resistor_pin, GPIO.OUT)
 # GPIO.output(resistor_pin, GPIO.HIGH)
 
-# # GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
+# GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
 # GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
 
-ICE_CMD_CHANNEL = 7
+ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
-MAX_AIR_OPEN = 20
+MAX_AIR_OPEN = 8191
+i = 0
 
 class DronecanCommander:
     node = None
@@ -180,25 +181,29 @@ class ICECommander:
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
+        global i
         if self.rp_state == RPStatesDict["NOT_CONNECTED"] or self.rp_state > RPStatesDict["STARTING"]:
             self.dronecan_commander.cmd.cmd = [0]* (ICE_AIR_CHANNEL + 1)
             return
 
         if self.rp_state == RPStatesDict["STARTING"]:
-            self.dronecan_commander.cmd.cmd[ICE_CMD_CHANNEL] = 3000
-            self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
+            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = 0
+            self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN - i
+            i += 200
+            if i > MAX_AIR_OPEN:
+                i = 0
+            print("AIR", self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL])
             return
 
         if self.mode == ICERunnerMode.SIMPLE:
-            self.dronecan_commander.cmd.cmd[ICE_CMD_CHANNEL] = self.configuration.rpm
+            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
             self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
         elif self.mode == ICERunnerMode.PID:
-            self.dronecan_commander.cmd.cmd[ICE_CMD_CHANNEL] = self.pid_controller.get_pid_command()
+            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.pid_controller.get_pid_command()
             self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
         elif self.mode == ICERunnerMode.RPM:
-            self.dronecan_commander.cmd.cmd[ICE_CMD_CHANNEL] = self.configuration.rpm
+            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
             self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
-            # self.dronecan_commander.cmd.cmd = [self.configuration.rpm] *ICE_CMD_CHANNEL
 
     async def spin(self) -> None:
         self.rp_state_start = self.rp_state

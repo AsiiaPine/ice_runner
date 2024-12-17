@@ -13,7 +13,13 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 from ice_commander import ICECommander
 import logging
 import logging_configurator
+# disable existing modules
+for name, logger in logging.root.manager.loggerDict.items():
+    logger.disabled=True
+    logger.propagate=False
+
 logger = logging_configurator.getLogger(__file__)
+
 
 conf_params_description = {
 "rpm":

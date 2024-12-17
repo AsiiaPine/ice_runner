@@ -6,8 +6,8 @@ from typing import Any, Dict
 from dotenv import load_dotenv
 from paho.mqtt.client import MQTTv311
 from server_mqtt_client import ServerMqttClient, start
-# import logging_configurator
-# logger = logging_configurator.getLogger(__file__)
+import logging_configurator
+logger = logging_configurator.getLogger(__file__)
 
 
 def start_server() -> None:
@@ -19,6 +19,7 @@ def start_server() -> None:
 
     ServerMqttClient.connect(SERVER_IP, SERVER_PORT)
     start()
+    logger.info("Started")
     last_keep_alive = time.time()
     while True:
         if time.time() - last_keep_alive > 1:

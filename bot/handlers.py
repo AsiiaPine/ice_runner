@@ -105,22 +105,17 @@ def get_configuration_str(rp_id: int) -> str:
 async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], bool]:
     """The function sets the status of the Raspberry Pi and returns the status string and the state of the info was is updated"""
     await asyncio.sleep(0.4)
-    print("get rp: data", await state.get_data())
     data = await state.get_data()
     report_period = 10
     if "report_period" in data.keys():
         report_period = data["report_period"]
     last_status_update = time.time() - (report_period + 1)
     if "last_status_update" not in data.keys():
-        print("last_stat is not in state\n\n")
         data["last_status_update"] = last_status_update
         await state.set_data(data)
     elif data["last_status_update"] is not None:
         last_status_update = int(data["last_status_update"])
-        print("last_stat is in state\n\n")
-
         if (time.time() - last_status_update) < report_period:
-            print("last_stat is in state, but time..\n\n")
             return "\tNo new status from the node\n", False
 
     await asyncio.sleep(0.5)
@@ -129,7 +124,6 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
     mqtt_client.rp_status[rp_id] = None
     mqtt_client.rp_states[rp_id] = None
     if status is None:
-        print("No status from the node")
         status_str = "\tNo status from the node\n"
     else:
         status_str = "\t\tState: " + rp_state + '\n'
@@ -139,7 +133,6 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
     data["last_status_update"] = last_status_update
     await state.update_data(data)
     update_time = datetime.fromtimestamp(last_status_update).strftime('%Y-%m-%d %H:%M:%S') + '\n'
-    print("update_time", update_time)
     return status_str + "\nupdate time: " + update_time, True
 
 class Conf(StatesGroup):
