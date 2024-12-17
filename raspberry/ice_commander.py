@@ -222,10 +222,10 @@ class ICECommander:
         # self.check_buttons()
         self.check_mqtt_cmd()
         rp_state = self.rp_state
-        cond_exceeded = self.check_conditions()
-        if cond_exceeded or rp_state > RPStatesDict["STARTING"] or ice_state == RecipStateDict["FAULT"]:
-            self.start_time = 0
-            logging.getLogger(__name__).info(f"STOP:\t conditions exceeded {bool(cond_exceeded)}, rp state {rp_state}, ice state {ice_state}")
+        # cond_exceeded = self.check_conditions()
+        # if cond_exceeded or rp_state > RPStatesDict["STARTING"] or ice_state == RecipStateDict["FAULT"]:
+        #     self.start_time = 0
+        #     logging.getLogger(__name__).info(f"STOP:\t conditions exceeded {bool(cond_exceeded)}, rp state {rp_state}, ice state {ice_state}")
         if rp_state == RPStatesDict["STARTING"]:
             if time.time() - self.start_time > 30:
                 self.rp_state = RPStatesDict["STOPPING"]
