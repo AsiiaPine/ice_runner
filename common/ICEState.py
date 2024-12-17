@@ -28,26 +28,6 @@ RecipStateDict = {
     "FAULT" : 3
 }
 
-# class Mode(IntEnum):
-#     MODE_OPERATIONAL      = 0         # Normal operating mode.
-#     MODE_INITIALIZATION   = 1         # Initialization is in progress; this mode is entered immediately after startup.
-#     MODE_MAINTENANCE      = 2         # E.g. calibration, the bootloader is running, etc.
-#     MODE_SOFTWARE_UPDATE  = 3         # New software/firmware is being loaded.
-#     MODE_OFFLINE          = 7         # The node is no longer available.
-
-# class Health(IntEnum):
-#     HEALTH_OK         = 0     # The node is functioning properly.
-#     HEALTH_WARNING    = 1     # A critical parameter went out of range or the node encountered a minor failure.
-#     HEALTH_ERROR      = 2     # The node encountered a major failure.
-#     HEALTH_CRITICAL   = 3     # The node suffered a fatal malfunction.
-
-# class RecipState(IntEnum):
-#     NOT_CONNECTED = -1
-#     STOPPED = 0
-#     RUNNING = 1
-#     WAITING = 2
-#     FAULT = 3
-
 class ICEState:
     def __init__(self) -> None:
         self.ice_state: int = RecipStateDict["NOT_CONNECTED"]
@@ -55,6 +35,7 @@ class ICEState:
         self.throttle: int = None
         self.temp: int = None
         self.fuel_level: int = None
+        self.fuel_level_percent: int = None
         self.gas_throttle: int = None
         self.air_throttle: int = None
 
@@ -98,6 +79,7 @@ class ICEState:
 
     def update_with_fuel_tank_status(self, msg) -> None:
         self.fuel_level = msg.message.available_fuel_volume_cm3
+        self.fuel_level_percent = msg.message.available_fuel_volume_percent
 
     def to_dict(self) -> Dict[str, Any]:
         vars_dict = vars(self)

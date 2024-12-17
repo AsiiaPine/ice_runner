@@ -7,8 +7,6 @@ import time
 from typing import Any, Dict
 import dronecan
 from common.ICEState import ICEState, RecipStateDict, ModeDict, HealthDict
-# from common.ICEState import Mode, Health, ICEState, RecipState
-# from common.RPStates import RPStates
 from common.RPStates import RPStatesDict
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from mqtt_client import RaspberryMqttClient
@@ -36,7 +34,6 @@ GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop but
 ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
-i = 0
 
 class DronecanCommander:
     node = None
@@ -154,8 +151,8 @@ class ICECommander:
         self.last_button_cmd = 1
 
     def check_conditions(self) -> int:
-        state = self.dronecan_commander.state
         # check if conditions are exeeded
+        state = self.dronecan_commander.state
         if state.ice_state == RecipStateDict["NOT_CONNECTED"]:
             self.rp_state = RPStatesDict["NOT_CONNECTED"]
             logging.getLogger(__name__).warning("STATUS:\t ice not connected")
@@ -176,14 +173,17 @@ class ICECommander:
         self.flags.temp_ex = self.configuration.max_temperature < state.temp
         self.flags.rpm_ex = self.configuration.rpm < state.rpm
         self.flags.time_ex = self.start_time > 0 and self.configuration.time < time.time() - self.start_time
+        if self.configuration.min_fuel_volume < 100:
+            self.fuel_level_ex = self.configuration.min_fuel_volume < state.fuel_level_percent
+        else:
+            self.fuel_level_ex = self.configuration.min_fuel_volume < state.fuel_level
         self.flags.vibration_ex = self.dronecan_commander.has_imu and self.configuration.max_vibration < state.vibration
         flags_attr = vars(self.flags)
-        if self.flags.vibration_ex or self.flags.time_ex or self.flags.rpm_ex or self.flags.throttle_ex or self.flags.temp_ex:
-            logging.getLogger(__name__).warning(f"STATUS:\t Flags exceeded: vibration {self.flags.vibration_ex} time {self.flags.time_ex} rpm {self.flags.rpm_ex} throttle {self.flags.throttle_ex} temp {self.flags.temp_ex}")
+        if self.flags.vibration_ex or self.flags.time_ex or self.flags.rpm_ex or self.flags.throttle_ex or self.flags.temp_ex or self.fuel_level_ex:
+            logging.getLogger(__name__).warning(f"STATUS:\t Flags exceeded: vibration {self.flags.vibration_ex} time {self.flags.time_ex} rpm {self.flags.rpm_ex} throttle {self.flags.throttle_ex} temp {self.flags.temp_ex} fuel level {self.fuel_level_ex}")
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
-        global i
         if self.rp_state == RPStatesDict["NOT_CONNECTED"] or self.rp_state > RPStatesDict["STARTING"]:
             self.dronecan_commander.cmd.cmd = [0]* (ICE_AIR_CHANNEL + 1)
             self.dronecan_commander.air_cmd.command_value = 0
@@ -192,12 +192,6 @@ class ICECommander:
         if self.rp_state == RPStatesDict["STARTING"]:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = 3000
             self.dronecan_commander.air_cmd.command_value = 1000
-
-            # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = 4000
-            i += 200
-            if i > MAX_AIR_OPEN:
-                i = 0
-            print("AIR", self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL])
             return
 
         if self.mode == ICERunnerMode.SIMPLE:
