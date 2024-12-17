@@ -19,7 +19,7 @@ import logging
 import logging_configurator
 # logger = logging_configurator.AsyncLogger(__name__)
 
-GPIO setup
+# GPIO setup
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 GPIO.setwarnings(True) # Ignore warning for now
 GPIO.setmode(GPIO.BCM) # Use physical pin numbering
