@@ -19,7 +19,7 @@ import logging
 import logging_configurator
 # logger = logging_configurator.AsyncLogger(__name__)
 
-# GPIO setup
+GPIO setup
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 GPIO.setwarnings(True) # Ignore warning for now
 GPIO.setmode(GPIO.BCM) # Use physical pin numbering
@@ -30,7 +30,7 @@ resistor_pin = 23
 GPIO.setup(resistor_pin, GPIO.OUT)
 GPIO.output(resistor_pin, GPIO.HIGH)
 
-# GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
+GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
 GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
 
 ICE_THR_CHANNEL = 7
@@ -187,7 +187,7 @@ class ICECommander:
             return
 
         if self.rp_state == RPStatesDict["STARTING"]:
-            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = 0
+            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = 3000
             self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN - i
             i += 200
             if i > MAX_AIR_OPEN:

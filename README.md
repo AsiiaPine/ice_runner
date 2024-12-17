@@ -51,3 +51,8 @@ Server subscribes to bot and rp topics and sends commands and statuses to the re
 Bot subscribes to its commander topic and sends user commands to the server.
 Raspberry Pi subscribes to its commander topic and sends parsed dronecan messages to the server.
     ![MQTT communication diagram](assets/mqtt_diagram.svg)
+
+
+# TODO:
+- [ ] Check requirements
+- [ ] Sometimes connection to mqtt is lost and server doesn't fetch raspberry pi statuses
