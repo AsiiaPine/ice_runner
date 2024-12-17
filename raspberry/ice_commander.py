@@ -188,7 +188,7 @@ class ICECommander:
 
         if self.rp_state == RPStatesDict["STARTING"]:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = 3000
-            self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN - i
+            self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = 4000
             i += 200
             if i > MAX_AIR_OPEN:
                 i = 0
