@@ -58,6 +58,7 @@ class ServerMqttClient:
             return
         status = cls.rp_status[rp_id]
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", str(status))
+        cls.rp_status[rp_id] = None
 
     @classmethod
     def publish_rp_states(cls) -> None:
