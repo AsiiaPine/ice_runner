@@ -11,14 +11,11 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from common.RPStates import RPStatesDict, safe_literal_eval
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 import logging
-logger = logging.getLogger(__name__)
-# import logging_configurator
-# logger = logging_configurator.AsyncLogger(__name__)
 
 def on_disconnect(client: Client, userdata: Any, rc: int) -> None:
     print("Disconnected")
     if rc != 0:
-        logger.error("Unexpected MQTT disconnection. Will auto-reconnect")
+        logging.error("Unexpected MQTT disconnection. Will auto-reconnect")
 
 class ServerMqttClient:
     client = Client(client_id="server", clean_session=False, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
@@ -36,7 +33,7 @@ class ServerMqttClient:
         cls.client.connect(server_ip, port, 60)
         cls.client.publish("ice_runner/server/raspberry_pi_commander", "ready")
         cls.client.publish("ice_runner/server/bot_commander", "ready")
-        logger.info("started server")
+        logging.info("started server")
 
     @classmethod
     def get_client(cls) -> mqtt.client.Client:
@@ -45,21 +42,21 @@ class ServerMqttClient:
     @classmethod
     def publish_rp_state(cls, rp_id: int) -> None:
         if rp_id not in cls.rp_status.keys():
-            logger.info(f"Published\t| Raspberry Pi {rp_id} is not connected ")
+            logging.info(f"Published\t| Raspberry Pi {rp_id} is not connected ")
             return
         if cls.rp_status[rp_id] is None:
-            logger.info(f"Published\t| Raspberry Pi {rp_id} no state set")
+            logging.info(f"Published\t| Raspberry Pi {rp_id} no state set")
             return
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", cls.rp_status[rp_id]["state"])
 
     @classmethod
     def publish_rp_status(cls, rp_id: int) -> None:
         if rp_id not in cls.rp_status.keys():
-            logger.info(f"Published\t| Raspberry Pi is not connected")
+            logging.info(f"Published\t| Raspberry Pi is not connected")
             return
         status = cls.rp_status[rp_id]
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", str(status))
-        logger.info(f"Published\t| Raspberry Pi {rp_id} status")
+        logging.info(f"Published\t| Raspberry Pi {rp_id} status")
         cls.rp_status[rp_id] = None
 
     @classmethod
@@ -71,7 +68,7 @@ class ServerMqttClient:
 def handle_raspberry_pi_dronecan_message(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
     message_type: str = msg.topic.split("/")[4]
-    logger.info(f"Published\t| Raspberry Pi {rp_id} send {message_type}")
+    logging.info(f"Published\t| Raspberry Pi {rp_id} send {message_type}")
     if rp_id not in ServerMqttClient.rp_messages.keys():
         ServerMqttClient.rp_messages[rp_id] = {}
     if message_type not in ServerMqttClient.rp_messages[rp_id].keys():
@@ -90,30 +87,30 @@ def handle_raspberry_pi_configuration(client, userdata, msg):
     logging.info(f"Received\t| Raspberry Pi {rp_id} send configuration")
     ServerMqttClient.rp_configuration[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/config", str(ServerMqttClient.rp_configuration[rp_id]))
-    logger.info(f"Published\t| Bot received configuration for Raspberry Pi")
+    logging.info(f"Published\t| Bot received configuration for Raspberry Pi")
 
 def handle_bot_usr_cmd_state(client, userdata,  msg):
     rp_id = int(msg.payload.decode())
-    logger.info(f"Recieved\t| Bot send command {rp_id} get_conf")
+    logging.info(f"Recieved\t| Bot send command {rp_id} get_conf")
     ServerMqttClient.client.publish("ice_runner/server/rp_commander/get_conf", str(rp_id))
 
 def handle_bot_usr_cmd_stop(client, userdata,  msg):
     rp_id = int(msg.payload.decode())
-    logger.info(f"Recieved\t| Bot send command {rp_id} stop")
+    logging.info(f"Recieved\t| Bot send command {rp_id} stop")
     ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "stop")
 
 def handle_bot_usr_cmd_start(client, userdata,  msg):
     rp_id = int(msg.payload.decode())
-    logger.info(f"Recieved\t| Bot send command {rp_id} start")
+    logging.info(f"Recieved\t| Bot send command {rp_id} start")
     ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "start")
 
 def handle_bot_usr_cmd_status(client, userdata,  msg):
     rp_id = int(msg.payload.decode())
-    logger.info(f"Recieved\t| Bot send command {rp_id} status")
+    logging.info(f"Recieved\t| Bot send command {rp_id} status")
     ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "status")
 
 def handle_bot_who_alive(client, userdata,  msg):
-    logger.info(f"Recieved\t| Bot send command who_alive")
+    logging.info(f"Recieved\t| Bot send command who_alive")
     ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/who_alive", "who_alive")
 
 def handle_bot_configure(client, userdata, msg):
@@ -125,15 +122,15 @@ def handle_bot_configure(client, userdata, msg):
         ServerMqttClient.rp_configuration[rp_id][name] = value
 
 def handle_bot_config(client, userdata, msg):
-    logger.info(f"Recieved\t| Bot send configuration")
+    logging.info(f"Recieved\t| Bot send configuration")
     rp_id = int(msg.payload.decode())
     if rp_id not in ServerMqttClient.rp_configuration.keys():
         ServerMqttClient.rp_configuration[rp_id] = {}
     ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/config", str(rp_id))
-    logger.info(f"Published\t| Bot waiting for configuration for Raspberry Pi {rp_id}")
+    logging.info(f"Published\t| Bot waiting for configuration for Raspberry Pi {rp_id}")
 
 def handle_bot_server(client, userdata, msg):
-    logger.info(f"Recieved\t| Bot send command server")
+    logging.info(f"Recieved\t| Bot send command server")
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/server", "server")
 
 def start() -> None:

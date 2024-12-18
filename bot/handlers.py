@@ -143,7 +143,7 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
     data["last_status_update"] = last_status_update
     await state.update_data(data)
     update_time = datetime.fromtimestamp(last_status_update).strftime('%Y-%m-%d %H:%M:%S') + '\n'
-    return status_str + "\nUpdate time| время обновления: " + update_time, True
+    return status_str + "\n\tUpdate time| время обновления: " + update_time, True
 
 async def show_options(message: types.Message, state: FSMContext) -> None:
     BotMqttClient.client.publish("ice_runner/bot/usr_cmd/who_alive")
@@ -396,6 +396,7 @@ async def command_server(message: Message, state: FSMContext) -> None:
         await message.answer("Server is connected|Сервер подключен")
     else:
         await message.answer("Server is not connected|Сервер не подключен")
+    BotMqttClient.server_connected = False
 
 @form_router.message(F.text.lower().not_in(commands_discription.keys()))
 async def unknown_message(msg: types.Message, state: FSMContext):
