@@ -389,7 +389,7 @@ async def command_server(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/server` command
     """
-    await message.answer("Check server status/Проверяем работу сервера")
+    await message.answer("Check server status|Проверяем работу сервера")
     BotMqttClient.client.publish("ice_runner/bot/usr_cmd/server", "server")
     await asyncio.sleep(1)
     if BotMqttClient.server_connected:

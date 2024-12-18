@@ -48,7 +48,7 @@ class ServerMqttClient:
             logger.info(f"Published\t| Raspberry Pi {rp_id} is not connected ")
             return
         if cls.rp_status[rp_id] is None:
-            logger.info(f"Published\t|Raspberry Pi {rp_id} no state set")
+            logger.info(f"Published\t| Raspberry Pi {rp_id} no state set")
             return
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", cls.rp_status[rp_id]["state"])
 
@@ -59,6 +59,7 @@ class ServerMqttClient:
             return
         status = cls.rp_status[rp_id]
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", str(status))
+        logger.info(f"Published\t| Raspberry Pi {rp_id} status")
         cls.rp_status[rp_id] = None
 
     @classmethod
