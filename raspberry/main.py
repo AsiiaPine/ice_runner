@@ -12,13 +12,13 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from ice_commander import ICECommander
 import logging
-import logging_configurator
+# import logging_configurator
 # disable existing modules
 for name, logger in logging.root.manager.loggerDict.items():
     logger.disabled=True
     logger.propagate=False
 
-logger = logging_configurator.getLogger(__file__)
+# logger = logging_configurator.getLogger(__file__)
 
 
 conf_params_description = {
@@ -53,7 +53,6 @@ async def main(id: int) -> None:
     print(f"RP:\tStarting raspberry {id}")
     os.environ.clear()
     dotenv_path = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env')))
-    print(dotenv_path)
     load_dotenv(dotenv_path, verbose=True)
     # run_candump()
     print(os.environ.values())

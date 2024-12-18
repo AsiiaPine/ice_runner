@@ -28,7 +28,7 @@ async def start_bot() -> None:
     # Run both the Telegram bot and MQTT listener in parallel
     await asyncio.gather(
         handlers.dp.start_polling(bot),
-        # start()
+        start()
     )
 
 if __name__ == "__main__":

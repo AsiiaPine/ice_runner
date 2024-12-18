@@ -53,7 +53,6 @@ class ICEState:
     def update_with_resiprocating_status(self, msg) -> None:
         logging.getLogger(__name__).info(f"UPD STATE: {msg.message.state}")
         self.ice_state = msg.message.state
-        print(self.ice_state)
         self.rpm = msg.message.engine_speed_rpm
         self.throttle = msg.message.throttle_position_percent
         self.temp = msg.message.oil_temperature
@@ -68,10 +67,7 @@ class ICEState:
 
     def update_with_node_status(self, msg) -> None:
         if msg.message.mode > self.mode.value:
-            print(type(self.mode))
-            print(msg.message.mode, type(msg.message.mode))
             self.mode = int(msg.message.mode)
-            print(type(self.mode), "\n\n\n\n\n\n\n\n")
         if msg.message.health > self.health.value:
             self.health = int(msg.message.health)
         if self.mode > ModeDict["MODE_SOFTWARE_UPDATE"] or self.health > HealthDict["HEALTH_WARNING"]:
