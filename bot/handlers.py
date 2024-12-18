@@ -135,6 +135,19 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
     update_time = datetime.fromtimestamp(last_status_update).strftime('%Y-%m-%d %H:%M:%S') + '\n'
     return status_str + "\nupdate time: " + update_time, True
 
+async def show_options(message: types.Message, state: FSMContext) -> None:
+    BotMqttClient.client.publish("ice_runner/bot/usr_cmd/who_alive")
+    await asyncio.sleep(0.5)
+    available_rps = list(BotMqttClient.rp_states.keys())
+    if len(available_rps) == 0:
+        await message.answer("Нет доступных обкатчиков")
+        return
+    await message.answer("Выберите ID обкатчика. Напишите ID")
+    kb = [[types.KeyboardButton(text=str(rp_id) + "\tStatus: " + BotMqttClient.rp_states[rp_id]) for rp_id in available_rps]]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+    await message.answer("Выберите ID обкатчика. Напишите ID", reply_markup=keyboard)
+    state.set_state(Conf.rp_id)
+
 class Conf(StatesGroup):
     rp_id = State()
     conf_state = State()
@@ -147,7 +160,7 @@ async def process_configuration(message: types.Message, state: FSMContext):
     """Process configuration of the runner"""
     if "rp_id" not in (await state.get_data()).keys():  
         await message.answer("Выберите Raspberry Pi ID. Напишите RP ID")
-        await state.set_state(Conf.rp_id)
+        await show_options(message, state)
         return
     rp_id = (await state.get_data())["rp_id"]
     matches = re.findall(r'--(\S+) (\d+)', message.text)
@@ -166,6 +179,7 @@ async def process_configuration(message: types.Message, state: FSMContext):
 async def choose_rp_id(message: types.Message, state: FSMContext) -> None:
     await state.set_state(Conf.rp_id)
     await message.answer("Выберите Raspberry Pi ID. Напишите RP ID")
+    await show_options(message, state)
 
 @form_router.message(Conf.rp_id)
 async def rp_id_handler(message: types.Message, state: FSMContext) -> None:
@@ -188,7 +202,7 @@ async def rp_id_handler(message: types.Message, state: FSMContext) -> None:
 async def command_conf_handler(message: types.Message, state: FSMContext):
     if "rp_id" not in (await state.get_data()).keys():
         await message.answer("Выберите Raspberry Pi ID. Напишите RP ID")
-        state.set_state(Conf.rp_id)
+        show_options(message, state)
         return
 
     await state.set_state(Conf.conf_state)
@@ -220,7 +234,8 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     """
     if "rp_id" not in (await state.get_data()).keys():
         await message.answer("Выберите Raspberry Pi ID. Напишите RP ID")
-        await state.set_state(Conf.rp_id)
+        # await state.set_state(Conf.rp_id)
+        await show_options(message, state)
         return
     rp_id = (await state.get_data())["rp_id"]
     await message.answer("Выбранная Raspberry Pi ID: " + str(rp_id))
@@ -306,7 +321,9 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     data["last_status_update"] = None
     if "rp_id" not in data.keys():
         await message.answer("Выберите Raspberry Pi ID. Напишите RP ID. Чтобы получить список ID нажмите /show_all")
-        await state.set_state(Conf.rp_id)
+        await show_options(message, state)
+
+        # await state.set_state(Conf.rp_id)
         return
     rp_id = data["rp_id"]
 
@@ -351,7 +368,8 @@ async def command_stop_handler(message: Message, state: FSMContext) -> None:
     """
     if "rp_id" not in (await state.get_data()).keys():
         await message.answer("Выберите Raspberry Pi ID. Напишите RP ID")
-        await state.set_state(Conf.rp_id)
+        await show_options(message, state)
+        # await state.set_state(Conf.rp_id)
         return
     await message.answer(f"Stopping")
     rp_id = (await state.get_data())["rp_id"]
@@ -383,6 +401,7 @@ async def command_server(message: Message, state: FSMContext) -> None:
 @form_router.message(F.text.lower().not_in(commands_discription.keys()))
 async def unknown_message(msg: types.Message):
     message_text = 'Я не знаю, что с этим делать :astonished: \nЯ просто напомню, что есть команда /help'
+    print(msg.text)
     await msg.reply(message_text, parse_mode=ParseMode.HTML)
 
 async def main() -> None:

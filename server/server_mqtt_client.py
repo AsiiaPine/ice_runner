@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def on_disconnect(client, userdata, rc):
     if rc != 0:
-        print("Unexpected MQTT disconnection. Will auto-reconnect")
+        logger.error("Unexpected MQTT disconnection. Will auto-reconnect")
 
 class ServerMqttClient:
     client = Client(client_id="server", clean_session=False, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
@@ -88,7 +88,7 @@ def handle_raspberry_pi_configuration(client, userdata, msg):
     logging.info(f"Received\t| Raspberry Pi {rp_id} send configuration")
     ServerMqttClient.rp_configuration[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/config", str(ServerMqttClient.rp_configuration[rp_id]))
-    print(f"Published\t| Bot received configuration for Raspberry Pi")
+    logger.info(f"Published\t| Bot received configuration for Raspberry Pi")
 
 def handle_bot_usr_cmd_state(client, userdata,  msg):
     rp_id = int(msg.payload.decode())

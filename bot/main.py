@@ -12,10 +12,8 @@ from bot_mqtt_client import BotMqttClient, start
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import logging
-import logging_configurator
+# import logging_configurator
 # logger = logging_configurator.getLogger(__file__)
-
-
 
 async def start_bot() -> None:
     os.environ.clear()
@@ -30,7 +28,7 @@ async def start_bot() -> None:
     # Run both the Telegram bot and MQTT listener in parallel
     await asyncio.gather(
         handlers.dp.start_polling(bot),
-        start()
+        # start()
     )
 
 if __name__ == "__main__":
