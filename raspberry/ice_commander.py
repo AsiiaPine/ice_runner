@@ -18,19 +18,19 @@ import logging
 # import logging_configurator
 # logger = logging_configurator.AsyncLogger(__name__)
 
-# # GPIO setup
-# import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-# GPIO.setwarnings(True) # Ignore warning for now
-# GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-# on_off_pin = 25
-# start_stop_pin = 24
-# # Setup CAN terminator
-# resistor_pin = 23
-# GPIO.setup(resistor_pin, GPIO.OUT)
-# GPIO.output(resistor_pin, GPIO.HIGH)
+# GPIO setup
+import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
+GPIO.setwarnings(True) # Ignore warning for now
+GPIO.setmode(GPIO.BCM) # Use physical pin numbering
+on_off_pin = 25
+start_stop_pin = 24
+# Setup CAN terminator
+resistor_pin = 23
+GPIO.setup(resistor_pin, GPIO.OUT)
+GPIO.output(resistor_pin, GPIO.HIGH)
 
-# # GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
-# GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
+# GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
+GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
 
 ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
