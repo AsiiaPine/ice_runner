@@ -30,25 +30,25 @@ def handle_commander_state(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     if rp_pi_id not in BotMqttClient.rp_states.keys():
         BotMqttClient.rp_states[rp_pi_id] = -1
-    state_name = list(RPStatesDict.keys())[list(RPStatesDict.values()).index(int(message.payload.decode()))]
+    state_name = message.payload.decode()
     BotMqttClient.rp_states[rp_pi_id] = state_name
-    logging.getLogger(__name__).info(f"STATUS\t| received RP state from Raspberry Pi {rp_pi_id}")
+    logging.getLogger(__name__).info(f"received RP state from Raspberry Pi {rp_pi_id}")
 
 def handle_commander_status(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     state = safe_literal_eval(message.payload.decode())
     if state is not None:
         BotMqttClient.rp_status[rp_pi_id] = state
-        logging.getLogger(__name__).info(f"STATUS\t| received RP status from Raspberry Pi {rp_pi_id}")
+        logging.getLogger(__name__).info(f"received RP status from Raspberry Pi {rp_pi_id}")
 
 def handle_commander_config(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     BotMqttClient.rp_configuration[rp_pi_id] = safe_literal_eval(message.payload.decode())
-    logging.getLogger(__name__).info(f"STATUS\t| received RP configuration from Raspberry Pi {rp_pi_id}")
+    logging.getLogger(__name__).info(f"received RP configuration from Raspberry Pi {rp_pi_id}")
 
 def handle_commander_server(client, userdata, message):
     BotMqttClient.server_connected = True
-    logging.getLogger(__name__).info(f"STATUS\t| received SERVER connection from Raspberry Pi")
+    logging.getLogger(__name__).info(f"received SERVER connection from Raspberry Pi")
 
 async def start() -> None:
     print("start")

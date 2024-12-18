@@ -23,10 +23,10 @@ root:
 
 formatters:
   brief:
-    format: "%(asctime)s | %(levelname)-8s | %(filename)s-%(lineno)04d | %(message)s"
+    format: "%(asctime)s | %(levelname)-6s | %(message)s"
     datefmt: "%Y-%m-%d %H:%M:%S"
   precise:
-    format: "%(asctime)s | %(levelname)-8s | %(filename)s | %(message)s"
+    format: "%(asctime)s | %(levelname)-8s | %(filename)-20s | %(message)s"
     datefmt: "%H:%M:%S"
   rawMessage:
     format: "%(asctime)s | %(message)s"

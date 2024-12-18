@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Tuple
 from aiogram import Router, Bot, Dispatcher, types, F, html
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.strategy import FSMStrategy
 from aiogram.types import (
     Message,
     ReplyKeyboardRemove,
@@ -64,13 +65,15 @@ commands_discription : Dict[str, str] = {
     "/status": "Получить статус подключенных блоков ДВС и текущие настройки/\nGet the status of the connected blocks and current configuration\n",
     "/show_all": "Показать все состояния блоков ДВС/\nShow all states of connected blocks\n",
     "/server": "Проверяет работу сервера./\n Check server status\n",
-    "/help": "Выдать список доступных команд/\nSend a list of available commands\n",
     "/stop": "Остановить обкатку двигателей/\nStop the automatic running immediately\n",
+    "/help": "Выдать список доступных команд/\nSend a list of available commands\n",
     "/conf": "Начать процесс настройки параметров\. После нажатия кнопки бот отправит сообщение с текущей конфигурацией и ждет в ответе новые параметры в формате \-\-имя значение\. Используйте комманду /cancel чтобы отменить конфигурирование и оставить старые параметры/\nStarts configuration process, after call you have specify configuration parameters in format \-\-name value\. Use /cancel to cancel the action\n",
-    "/cancel": "Отменить последнее действие/\nCancel any action\n"}
+    "/choose_rp": "Выберите ID обкатчика/\n Choose ID of the ICE runner\n",
+    "/cancel": "Отменить последнее действие/\nCancel any action\n",
+}
 
 # rp_id = None
-dp = Dispatcher(storage=MemoryStorage())
+dp = Dispatcher(storage=MemoryStorage(), fsm_strategy=FSMStrategy.CHAT)
 form_router = Router()
 dp.include_router(form_router)
 
@@ -132,6 +135,8 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
             for name, value in list(status.items()):
                 status_str += f"\t\t\t{name}: {value}\n"
     else:
+        mqtt_client.rp_status.pop(rp_id)
+        mqtt_client.rp_states.pop(rp_id)
         status_str = "\tIce runner keep silent| Обкатчик молчит\n"
 
     last_status_update = time.time()
@@ -181,16 +186,13 @@ async def process_configuration(message: types.Message, state: FSMContext):
 @form_router.message(Command(commands=["chose_rp", "выбрать_ДВС"]))
 async def choose_rp_id(message: types.Message, state: FSMContext) -> None:
     await state.set_state(Conf.rp_id)
-    await message.answer("Choose ID| Выберите ID обкатчика")
     await show_options(message, state)
 
 @form_router.message(Conf.rp_id)
 async def rp_id_handler(message: types.Message, state: FSMContext) -> None:
-    print(message.text)
     id = message.text.split(" ")[0]
-    print(id)
     if not id.isdigit():
-        if message.text.casefold() in ("/cancel", "cancel"):
+        if "/cancel" in message.text.casefold() or "cancel" in message.text.casefold():
             await cancel_handler(message, state)
         else:
             await message.reply("Please, enter a number ID of the ICE runner or cancel the command with /cancel.\nПожалуйста, введите числовой ID обкатчика или отмените команду с помощью /cancel.")
@@ -247,20 +249,19 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     i = 0
     await state.set_state(Conf.starting_state)
     is_starting = await state.get_state()
-    print(is_starting)
-    logging.getLogger(__name__).info(f"STATUS\t| received CMD START from user {message.from_user.username}")
+    logging.getLogger(__name__).info(f"received CMD START from user {message.from_user.username}")
     while i < 5 and is_starting:
         await message.answer(f"Starting in {5-i}|Запуск через {5-i}")
         i += 1
         await asyncio.sleep(1)
         is_starting = await state.get_state()
         if is_starting is None:
-            logging.getLogger(__name__).info(f"STATUS\t| CMD START aborted by user")
+            logging.getLogger(__name__).info(f"CMD START aborted by user")
             await asyncio.sleep(0.1)
             continue
     if is_starting:
         await message.answer(f"Started|Запущено")
-        logging.getLogger(__name__).info(f"STATUS\t| CMD START send to Raspberry Pi {rp_id}")
+        logging.getLogger(__name__).info(f"CMD START send to Raspberry Pi {rp_id}")
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
 
 @dp.message(Command(commands=["help", "помощь"]))
@@ -289,8 +290,8 @@ async def command_show_all_handler(message: Message, state: FSMContext) -> None:
     if len(connected_nodes) == 0:
         return
 
-    for rp_id in mqtt_client.rp_states.keys():
-        print(f"Showing status for {rp_id}")
+    for rp_id in list(mqtt_client.rp_states.keys()):
+        logging.info(f"Sending config for {rp_id}")
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
         await asyncio.sleep(0.3)
         header_str = html.bold(f"ID обкатчика: {rp_id}\n\tStatus|Статус:\n" )
@@ -353,7 +354,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     res = await message.answer(message_text, parse_mode=ParseMode.HTML)
     await asyncio.sleep(0.5)
     while ((await state.get_state()) == Conf.status_state):
-        print("Updating status ", await state.get_data())
+        logging.info("Updating status ", await state.get_data())
         status_str, is_updated = await get_rp_status(rp_id, state)
         if not is_updated:
             continue
@@ -409,7 +410,7 @@ async def main() -> None:
     TOKEN = os.getenv("BOT_TOKEN")
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     print("TG:\t" + configuration_file_path)
-    logging.getLogger(__name__).info(f"STATUS\t| Bot started")
+    logging.getLogger(__name__).info(f"Bot started")
     dp.include_router(form_router)
     await dp.start_polling(bot)
 

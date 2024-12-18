@@ -28,6 +28,43 @@ RecipStateDict = {
     "FAULT" : 3
 }
 
+def get_recip_state_name(state) -> str:
+    if state == RecipStateDict["NOT_CONNECTED"]:
+        return "NOT_CONNECTED"
+    if state == RecipStateDict["STOPPED"]:
+        return "STOPPED"
+    if state == RecipStateDict["RUNNING"]:
+        return "RUNNING"
+    if state == RecipStateDict["WAITING"]:
+        return "WAITING"
+    if state == RecipStateDict["FAULT"]:
+        return "FAULT"
+    return "UNKNOWN"
+
+def get_health_name(health: int) -> str:
+    if health == HealthDict["HEALTH_OK"]:
+        return "HEALTH_OK"
+    if health == HealthDict["HEALTH_WARNING"]:
+        return "HEALTH_WARNING"
+    if health == HealthDict["HEALTH_CRITICAL"]:
+        return "HEALTH_CRITICAL"
+    if health == HealthDict["HEALTH_ERROR"]:
+        return "HEALTH_ERROR"
+    return "UNKNOWN"
+
+def get_mode_name(mode: int) -> str:
+    if mode == ModeDict["MODE_OPERATIONAL"]:
+        return "MODE_OPERATIONAL"
+    if mode == ModeDict["MODE_INITIALIZATION"]:
+        return "MODE_INITIALIZATION"
+    if mode == ModeDict["MODE_MAINTENANCE"]:
+        return "MODE_MAINTENANCE"
+    if mode == ModeDict["MODE_OFFLINE"]:
+        return "MODE_OFFLINE"
+    if mode == ModeDict["MODE_SOFTWARE_UPDATE"]:
+        return "MODE_SOFTWARE_UPDATE"
+    return "UNKNOWN"
+
 class ICEState:
     def __init__(self) -> None:
         self.ice_state: int = RecipStateDict["NOT_CONNECTED"]
@@ -80,7 +117,7 @@ class ICEState:
     def to_dict(self) -> Dict[str, Any]:
         vars_dict = vars(self)
 
-        vars_dict["ice_state"] = self.ice_state
-        vars_dict["mode"] = self.mode
-        vars_dict["health"] = self.health
+        vars_dict["ice_state"] = get_recip_state_name(self.ice_state)
+        vars_dict["mode"] = get_mode_name(self.mode)
+        vars_dict["health"] = get_health_name(self.health)
         return vars_dict
