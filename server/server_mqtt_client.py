@@ -130,6 +130,10 @@ def handle_bot_config(client, userdata, msg):
     ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/config", str(rp_id))
     logger.info(f"Published\t| Bot waiting for configuration for Raspberry Pi {rp_id}")
 
+def handle_bot_server(client, userdata, msg):
+    logger.info(f"Recieved\t| Bot send command server")
+    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/server", "server")
+
 def start() -> None:
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/status", handle_raspberry_pi_status)
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/dronecan/#", handle_raspberry_pi_dronecan_message)
@@ -142,6 +146,7 @@ def start() -> None:
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/status", handle_bot_usr_cmd_status)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/who_alive", handle_bot_who_alive)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/config", handle_bot_config)
+    ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/server", handle_bot_server)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/configure/#", handle_bot_configure)
     ServerMqttClient.client.subscribe("ice_runner/raspberry_pi/#")
     ServerMqttClient.client.subscribe("ice_runner/bot/#")

@@ -367,6 +367,18 @@ async def command_stop_handler(message: Message, state: FSMContext) -> None:
         await asyncio.sleep(1)
     await message.answer(f"Stopped")
 
+@form_router.message(Command(commands=["server", "сервер"]))
+async def command_server(message: Message, state: FSMContext) -> None:
+    """
+    This handler receives messages with `/server` command
+    """
+    await message.answer("Проверяем работу сервера")
+    BotMqttClient.client.publish("ice_runner/bot/usr_cmd/server", "server")
+    await asyncio.sleep(1)
+    if BotMqttClient.server_connected:
+        await message.answer("Сервер подключен")
+    else:
+        await message.answer("Сервер не подключен")
 
 @form_router.message(F.text.lower().not_in(commands_discription.keys()))
 async def unknown_message(msg: types.Message):

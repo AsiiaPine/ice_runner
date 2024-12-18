@@ -14,6 +14,7 @@ class BotMqttClient:
     rp_states: Dict[int, str] = {}
     rp_status: Dict[int, str] = {}
     rp_configuration: Dict[int, Dict[str, Any]] = {}
+    server_connected = False
 
     @classmethod
     async def connect(cls, server_ip: str = "localhost", port: int = 1883, max_messages: int = 10) -> None:
@@ -45,10 +46,15 @@ def handle_commander_config(client, userdata, message):
     BotMqttClient.rp_configuration[rp_pi_id] = safe_literal_eval(message.payload.decode())
     logging.getLogger(__name__).info(f"STATUS\t| received RP configuration from Raspberry Pi {rp_pi_id}")
 
+def handle_commander_server(client, userdata, message):
+    BotMqttClient.server_connected = True
+    logging.getLogger(__name__).info(f"STATUS\t| received SERVER connection from Raspberry Pi")
+
 async def start() -> None:
     print("start")
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/state", handle_commander_state)
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/status", handle_commander_status)
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/config", handle_commander_config)
+    BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/server", handle_commander_server)
     BotMqttClient.client.subscribe("ice_runner/server/bot_commander/#")
     BotMqttClient.client.loop_start()
