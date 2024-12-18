@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 # import logging_configurator
 # logger = logging_configurator.AsyncLogger(__name__)
 
-def on_disconnect(client, userdata, rc):
+def on_disconnect(client: Client, userdata: Any, rc: int) -> None:
+    print("Disconnected")
     if rc != 0:
         logger.error("Unexpected MQTT disconnection. Will auto-reconnect")
 

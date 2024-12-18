@@ -17,18 +17,15 @@ def start_server() -> None:
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
 
-    ServerMqttClient.connect(SERVER_IP, SERVER_PORT)
-    start()
-    logger.info("Started")
-    last_keep_alive = time.time()
     while True:
-        if time.time() - last_keep_alive > 1:
-            for rp_id, status in ServerMqttClient.rp_status.items():
-                topic = f"ice_runner/server/raspberry_pi_commander/{rp_id}/command"
-                ServerMqttClient.client.publish(topic, "keep alive").wait_for_publish()
-                ServerMqttClient.publish_rp_states()
-
-            last_keep_alive = time.time()
+        ServerMqttClient.connect(SERVER_IP, SERVER_PORT)
+        logger.info("Started")
+        start()
+        while ServerMqttClient.client.is_connected: #wait in loop
+            pass
+        logger.error("STATUS\t| Disconnected")
+        ServerMqttClient.client.disconnect() # disconnect
+        ServerMqttClient.client.loop_stop()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
