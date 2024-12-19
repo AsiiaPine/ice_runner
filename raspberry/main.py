@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import logging
 import os
 from pathlib import Path
 import sys
@@ -9,17 +8,19 @@ from dotenv import load_dotenv
 from mqtt_client import RaspberryMqttClient, start
 import subprocess
 
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../dronecan_communication')))
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from ice_commander import ICECommander
+import logging
 import logging_configurator
-from can import Printer
+# disable existing modules
+for name, logger in logging.root.manager.loggerDict.items():
+    logger.disabled=True
+    logger.propagate=False
 
-logger = logging.getLogger(__name__)
+logger = logging_configurator.getLogger(__file__)
 
-printer = Printer("test_printer.txt", append=True)
-# printer.on_message_received
+
 conf_params_description = {
 "rpm":
     {"default": 4500, "help": "Целевые обороты ДВС"},
@@ -43,14 +44,17 @@ conf_params_description = {
     {"default": 0, "help": "Команда на N оборотов (RPMCommand) без ПИД-регулятора"}
 }
 
+def run_candump():
+    output_filename = f"logs/candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    with open(output_filename, "w") as outfile:
+        subprocess.Popen(["candump", "can0"], stdout=outfile)
+
 async def main(id: int) -> None:
     print(f"RP:\tStarting raspberry {id}")
     os.environ.clear()
     dotenv_path = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env')))
-    print(dotenv_path)
     load_dotenv(dotenv_path, verbose=True)
-    subprocess.run(["candump", "can0", ">", f"candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"])
-    print(os.environ.values())
+    run_candump()
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
     RaspberryMqttClient.set_id(id)
@@ -77,7 +81,6 @@ if __name__ == "__main__":
     if args.id is None:
         print("RP:\tNo ID provided, exiting")
         sys.exit(-1)
-    os.system("echo ''")
 
     configuration = IceRunnerConfiguration(args.__dict__)
     RaspberryMqttClient.configuration = configuration

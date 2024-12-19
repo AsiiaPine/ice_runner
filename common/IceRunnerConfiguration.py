@@ -1,5 +1,4 @@
 from typing import Any, Dict
-import yaml
 
 class IceRunnerConfiguration:
     rpm: int = 4500
@@ -17,7 +16,6 @@ class IceRunnerConfiguration:
 
     # @classmethod
     def __init__(self, conf: Dict[str, Any]) -> Any:
-        print(conf)
         self.rpm = conf["rpm"] if conf["rpm"] else 4500
         self.time = conf["time"] if conf["time"] else 0
         self.max_temperature = conf["max_temperature"] + 273.15 if conf["max_temperature"] else 463.15  # Kelvin
