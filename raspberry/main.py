@@ -52,7 +52,10 @@ last_sync_time = time.time()
 def run_candump():
     output_filename = f"logs/candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     with open(output_filename, "w") as outfile:
-        subprocess.Popen(["candump", "-ta", "can0"], stdout=outfile, bufsize=0)
+        subprocess.Popen(["candump", "-ta", "can0"], stdout=outfile, bufsize=3)
+        outfile.flush()
+        os.fsync(outfile.fileno())
+        outfile.close()
 
 async def main(id: int) -> None:
     print(f"RP:\tStarting raspberry {id}")

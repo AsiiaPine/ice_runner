@@ -47,15 +47,18 @@ def safely_write_to_file(temp_file: TextIOWrapper, original_filename: str, last_
             temp_file.flush()
             os.fsync(temp_file.fileno())  # Force write to disk
             # Atomically replace the original file with the temporary file
-            shutil.move(temp_file.name, original_filename)
-        return last_sync_time
+            with open(original_filename, "a"):
+                original_filename.write(temp_file.read())
+                temp_file.close()
+                os.remove(temp_file.name)
+                temp_file = open(temp_file.name, "a")
+            return last_sync_time, temp_file
 
     except Exception as e:
         print(f"An error occurred: {e}")
         logging.getLogger(__name__).error(f"An error occurred: {e}")
+        temp_file.close()
         return last_sync_time
-
-
 
 class DronecanCommander:
     node = None
@@ -75,7 +78,7 @@ class DronecanCommander:
         cls.has_imu = False
         cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
         cls.temp_output_filename = f"logs/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
-        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "w")
+        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a", buffering=)
         cls.last_sync_time = time.time()
         print("all messages will be in ", cls.output_filename)
 
@@ -89,7 +92,7 @@ class DronecanCommander:
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
-    DronecanCommander.last_sync_time = safely_write_to_file(DronecanCommander.temp_output_file.name, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
+    DronecanCommander.last_sync_time, DronecanCommander.temp_output_file = safely_write_to_file(DronecanCommander.temp_output_file.name, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
