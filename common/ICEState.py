@@ -1,3 +1,4 @@
+import copy
 from enum import IntEnum
 from typing import Any, Dict
 import logging
@@ -43,7 +44,6 @@ def get_recip_state_name(state) -> str:
 
 def get_health_name(health: int) -> str:
     print(health)
-    assert health in HealthDict.values()
     if health == HealthDict["HEALTH_OK"]:
         return "HEALTH_OK"
     if health == HealthDict["HEALTH_WARNING"]:
@@ -117,7 +117,7 @@ class ICEState:
         self.fuel_level_percent = msg.message.available_fuel_volume_percent
 
     def to_dict(self) -> Dict[str, Any]:
-        vars_dict = vars(self)
+        vars_dict = copy.deepcopy(vars(self))
 
         vars_dict["ice_state"] = get_recip_state_name(self.ice_state)
         vars_dict["mode"] = get_mode_name(self.mode)
