@@ -1,3 +1,4 @@
+import copy
 from enum import IntEnum
 from typing import Any, Dict
 import logging
@@ -115,7 +116,7 @@ class ICEState:
         self.fuel_level_percent = msg.message.available_fuel_volume_percent
 
     def to_dict(self) -> Dict[str, Any]:
-        vars_dict = vars(self)
+        vars_dict = copy.deepcopy(vars(self))
 
         vars_dict["ice_state"] = get_recip_state_name(self.ice_state)
         vars_dict["mode"] = get_mode_name(self.mode)

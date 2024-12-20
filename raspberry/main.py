@@ -1,9 +1,12 @@
 import argparse
 import asyncio
+from asyncio.subprocess import Process
 import os
 from pathlib import Path
+import shutil
 import sys
 import datetime
+import time
 from dotenv import load_dotenv
 from mqtt_client import RaspberryMqttClient, start
 import subprocess
@@ -44,10 +47,15 @@ conf_params_description = {
     {"default": 0, "help": "Команда на N оборотов (RPMCommand) без ПИД-регулятора"}
 }
 
+last_sync_time = time.time()
+
 def run_candump():
     output_filename = f"logs/candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     with open(output_filename, "w") as outfile:
-        subprocess.Popen(["candump", "can0"], stdout=outfile)
+        subprocess.Popen(["candump", "-ta", "can0"], stdout=outfile, bufsize=3)
+        outfile.flush()
+        os.fsync(outfile.fileno())
+        outfile.close()
 
 async def main(id: int) -> None:
     print(f"RP:\tStarting raspberry {id}")
@@ -59,8 +67,10 @@ async def main(id: int) -> None:
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
     RaspberryMqttClient.set_id(id)
     RaspberryMqttClient.connect(id, SERVER_IP, SERVER_PORT)
+
     ice_commander = ICECommander(reporting_period=2,
                                  configuration=IceRunnerConfiguration(args.__dict__))
+
     await asyncio.gather(ice_commander.run(), start())
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ class BotMqttClient:
         cls.client = Client(client_id="bot", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
         cls.client.connect(server_ip, port, 60)
         cls.client.publish("ice_runner/bot", "ready")
+        logging.getLogger(__name__).info("started bot on " + server_ip + ":" + str(port))
 
     @classmethod
     def get_client(cls) -> mqtt.client.Client:
@@ -51,7 +52,7 @@ def handle_commander_server(client, userdata, message):
     logging.getLogger(__name__).info(f"received SERVER connection from Raspberry Pi")
 
 async def start() -> None:
-    print("start")
+    print("MQTT client started")
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/state", handle_commander_state)
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/status", handle_commander_status)
     BotMqttClient.client.message_callback_add("ice_runner/server/bot_commander/rp_states/+/config", handle_commander_config)
