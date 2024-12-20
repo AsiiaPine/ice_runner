@@ -196,18 +196,18 @@ class ICECommander:
 
         if self.rp_state == RPStatesDict["STARTING"]:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = 3000
-            self.dronecan_commander.air_cmd.command_value = 1000
+            self.dronecan_commander.air_cmd.command_value = 2000
             return
 
         if self.mode == ICERunnerMode.SIMPLE:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
-            self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
+            # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
         elif self.mode == ICERunnerMode.PID:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.pid_controller.get_pid_command()
-            self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
+            # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
         elif self.mode == ICERunnerMode.RPM:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
-            self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
+            # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
 
     async def spin(self) -> None:
         self.rp_state_start = self.rp_state
