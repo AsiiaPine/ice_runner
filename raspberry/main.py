@@ -92,13 +92,13 @@ async def main(id: int) -> None:
         global last_sync_time
         with open(ice_commander.dronecan_commander.output_filename, 'a') as fp:
             while True:
-                item = q.get()
+                item = await q.get()
                 if item is None:
                     break
-                fp.write(item)
+                await fp.write(item)
                 if time.time() - last_sync_time > 1:
                     last_sync_time = time.time()
-                    fp.flush()
+                    await fp.flush()
                 asyncio.sleep(0.1)
 
     await asyncio.gather(ice_commander.run(), start(), async_write_to_files())
