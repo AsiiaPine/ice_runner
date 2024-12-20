@@ -42,6 +42,7 @@ def get_recip_state_name(state) -> str:
     return "UNKNOWN"
 
 def get_health_name(health: int) -> str:
+    print(health)
     if health == HealthDict["HEALTH_OK"]:
         return "HEALTH_OK"
     if health == HealthDict["HEALTH_WARNING"]:
