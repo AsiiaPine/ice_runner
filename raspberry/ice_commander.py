@@ -43,13 +43,15 @@ def safely_write_to_file(temp_file: TextIOWrapper, original_filename: str, last_
     try:
         # Write data to a temporary file
         if last_sync_time - time.time() > 1:
+            print("Last sync time: \n\n\n\n\n", last_sync_time)
             last_sync_time = time.time()
             temp_file.flush()
             os.fsync(temp_file.fileno())  # Force write to disk
             # Atomically replace the original file with the temporary file
-            with open(original_filename, "a"):
-                original_filename.write(temp_file.read())
+            with open(original_filename, "a") as original_file:
+                original_file.write(temp_file.read())
                 temp_file.close()
+                original_file.close()
                 os.remove(temp_file.name)
                 temp_file = open(temp_file.name, "a")
             return last_sync_time, temp_file
@@ -78,7 +80,7 @@ class DronecanCommander:
         cls.has_imu = False
         cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
         cls.temp_output_filename = f"logs/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
-        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a", buffering=)
+        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a", buffering=1)
         cls.last_sync_time = time.time()
         print("all messages will be in ", cls.output_filename)
 
