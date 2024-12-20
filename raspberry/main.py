@@ -64,13 +64,11 @@ async def main(id: int) -> None:
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
     RaspberryMqttClient.set_id(id)
     RaspberryMqttClient.connect(id, SERVER_IP, SERVER_PORT)
-    q = asyncio.Queue()
-
 
     ice_commander = ICECommander(reporting_period=2,
-                                 configuration=IceRunnerConfiguration(args.__dict__), output_queue=q)
+                                 configuration=IceRunnerConfiguration(args.__dict__))
 
-    await asyncio.gather(ice_commander.run(), start(), async_write_to_files())
+    await asyncio.gather(ice_commander.run(), start())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Raspberry Pi CAN node for automatic ICE runner')

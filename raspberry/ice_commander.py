@@ -73,6 +73,7 @@ class DronecanCommander:
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
         cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.temp_output_filename = f"logs/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
         cls.temp_output_file: TextIOWrapper = open("temp" + cls.output_filename, "w")
         cls.last_sync_time = time.time()
         print("all messages will be in ", cls.output_filename)
@@ -161,12 +162,11 @@ class PIDController:
         return self.seeked_value + self.kp*self.error + self.kd*self.drpm + self.ki * self.integral
 
 class ICECommander:
-    def __init__(self, reporting_period: float = 1, configuration: IceRunnerConfiguration = None, output_queue: asyncio.Queue = None) -> None:
+    def __init__(self, reporting_period: float = 1, configuration: IceRunnerConfiguration = None) -> None:
         self.rp_state = RPStatesDict["STOPPED"]
         self.reporting_period = reporting_period
         self.dronecan_commander = DronecanCommander
         self.dronecan_commander.connect()
-        self.dronecan_commander.output_queue = output_queue
         start_dronecan_handlers()
         self.configuration = configuration
         self.flags = ICEFlags()
