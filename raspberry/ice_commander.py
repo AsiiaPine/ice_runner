@@ -3,6 +3,9 @@
 import asyncio
 import datetime
 from enum import IntEnum
+from io import TextIOWrapper
+import os
+import shutil
 import time
 import traceback
 from typing import Any, Dict
@@ -36,9 +39,25 @@ ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
+last_sync_time = time.time()
+
+def safely_write_to_file(temp_file: TextIOWrapper, original_filename: str):
+    try:
+        # Write data to a temporary file
+        if last_sync_time - time.time() > 1:
+            last_sync_time = time.time()
+            temp_file.flush()
+            os.fsync(temp_file.fileno())  # Force write to disk
+            # Atomically replace the original file with the temporary file
+            shutil.move(temp_file.name, original_filename)
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+
 class DronecanCommander:
     node = None
-    output_queue: asyncio.Queue = None
 
     @classmethod
     def connect(cls) -> None:
@@ -54,6 +73,7 @@ class DronecanCommander:
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
         cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.temp_output_file: TextIOWrapper = open("temp" + cls.output_filename, "w")
         cls.last_sync_time = time.time()
         print("all messages will be in ", cls.output_filename)
 
@@ -66,7 +86,8 @@ class DronecanCommander:
             cls.node.publish(dronecan.uavcan.equipment.actuator.ArrayCommand(commands = [cls.air_cmd]))
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
-    DronecanCommander.output_queue.put(dronecan.to_yaml(msg) + "\n")
+    DronecanCommander.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
+    safely_write_to_file(DronecanCommander.temp_output_file.name, DronecanCommander.output_filename)
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
