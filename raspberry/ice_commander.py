@@ -195,7 +195,7 @@ class ICECommander:
             return
 
         if self.rp_state == RPStatesDict["STARTING"]:
-            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = 3000
+            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = 3500
             self.dronecan_commander.air_cmd.command_value = 2000
             return
 
