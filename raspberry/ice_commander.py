@@ -41,8 +41,9 @@ MAX_AIR_OPEN = 8191
 
 def safely_write_to_file(temp_file: TextIOWrapper, original_filename: str, last_sync_time: float):
     try:
+        print("HEllo", last_sync_time)
         # Write data to a temporary file
-        if last_sync_time - time.time() > 1:
+        if time.time() - last_sync_time > 1:
             print("Last sync time: \n\n\n\n\n", last_sync_time)
             last_sync_time = time.time()
             temp_file.flush()
