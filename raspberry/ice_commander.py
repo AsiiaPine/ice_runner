@@ -38,6 +38,7 @@ MAX_AIR_OPEN = 8191
 
 class DronecanCommander:
     node = None
+    output_queue: asyncio.Queue = None
 
     @classmethod
     def connect(cls) -> None:
@@ -53,11 +54,8 @@ class DronecanCommander:
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
         cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.last_sync_time = time.time()
         print("all messages will be in ", cls.output_filename)
-
-    def dump_msg(msg: dronecan.node.TransferEvent, output_filename) -> None:
-        with open(output_filename, "a") as myfile:
-            myfile.write(dronecan.to_yaml(msg) + "\n")
 
     @classmethod
     def spin(cls) -> None:
@@ -67,10 +65,13 @@ class DronecanCommander:
             cls.node.publish(cls.cmd)
             cls.node.publish(dronecan.uavcan.equipment.actuator.ArrayCommand(commands = [cls.air_cmd]))
 
+def dump_msg(msg: dronecan.node.TransferEvent) -> None:
+    DronecanCommander.output_queue.put(dronecan.to_yaml(msg) + "\n")
+
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_fuel_tank_status(msg)
-    DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
+    dump_msg(msg)
     logging.debug(f"MES:\tReceived fuel tank status")
 
 def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
@@ -81,19 +82,19 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
         DronecanCommander.param_interface._target_node_id = msg.message.source_node_id
         param = DronecanCommander.param_interface.get("status.engaged_time")
         DronecanCommander.state.engaged_time = param.value
-    DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
+    dump_msg(msg)
     logging.debug(f"MES:\tReceived raw imu")
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_node_status(msg)
-    DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
+    dump_msg(msg)
     logging.debug(f"MES:\tReceived node status")
 
 def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.state.update_with_resiprocating_status(msg)
     DronecanCommander.messages['uavcan.equipment.ice.reciprocating.Status'] = dronecan.to_yaml(msg.message)
-    DronecanCommander.dump_msg(msg, DronecanCommander.output_filename)
+    dump_msg(msg)
     logging.debug(f"MES:\tReceived ICE reciprocating status")
 
 def start_dronecan_handlers() -> None:
@@ -139,11 +140,12 @@ class PIDController:
         return self.seeked_value + self.kp*self.error + self.kd*self.drpm + self.ki * self.integral
 
 class ICECommander:
-    def __init__(self, reporting_period: float = 1, configuration: IceRunnerConfiguration = None) -> None:
+    def __init__(self, reporting_period: float = 1, configuration: IceRunnerConfiguration = None, output_queue: asyncio.Queue = None) -> None:
         self.rp_state = RPStatesDict["STOPPED"]
         self.reporting_period = reporting_period
         self.dronecan_commander = DronecanCommander
         self.dronecan_commander.connect()
+        self.dronecan_commander.output_queue = output_queue
         start_dronecan_handlers()
         self.configuration = configuration
         self.flags = ICEFlags()
@@ -154,6 +156,7 @@ class ICECommander:
         if self.mode == ICERunnerMode.PID:
             self.pid_controller = PIDController(configuration.rpm)
         self.last_button_cmd = 1
+
 
     def check_conditions(self) -> int:
         # check if conditions are exeeded

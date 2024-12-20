@@ -1,9 +1,12 @@
 import argparse
 import asyncio
+from asyncio.subprocess import Process
 import os
 from pathlib import Path
+import shutil
 import sys
 import datetime
+import time
 from dotenv import load_dotenv
 from mqtt_client import RaspberryMqttClient, start
 import subprocess
@@ -49,6 +52,23 @@ def run_candump():
     with open(output_filename, "w") as outfile:
         subprocess.Popen(["candump", "can0"], stdout=outfile)
 
+async def safely_write_to_file(original_file, temp_file):
+    try:
+        # Write data to a temporary file
+        with open(temp_file, 'w') as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())  # Force write to disk
+
+        # Atomically replace the original file with the temporary file
+        shutil.move(temp_file, original_file)
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+last_sync_time = time.time()
+
+
 async def main(id: int) -> None:
     print(f"RP:\tStarting raspberry {id}")
     os.environ.clear()
@@ -59,9 +79,25 @@ async def main(id: int) -> None:
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
     RaspberryMqttClient.set_id(id)
     RaspberryMqttClient.connect(id, SERVER_IP, SERVER_PORT)
+    q = asyncio.Queue()
+
+
     ice_commander = ICECommander(reporting_period=2,
-                                 configuration=IceRunnerConfiguration(args.__dict__))
-    await asyncio.gather(ice_commander.run(), start())
+                                 configuration=IceRunnerConfiguration(args.__dict__), output_queue=q)
+    async def async_write_to_files():
+        global last_sync_time
+        with open(ice_commander.dronecan_commander.output_filename, 'a') as fp:
+            while True:
+                item = q.get()
+                if item is None:
+                    break
+                fp.write(item)
+                if time.time() - last_sync_time > 1:
+                    last_sync_time = time.time()
+                    fp.flush()
+                asyncio.sleep(0.1)
+
+    await asyncio.gather(ice_commander.run(), start(), async_write_to_files())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Raspberry Pi CAN node for automatic ICE runner')
