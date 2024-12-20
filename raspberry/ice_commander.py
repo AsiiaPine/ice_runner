@@ -40,28 +40,22 @@ ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
 def safely_write_to_file(temp_file: TextIOWrapper, original_filename: str, last_sync_time: float):
-    try:
-        print("HEllo", last_sync_time)
-        # Write data to a temporary file
-        if time.time() - last_sync_time > 1:
-            print("Last sync time: \n\n\n\n\n", last_sync_time)
-            last_sync_time = time.time()
-            temp_file.flush()
-            os.fsync(temp_file.fileno())  # Force write to disk
-            # Atomically replace the original file with the temporary file
-            with open(original_filename, "a") as original_file:
-                original_file.write(temp_file.read())
-                temp_file.close()
-                original_file.close()
-                os.remove(temp_file.name)
-                temp_file = open(temp_file.name, "a")
-            return last_sync_time, temp_file
+    print("HEllo", last_sync_time)
+    # Write data to a temporary file
+    if time.time() - last_sync_time > 1:
+        print("Last sync time: \n\n\n\n\n", last_sync_time)
+        last_sync_time = time.time()
+        temp_file.flush()
+        os.fsync(temp_file.fileno())  # Force write to disk
+        # Atomically replace the original file with the temporary file
+        with open(original_filename, "a") as original_file:
+            original_file.write(temp_file.read())
+            temp_file.close()
+            original_file.close()
+            os.remove(temp_file.name)
+            temp_file = open(temp_file.name, "a")
+        return last_sync_time, temp_file
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        logging.getLogger(__name__).error(f"An error occurred: {e}")
-        temp_file.close()
-        return last_sync_time
 
 class DronecanCommander:
     node = None
@@ -95,7 +89,7 @@ class DronecanCommander:
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
-    DronecanCommander.last_sync_time, DronecanCommander.temp_output_file = safely_write_to_file(DronecanCommander.temp_output_file.name, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
+    DronecanCommander.last_sync_time, DronecanCommander.temp_output_file = safely_write_to_file(DronecanCommander.temp_output_file, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
