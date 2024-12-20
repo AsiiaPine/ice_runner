@@ -47,10 +47,15 @@ conf_params_description = {
     {"default": 0, "help": "Команда на N оборотов (RPMCommand) без ПИД-регулятора"}
 }
 
+last_sync_time = time.time()
+
 def run_candump():
     output_filename = f"logs/candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     with open(output_filename, "w") as outfile:
-        subprocess.Popen(["candump", "can0"], stdout=outfile)
+        subprocess.Popen(["candump", "-ta", "can0"], stdout=outfile)
+        if last_sync_time - time.time() > 1:
+            outfile.flush()
+            print("sync")
 
 async def safely_write_to_file(original_file, temp_file):
     try:
@@ -66,7 +71,6 @@ async def safely_write_to_file(original_file, temp_file):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-last_sync_time = time.time()
 
 
 async def main(id: int) -> None:
