@@ -74,7 +74,7 @@ class DronecanCommander:
         cls.has_imu = False
         cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
         cls.temp_output_filename = f"logs/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
-        cls.temp_output_file: TextIOWrapper = open("temp" + cls.output_filename, "w")
+        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "w")
         cls.last_sync_time = time.time()
         print("all messages will be in ", cls.output_filename)
 
