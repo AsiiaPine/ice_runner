@@ -43,6 +43,7 @@ def get_recip_state_name(state) -> str:
 
 def get_health_name(health: int) -> str:
     print(health)
+    assert health in HealthDict.values()
     if health == HealthDict["HEALTH_OK"]:
         return "HEALTH_OK"
     if health == HealthDict["HEALTH_WARNING"]:
