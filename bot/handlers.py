@@ -243,7 +243,7 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         await show_options(message, state)
         return
     rp_id = (await state.get_data())["rp_id"]
-    await message.answer("ID обкатчика: {rp_id}\n")
+    await message.answer(f"ID обкатчика: {rp_id}\n")
     await message.answer("Current configuration| Настройки обкатки:" + get_configuration_str(rp_id))
     await message.answer(f"Send /cancel or /cancel to cancel the run. After the run is sent /stop or /stop to stop it\n\nОтправьте /cancel или /отмена чтобы отменить запуск обкатки. После запуска отправьте /stop или /стоп чтобы остановить ее")
     i = 0

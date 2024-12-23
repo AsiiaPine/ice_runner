@@ -5,7 +5,6 @@ import datetime
 from enum import IntEnum
 from io import TextIOWrapper
 import os
-import shutil
 import time
 import traceback
 from typing import Any, Dict
@@ -39,6 +38,27 @@ ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
+
+def safely_write_to_file(temp_filename: str, original_filename: str, last_sync_time: float):
+    try:
+        if time.time() - last_sync_time > 1:
+            logging.getLogger(__name__).info("CANDUMP\tSaving data")
+            temp_output_file = open(temp_filename, "r+")
+            output = open(original_filename, "a")
+            lines = temp_output_file.readlines()
+            output.writelines(lines)
+            output.flush()
+            output.close()
+            temp_output_file.truncate(0)
+            temp_output_file.close()
+            last_sync_time = time.time()
+        return last_sync_time
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        logging.getLogger(__name__).error(f"An error occurred: {e}")
+        return last_sync_time
+
 class DronecanCommander:
     node = None
 
@@ -55,9 +75,9 @@ class DronecanCommander:
         cls.prev_broadcast_time = 0
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
-        cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
-        cls.temp_output_filename = f"logs/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
-        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a", buffering=3)
+        cls.output_filename = f"logs/raspberry/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.temp_output_filename = f"logs/raspberry/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a")
         cls.last_sync_time = 0
         print("all messages will be in ", cls.output_filename)
 
@@ -69,9 +89,14 @@ class DronecanCommander:
             cls.node.publish(cls.cmd)
             cls.node.publish(dronecan.uavcan.equipment.actuator.ArrayCommand(commands = [cls.air_cmd]))
 
+def dump_msg(msg: dronecan.node.TransferEvent) -> None:
+    DronecanCommander.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
+    DronecanCommander.last_sync_time = safely_write_to_file(DronecanCommander.temp_output_filename, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
+
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_fuel_tank_status(msg)
+    dump_msg(msg)
     logging.debug(f"MES:\tReceived fuel tank status")
 
 def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
@@ -82,16 +107,19 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
         DronecanCommander.param_interface._target_node_id = msg.message.source_node_id
         param = DronecanCommander.param_interface.get("status.engaged_time")
         DronecanCommander.state.engaged_time = param.value
+    dump_msg(msg)
     logging.debug(f"MES:\tReceived raw imu")
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.state.update_with_node_status(msg)
     DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
+    dump_msg(msg)
     logging.debug(f"MES:\tReceived node status")
 
 def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.state.update_with_resiprocating_status(msg)
     DronecanCommander.messages['uavcan.equipment.ice.reciprocating.Status'] = dronecan.to_yaml(msg.message)
+    dump_msg(msg)
     logging.debug(f"MES:\tReceived ICE reciprocating status")
 
 def start_dronecan_handlers() -> None:

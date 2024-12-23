@@ -50,12 +50,25 @@ conf_params_description = {
 
 last_sync_time = time.time()
 
-def run_candump():
+async def run_candump():
     global last_sync_time
-    output_filename = f"logs/candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-    output = open(output_filename, "wb", buffering=0)
-    subprocess.Popen(["candump", "-ta", "can0"], stdout=output, bufsize=0)
-    print("CANDUP\t| Started")
+    temp_output_filename = f"logs/raspberry/temp_candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    output_filename = f"logs/raspberry/candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    temp_output = open(temp_output_filename, "wb", buffering=0)
+    subprocess.Popen(["candump", "-ta", "can0"], stdout=temp_output, bufsize=0)
+    while True:
+        if time.time() - last_sync_time > 1:
+            logging.getLogger(__name__).info("CANDUMP\t| Saving data")
+            output = open(output_filename, "a")
+            temp_output_file = open(temp_output_filename, "r+")
+            for line in temp_output_file.readlines():
+                output.write(line)
+            output.flush()
+            output.close()
+            temp_output_file.truncate(0)
+            temp_output_file.close()
+            last_sync_time = time.time()
+        await asyncio.sleep(1)
 
 async def main(id: int) -> None:
     print(f"RP:\tStarting raspberry {id}")
@@ -64,14 +77,14 @@ async def main(id: int) -> None:
     load_dotenv(dotenv_path, verbose=True)
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
-    run_candump()
+    # run_candump()
     RaspberryMqttClient.set_id(id)
     RaspberryMqttClient.connect(id, SERVER_IP, SERVER_PORT)
 
     ice_commander = ICECommander(reporting_period=2,
                                  configuration=IceRunnerConfiguration(args.__dict__))
 
-    await asyncio.gather(ice_commander.run(), start())
+    await asyncio.gather(ice_commander.run(), start(), run_candump())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Raspberry Pi CAN node for automatic ICE runner')
