@@ -297,7 +297,8 @@ class ICECommander:
                 continue
 
     def check_buttons(self):
-        """If we"""
+        """The function checks the state of the stop button"""
+        # TODO: make button to be nessesary to set the state from MQTT
         stop_switch = GPIO.input(start_stop_pin)
         if self.last_button_cmd == stop_switch:
             return

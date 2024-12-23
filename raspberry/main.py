@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 from asyncio.subprocess import Process
+from io import TextIOWrapper
 import os
 from pathlib import Path
 import shutil
@@ -50,19 +51,28 @@ conf_params_description = {
 last_sync_time = time.time()
 
 def run_candump():
+    global last_sync_time
     output_filename = f"logs/candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-    with open(output_filename, "w") as outfile:
-        subprocess.Popen(["candump", "-ta", "can0"], stdout=outfile, bufsize=3)
-        outfile.flush()
-        os.fsync(outfile.fileno())
-        outfile.close()
+    temp_output_filename = f"logs/temp_candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    # outfile: TextIOWrapper = open(output_filename, "a", buffering=3)
+    temp_output = open(temp_output_filename, "w+")
+    candump = subprocess.Popen(["candump", "-ta", "can0"], stdout=temp_output, bufsize=3)
+    while True:
+        if time.time() - last_sync_time > 1:
+            output = open(output_filename, "a")
+            temp_output_file = open(temp_output_filename, "r")
+            for line in temp_output_file.readlines():
+                output.write(line)
+            output.flush()
+            output.close()
+            temp_output_file.close()
+            last_sync_time = time.time()
 
 async def main(id: int) -> None:
     print(f"RP:\tStarting raspberry {id}")
     os.environ.clear()
     dotenv_path = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env')))
     load_dotenv(dotenv_path, verbose=True)
-    run_candump()
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
     RaspberryMqttClient.set_id(id)
@@ -71,7 +81,7 @@ async def main(id: int) -> None:
     ice_commander = ICECommander(reporting_period=2,
                                  configuration=IceRunnerConfiguration(args.__dict__))
 
-    await asyncio.gather(ice_commander.run(), start())
+    await asyncio.gather(ice_commander.run(), start(), run_candump())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Raspberry Pi CAN node for automatic ICE runner')
