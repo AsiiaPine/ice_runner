@@ -69,22 +69,22 @@ def get_mode_name(mode: int) -> str:
 class ICEState:
     def __init__(self) -> None:
         self.ice_state: int = RecipStateDict["NOT_CONNECTED"]
-        self.rpm: int = None
-        self.throttle: int = None
-        self.temp: int = None
-        self.fuel_level: int = None
-        self.fuel_level_percent: int = None
-        self.gas_throttle: int = None
-        self.air_throttle: int = None
+        self.rpm: int = 0
+        self.throttle: int = 0
+        self.temp: int = 0
+        self.fuel_level: int = 0
+        self.fuel_level_percent: int = 0
+        self.gas_throttle: int = 0
+        self.air_throttle: int = 0
 
-        self.current: float = None
+        self.current: float = 0
 
-        self.voltage_in: float = None
-        self.voltage_out: float = None
+        self.voltage_in: float = 0
+        self.voltage_out: float = 0
 
-        self.vibration: float = None
+        self.vibration: float = 0
 
-        self.engaged_time: float = None
+        self.engaged_time: float = 0
         self.mode = ModeDict["MODE_OPERATIONAL"]
         self.health = HealthDict["HEALTH_OK"]
 
@@ -104,9 +104,9 @@ class ICEState:
         self.vibration = msg.message.integration_interval
 
     def update_with_node_status(self, msg) -> None:
-        if msg.message.mode > self.mode.value:
+        if msg.message.mode > self.mode:
             self.mode = int(msg.message.mode)
-        if msg.message.health > self.health.value:
+        if msg.message.health > self.health:
             self.health = int(msg.message.health)
         if self.mode > ModeDict["MODE_SOFTWARE_UPDATE"] or self.health > HealthDict["HEALTH_WARNING"]:
             self.ice_state = RecipStateDict["FAULT"]

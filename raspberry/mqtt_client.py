@@ -88,6 +88,7 @@ def handle_config(client, userdata, message):
 def handle_who_alive(client, userdata, message):
     logging.getLogger(__name__).info("RECEIVED:\tWHO ALIVE")
     RaspberryMqttClient.client.publish(f"ice_runner/raspberry_pi/{RaspberryMqttClient.rp_id}/status", str(RaspberryMqttClient.status))
+    print(str(RaspberryMqttClient.status))
 
 async def start() -> None:
     RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/rp_commander/{RaspberryMqttClient.rp_id}/command", handle_command)
