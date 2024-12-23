@@ -1,6 +1,5 @@
 
 
-import asyncio
 import datetime
 from enum import IntEnum
 from io import TextIOWrapper
@@ -16,7 +15,7 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 from mqtt_client import RaspberryMqttClient
 from raccoonlab_tools.dronecan.utils import ParametersInterface
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-
+from logging import handlers
 import logging
 # import logging_configurator
 # logger = logging_configurator.AsyncLogger(__name__)
@@ -39,21 +38,6 @@ ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
-def safely_write_to_file(temp_filename: str, original_filename: str, last_sync_time: float)->float:
-    # Write data to a temporary file
-    if time.time() - last_sync_time > 1:
-        output = open(original_filename, "a")
-        temp_output_file = open(temp_filename, "r")
-        for line in temp_output_file.readlines():
-            output.write(line)
-        output.flush()
-        output.close()
-        temp_output_file.close()
-        last_sync_time = time.time()
-
-        return last_sync_time
-
-
 class DronecanCommander:
     node = None
 
@@ -72,8 +56,8 @@ class DronecanCommander:
         cls.has_imu = False
         cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
         cls.temp_output_filename = f"logs/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
-        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a", buffering=1)
-        cls.last_sync_time = time.time()
+        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a", buffering=3)
+        cls.last_sync_time = 0
         print("all messages will be in ", cls.output_filename)
 
     @classmethod
@@ -84,14 +68,9 @@ class DronecanCommander:
             cls.node.publish(cls.cmd)
             cls.node.publish(dronecan.uavcan.equipment.actuator.ArrayCommand(commands = [cls.air_cmd]))
 
-def dump_msg(msg: dronecan.node.TransferEvent) -> None:
-    DronecanCommander.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
-    DronecanCommander.last_sync_time = safely_write_to_file(DronecanCommander.temp_output_filename, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
-
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_fuel_tank_status(msg)
-    dump_msg(msg)
     logging.debug(f"MES:\tReceived fuel tank status")
 
 def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
@@ -102,19 +81,16 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
         DronecanCommander.param_interface._target_node_id = msg.message.source_node_id
         param = DronecanCommander.param_interface.get("status.engaged_time")
         DronecanCommander.state.engaged_time = param.value
-    dump_msg(msg)
     logging.debug(f"MES:\tReceived raw imu")
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_node_status(msg)
-    dump_msg(msg)
     logging.debug(f"MES:\tReceived node status")
 
 def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.state.update_with_resiprocating_status(msg)
     DronecanCommander.messages['uavcan.equipment.ice.reciprocating.Status'] = dronecan.to_yaml(msg.message)
-    dump_msg(msg)
     logging.debug(f"MES:\tReceived ICE reciprocating status")
 
 def start_dronecan_handlers() -> None:
@@ -122,7 +98,6 @@ def start_dronecan_handlers() -> None:
     DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ahrs.RawIMU, raw_imu_handler)
     DronecanCommander.node.node.add_handler(dronecan.uavcan.protocol.NodeStatus, node_status_handler)
     DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ice.FuelTankStatus, fuel_tank_status_handler)
-
 
 class ICEFlags:
     def __init__(self) -> None:
@@ -231,13 +206,13 @@ class ICECommander:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
             # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
 
-    async def spin(self) -> None:
+    def spin(self) -> None:
         self.rp_state_start = self.rp_state
         ice_state = self.dronecan_commander.state.ice_state
         rpm = self.dronecan_commander.state.rpm
         if ice_state == RecipStateDict["NOT_CONNECTED"]:
             logging.getLogger(__name__).error("NOT_CONNECTED:\tNo ICE connected")
-            await asyncio.sleep(1)
+            time.sleep(1)
             self.dronecan_commander.cmd.cmd = [0] * (ICE_AIR_CHANNEL + 1)
             self.dronecan_commander.spin()
             return
@@ -266,11 +241,11 @@ class ICECommander:
 
         self.set_command()
         logging.getLogger(__name__).info(f"CMD:\t{list(self.dronecan_commander.cmd.cmd)}")
-        await self.report_state()
+        self.report_state()
         self.dronecan_commander.spin()
-        await asyncio.sleep(0.05)
+        time.sleep(0.05)
 
-    async def report_state(self) -> None:
+    def report_state(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
             state_dict = self.dronecan_commander.state.to_dict()
             state_dict["start_time"] = self.start_time
@@ -282,10 +257,10 @@ class ICECommander:
             self.prev_report_time = time.time()
             logging.getLogger(__name__).info(f"SEND:\tstate{get_rp_state_name(self.rp_state)}")
 
-    async def run(self) -> None:
+    def run(self) -> None:
         while True:
             try:
-                await self.spin()
+                self.spin()
             except dronecan.transport.TransferError as e:
                 logging.getLogger(__name__).error(f"{e}\n{traceback.format_exc()}")
                 continue
