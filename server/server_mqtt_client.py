@@ -13,7 +13,7 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 import logging
 
 def on_disconnect(client: Client, userdata: Any, rc: int) -> None:
-    print("Disconnected")
+    logging.getLogger(__name__).error("Disconnected")
     if rc != 0:
         logging.error("Unexpected MQTT disconnection. Will auto-reconnect")
 
@@ -79,7 +79,6 @@ def handle_raspberry_pi_status(client, userdata, msg):
     rp_id = int(msg.topic.split("/")[2])
     logging.info(f"Recieved\t| Raspberry Pi {rp_id} send status")
     ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())
-    print("ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())", ServerMqttClient.rp_status[rp_id])
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", ServerMqttClient.rp_status[rp_id]["state"])
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", str(ServerMqttClient.rp_status[rp_id]))
 

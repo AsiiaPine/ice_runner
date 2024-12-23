@@ -250,12 +250,10 @@ class ICECommander:
 
     def report_state(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
-            print("REPORT\t| Sending state")
+            logging.getLogger(__name__).debug(f"REPORT\t| Sending state")
             state_dict = self.dronecan_commander.state.to_dict()
             state_dict["start_time"] = self.start_time
-            print("state_dict['start_time'] = self.start_time", state_dict)
             state_dict["state"] = get_rp_state_name(self.rp_state)
-            print("state_dict['state'] = get_rp_state_name(self.rp_state)", state_dict)
             RaspberryMqttClient.status = state_dict
             RaspberryMqttClient.publish_status(state_dict)
             RaspberryMqttClient.get_client().publish("ice_runner/raspberry_pi/{rp_id}/state", get_rp_state_name(self.rp_state))
@@ -281,18 +279,14 @@ class ICECommander:
         if self.last_button_cmd == stop_switch:
             return
         if stop_switch:
-            print("Button released")
             if self.rp_state == RPStatesDict["STARTING"] or self.rp_state == RPStatesDict["RUNNING"]:
                 self.rp_state = RPStatesDict["STOPPING"]
-            print("state:" + self.rp_state)
+            logging.getLogger(__name__).info(f"BUTTON\t|  Button released, state: {self.rp_state}")
         else:
-            print("Button pressed")
             if self.rp_state > RPStatesDict["STARTING"]:
                 self.rp_state = RPStatesDict["STARTING"]
                 self.start_time = time.time()
-                print("state: " + self.rp_state)
-            else:
-                print("state: " + self.rp_state)
+            logging.getLogger(__name__).info(f"BUTTON\t|  Button pressed, state: {self.rp_state}")
         self.last_button_cmd = stop_switch
 
     def check_mqtt_cmd(self):

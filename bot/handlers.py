@@ -402,7 +402,7 @@ async def command_server(message: Message, state: FSMContext) -> None:
 async def unknown_message(msg: types.Message, state: FSMContext):
     message_text_eng = 'I do not know what to do \nI just remember that there is a command /help'
     message_text_rus = 'Я не знаю, что с этим делать \nЯ просто напомню, что есть команда /help'
-    print(msg.text, await state.get_state())
+    logging.getLogger(__name__).warning(msg.text, await state.get_state())
     await msg.reply(message_text_eng+"\n"+message_text_rus, parse_mode=ParseMode.HTML)
 
 async def main() -> None:
