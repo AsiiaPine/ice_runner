@@ -25,7 +25,7 @@ import logging
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 GPIO.setwarnings(True) # Ignore warning for now
 GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-on_off_pin = 25
+# on_off_pin = 25
 start_stop_pin = 24
 # Setup CAN terminator
 resistor_pin = 23
@@ -39,22 +39,19 @@ ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
-def safely_write_to_file(temp_file: TextIOWrapper, original_filename: str, last_sync_time: float):
-    print("HEllo", last_sync_time)
+def safely_write_to_file(temp_filename: str, original_filename: str, last_sync_time: float)->float:
     # Write data to a temporary file
     if time.time() - last_sync_time > 1:
-        print("Last sync time: \n\n\n\n\n", last_sync_time)
+        output = open(original_filename, "a")
+        temp_output_file = open(temp_filename, "r")
+        for line in temp_output_file.readlines():
+            output.write(line)
+        output.flush()
+        output.close()
+        temp_output_file.close()
         last_sync_time = time.time()
-        temp_file.flush()
-        os.fsync(temp_file.fileno())  # Force write to disk
-        # Atomically replace the original file with the temporary file
-        with open(original_filename, "a") as original_file:
-            original_file.write(temp_file.read())
-            temp_file.close()
-            original_file.close()
-            os.remove(temp_file.name)
-            temp_file = open(temp_file.name, "a")
-        return last_sync_time, temp_file
+
+        return last_sync_time
 
 
 class DronecanCommander:
@@ -89,7 +86,7 @@ class DronecanCommander:
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
-    DronecanCommander.last_sync_time, DronecanCommander.temp_output_file = safely_write_to_file(DronecanCommander.temp_output_file, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
+    DronecanCommander.last_sync_time = safely_write_to_file(DronecanCommander.temp_output_filename, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
