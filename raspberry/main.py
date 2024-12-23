@@ -64,6 +64,7 @@ async def run_candump():
             for line in temp_output_file.readlines():
                 output.write(line)
             output.flush()
+            os.fsync(output.fileno())
             output.close()
             temp_output_file.truncate(0)
             temp_output_file.close()

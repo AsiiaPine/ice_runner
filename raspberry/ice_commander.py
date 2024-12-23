@@ -39,18 +39,24 @@ ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
 
-def safely_write_to_file(temp_filename: str, original_filename: str, last_sync_time: float):
+def safely_write_to_file(temp_filename: str, original_filename: str, last_sync_time: float) -> float:
     try:
         if time.time() - last_sync_time > 1:
             logging.getLogger(__name__).info("CANDUMP\tSaving data")
-            temp_output_file = open(temp_filename, "r+")
-            output = open(original_filename, "a")
-            lines = temp_output_file.readlines()
-            output.writelines(lines)
-            output.flush()
-            output.close()
-            temp_output_file.truncate(0)
-            temp_output_file.close()
+
+            # With and open both files safely using 'with' context manager
+            with open(temp_filename, "r+") as temp_output_file:
+                # Use os.open for setting O_SYNC flag for synchronous writing
+                fd = os.open(original_filename, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_SYNC)
+                with open(fd, "a") as output:
+                    lines = temp_output_file.readlines()
+                    output.writelines(lines)
+                    output.flush()
+                    os.fsync(output.fileno())
+                    output.close()
+                # safely truncate the temporary file after successful copying
+                temp_output_file.truncate(0)
+
             last_sync_time = time.time()
         return last_sync_time
 
