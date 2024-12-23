@@ -5,7 +5,6 @@ import datetime
 from enum import IntEnum
 from io import TextIOWrapper
 import os
-import shutil
 import time
 import traceback
 from typing import Any, Dict
@@ -16,7 +15,7 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 from mqtt_client import RaspberryMqttClient
 from raccoonlab_tools.dronecan.utils import ParametersInterface
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-
+from logging import handlers
 import logging
 # import logging_configurator
 # logger = logging_configurator.AsyncLogger(__name__)
@@ -25,7 +24,7 @@ import logging
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 GPIO.setwarnings(True) # Ignore warning for now
 GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-on_off_pin = 25
+# on_off_pin = 25
 start_stop_pin = 24
 # Setup CAN terminator
 resistor_pin = 23
@@ -39,25 +38,31 @@ ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
-def safely_write_to_file(temp_file: TextIOWrapper, original_filename: str, last_sync_time: float):
+
+def safely_write_to_file(temp_filename: str, original_filename: str, last_sync_time: float) -> float:
     try:
-        # Write data to a temporary file
-        if last_sync_time - time.time() > 1:
+        if time.time() - last_sync_time > 1:
+            logging.getLogger(__name__).info("CANDUMP\tSaving data")
+
+            # With and open both files safely using 'with' context manager
+            with open(temp_filename, "r+") as temp_output_file:
+                # Use os.open for setting O_SYNC flag for synchronous writing
+                fd = os.open(original_filename, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_SYNC)
+                with open(fd, "a") as output:
+                    lines = temp_output_file.readlines()
+                    output.writelines(lines)
+                    output.flush()
+                    os.fsync(output.fileno())
+                    output.close()
+                # safely truncate the temporary file after successful copying
+                temp_output_file.truncate(0)
+
             last_sync_time = time.time()
-            temp_file.flush()
-            os.fsync(temp_file.fileno())  # Force write to disk
-            # Atomically replace the original file with the temporary file
-            with open(original_filename, "a"):
-                original_filename.write(temp_file.read())
-                temp_file.close()
-                os.remove(temp_file.name)
-                temp_file = open(temp_file.name, "a")
-            return last_sync_time, temp_file
+        return last_sync_time
 
     except Exception as e:
         print(f"An error occurred: {e}")
         logging.getLogger(__name__).error(f"An error occurred: {e}")
-        temp_file.close()
         return last_sync_time
 
 class DronecanCommander:
@@ -76,10 +81,10 @@ class DronecanCommander:
         cls.prev_broadcast_time = 0
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
-        cls.output_filename = f"logs/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
-        cls.temp_output_filename = f"logs/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
-        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a", buffering=)
-        cls.last_sync_time = time.time()
+        cls.output_filename = f"logs/raspberry/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.temp_output_filename = f"logs/raspberry/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a")
+        cls.last_sync_time = 0
         print("all messages will be in ", cls.output_filename)
 
     @classmethod
@@ -92,7 +97,7 @@ class DronecanCommander:
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
-    DronecanCommander.last_sync_time, DronecanCommander.temp_output_file = safely_write_to_file(DronecanCommander.temp_output_file.name, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
+    DronecanCommander.last_sync_time = safely_write_to_file(DronecanCommander.temp_output_filename, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
@@ -101,8 +106,8 @@ def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     logging.debug(f"MES:\tReceived fuel tank status")
 
 def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
-    DronecanCommander.messages['uavcan.equipment.ahrs.RawIMU'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_raw_imu(msg)
+    DronecanCommander.messages['uavcan.equipment.ahrs.RawIMU'] = dronecan.to_yaml(msg.message)
     DronecanCommander.has_imu = True
     if DronecanCommander.state.engaged_time is None:
         DronecanCommander.param_interface._target_node_id = msg.message.source_node_id
@@ -112,8 +117,8 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
     logging.debug(f"MES:\tReceived raw imu")
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
-    DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
     DronecanCommander.state.update_with_node_status(msg)
+    DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
     dump_msg(msg)
     logging.debug(f"MES:\tReceived node status")
 
@@ -128,7 +133,6 @@ def start_dronecan_handlers() -> None:
     DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ahrs.RawIMU, raw_imu_handler)
     DronecanCommander.node.node.add_handler(dronecan.uavcan.protocol.NodeStatus, node_status_handler)
     DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ice.FuelTankStatus, fuel_tank_status_handler)
-
 
 class ICEFlags:
     def __init__(self) -> None:
@@ -243,9 +247,11 @@ class ICECommander:
         rpm = self.dronecan_commander.state.rpm
         if ice_state == RecipStateDict["NOT_CONNECTED"]:
             logging.getLogger(__name__).error("NOT_CONNECTED:\tNo ICE connected")
-            await asyncio.sleep(1)
-            self.dronecan_commander.cmd.cmd = [0] * (ICE_AIR_CHANNEL + 1)
+            time.sleep(1)
+            self.dronecan_commander.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
             self.dronecan_commander.spin()
+            self.report_state()
+            await asyncio.sleep(1)
             return
 
         if ice_state == RecipStateDict["STOPPED"]:
@@ -272,12 +278,13 @@ class ICECommander:
 
         self.set_command()
         logging.getLogger(__name__).info(f"CMD:\t{list(self.dronecan_commander.cmd.cmd)}")
-        await self.report_state()
+        self.report_state()
         self.dronecan_commander.spin()
         await asyncio.sleep(0.05)
 
-    async def report_state(self) -> None:
+    def report_state(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
+            logging.getLogger(__name__).debug(f"REPORT\t| Sending state")
             state_dict = self.dronecan_commander.state.to_dict()
             state_dict["start_time"] = self.start_time
             state_dict["state"] = get_rp_state_name(self.rp_state)
@@ -300,23 +307,20 @@ class ICECommander:
                 continue
 
     def check_buttons(self):
-        """If we"""
+        """The function checks the state of the stop button"""
+        # TODO: make button to be nessesary to set the state from MQTT
         stop_switch = GPIO.input(start_stop_pin)
         if self.last_button_cmd == stop_switch:
             return
         if stop_switch:
-            print("Button released")
             if self.rp_state == RPStatesDict["STARTING"] or self.rp_state == RPStatesDict["RUNNING"]:
                 self.rp_state = RPStatesDict["STOPPING"]
-            print("state:" + self.rp_state)
+            logging.getLogger(__name__).info(f"BUTTON\t|  Button released, state: {self.rp_state}")
         else:
-            print("Button pressed")
             if self.rp_state > RPStatesDict["STARTING"]:
                 self.rp_state = RPStatesDict["STARTING"]
                 self.start_time = time.time()
-                print("state: " + self.rp_state)
-            else:
-                print("state: " + self.rp_state)
+            logging.getLogger(__name__).info(f"BUTTON\t|  Button pressed, state: {self.rp_state}")
         self.last_button_cmd = stop_switch
 
     def check_mqtt_cmd(self):

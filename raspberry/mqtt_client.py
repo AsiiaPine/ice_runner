@@ -17,7 +17,7 @@ from common.RPStates import RPStatesDict
 
 def on_disconnect(client, userdata, rc):
     if rc != 0:
-        print("Unexpected MQTT disconnection. Will auto-reconnect")
+        logging.getLogger(__name__).error("Unexpected MQTT disconnection. Will auto-reconnect")
 
 class RaspberryMqttClient:
     client: Client = Client(client_id="raspberry_0", clean_session=False, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
@@ -81,12 +81,6 @@ def handle_command(client, userdata, message):
         logging.getLogger(__name__).info("RECEIVED:\tStatus request")
         RaspberryMqttClient.publish_status(str(RaspberryMqttClient.status))
 
-# def handle_configuration(client, userdata, message):
-#     logging.getLogger(__name__).info("RECEIVE:\tConfiguration request")
-#     rp_id = int(message.payload.decode())
-#     if rp_id == RaspberryMqttClient.rp_id:
-#         RaspberryMqttClient.client.publish(f"ice_runner/raspberry_pi/{RaspberryMqttClient.rp_id}/configuration", str(RaspberryMqttClient.configuration.to_dict()))
-
 def handle_config(client, userdata, message):
     logging.getLogger(__name__).info("RECEIVED:\tConfiguration")
     RaspberryMqttClient.client.publish(f"ice_runner/raspberry_pi/{RaspberryMqttClient.rp_id}/configuration", str(RaspberryMqttClient.configuration.to_dict()))
@@ -101,8 +95,6 @@ async def start() -> None:
     RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/rp_commander/config", handle_config)
     RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/rp_commander/who_alive", 
     handle_who_alive)
-
-    # RaspberryMqttClient.client.message_callback_add(f"ice_runner/server/raspberry_pi_commander/{RaspberryMqttClient.rp_id}/setpoint", handle_setpoint)
 
     RaspberryMqttClient.client.subscribe(f"ice_runner/server/rp_commander/{RaspberryMqttClient.rp_id}/#")
     RaspberryMqttClient.client.subscribe(f"ice_runner/server/rp_commander/#")

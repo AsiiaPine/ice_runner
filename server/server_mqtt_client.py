@@ -13,7 +13,7 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 import logging
 
 def on_disconnect(client: Client, userdata: Any, rc: int) -> None:
-    print("Disconnected")
+    logging.getLogger(__name__).error("Disconnected")
     if rc != 0:
         logging.error("Unexpected MQTT disconnection. Will auto-reconnect")
 
