@@ -6,6 +6,7 @@ import os
 import sys
 import secrets
 import subprocess
+import numpy as np
 import pytest
 import dronecan
 import time
@@ -21,6 +22,7 @@ from raccoonlab_tools.dronecan.utils import (
 )
 
 ICE_CMD_CHANNEL = 7
+ICE_AIR_CHANNEL = 10
 
 class ICENodeStatus(IntEnum):
     STOPPED = 0
@@ -41,21 +43,141 @@ class Health(IntEnum):
     HEALTH_ERROR      = 2     # The node encountered a major failure.
     HEALTH_CRITICAL   = 3     # The node suffered a fatal malfunction.
 
+class StarterState(IntEnum):
+    STOPPED = 0
+    RUNNING = 1
+    WAITING = 2
+    FINISHED = 3
+    FAULT = 4
+
+class Starter:
+    def __init__(self, running_period_ms: int, waiting_period_ms: int) -> None:
+        self.running_period_ms = running_period_ms
+        self.waiting_period_ms = waiting_period_ms
+        self.t1_ms = 0
+        self.t2_ms = 0
+        self.t3_ms = 0
+        self.state = StarterState.STOPPED
+        self.turn_starter_on = False
+
+    def update(self, is_cmd_engage: bool, is_status_rotating: bool) -> bool:
+        crnt_time_ms = time.time_ns() / 1000000
+        if not is_cmd_engage:
+            self.t1_ms = 0
+            self.t2_ms = 0
+            self.t3_ms = 0
+            self.state = StarterState.STOPPED
+        elif crnt_time_ms >= self.t2_ms and crnt_time_ms < self.t3_ms:
+            self.turn_starter_on = False
+            self.state = StarterState.WAITING
+        elif crnt_time_ms >= self.t3_ms and is_status_rotating:
+            self.turn_starter_on = False
+            self.state = StarterState.FINISHED
+        elif crnt_time_ms >= self.t3_ms and not is_status_rotating:
+            self.turn_starter_on = True
+            self.t1_ms = crnt_time_ms
+            self.t2_ms = self.t1_ms + self.running_period_ms
+            self.t3_ms = self.t2_ms + self.waiting_period_ms
+            self.state = StarterState.RUNNING
+        elif crnt_time_ms < self.t2_ms:
+            self.turn_starter_on = True
+            self.state = StarterState.RUNNING
+        else:
+            self.turn_starter_on = False
+            self.t1_ms = 0
+            self.t2_ms = 0
+            self.t3_ms = 0
+            self.state = StarterState.FAULT
+        return self.turn_starter_on
+
+    def get_cycle_time(self) -> int:
+        min_cycle_time_ms = 0
+        max_cycle_time_ms = self.running_period_ms + self.waiting_period_ms
+
+        cycle_time_ms = max_cycle_time_ms
+        if self.t1_ms == 0:
+            cycle_time_ms = max_cycle_time_ms
+        else:
+            cycle_time_ms = max(min_cycle_time_ms, min(time.time_ns() / 1000000 - self.t1_ms, max_cycle_time_ms))
+        return cycle_time_ms
+
+class Engine:
+    def __init__(self) -> None:
+        self.preformance = 4.1 / 8500 # 4.1 HP / 8500 RPM or 3057.37 W / 8500 RPM
+
+        self.rpm = 0
+        self.temp = 0
+        self.torque = 0
+        self.state = ICENodeStatus.STOPPED
+        self.starter = Starter(running_period_ms=3000, waiting_period_ms=500)
+        self.last_upd = time.time()
+
+    def get_power(self) -> float:
+        return self.preformance * self.rpm
+
+    def update(self, cmd: int, air_cmd: int) -> None:
+        dt = time.time() - self.last_upd
+        self.last_upd = time.time()
+        print("1RPM\t| ", self.rpm)
+        print("3CMD\t| ", cmd)
+        if cmd == 0:
+            self.state = ICENodeStatus.STOPPED
+            self.rpm = 0
+            return
+
+        ice_acceleration = self.random_d_rpm_change()
+        if air_cmd < 100:
+            ice_acceleration -= air_cmd % 1000
+        if air_cmd > 3000:
+            ice_acceleration += air_cmd % 1000
+        if self.rpm < 1500:
+            print("2RPM\t| ", self.rpm)
+            self.random_rpm_change()
+            print("3RPM\t| ", self.rpm)
+        print("4RPM\t| ", self.rpm)
+        starter_enabled = False
+        if self.state == ICENodeStatus.STOPPED:
+            starter_enabled = True
+        else:
+            print("STARTER\t| ", starter_enabled)
+            starter_enabled = self.starter.update(is_cmd_engage=cmd > 0, is_status_rotating=self.rpm > 100)
+        print("STARTER\t| ", starter_enabled)
+        if starter_enabled:
+            if self.state == ICENodeStatus.STOPPED:
+                self.state = ICENodeStatus.RUNNING
+        else:
+            if self.rpm > 1500:
+                self.state = ICENodeStatus.RUNNING
+            else:
+                self.state = ICENodeStatus.WAITING
+                self.rpm = 0
+                return
+        self.rpm = max(0, min(self.rpm + ice_acceleration * dt + cmd * 0.1, cmd + np.sin(self.rpm / 1000) * (100 + dt)))
+
+    def random_rpm_change(self) -> float:
+        rmp = secrets.randbelow(1500)
+        self.rpm = max(0, min(self.rpm + rmp, 8500))
+
+    def random_d_rpm_change(self) -> int:
+        d_rpm = secrets.randbelow(100)
+        return d_rpm * secrets.choice([1, -1])
+
 class ICENODE:
     min_command: int = 2000
-    status_timeout: float = 0.1
+    status_timeout: float = 0.5
 
     def __init__(self) -> None:
-        self.node = DronecanNode()
+        self.dt = 0.05
+        self.node = DronecanNode(node_id= 11)
         self.command = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_CMD_CHANNEL + 1))
         self.rpm = 0
         self.status = ICENodeStatus.STOPPED
-        self.temp: int = 0
-
+        self.temp: float = 0
+        self.int_temp: float = 0
         self.gas_throttle: int = 0
         self.air_throttle: int = 0
 
-        self.current: float = None
+        self.current: float = 40
 
         self.voltage_in: float = 40
         self.voltage_out: float = 5
@@ -63,244 +185,63 @@ class ICENODE:
         self.vibration: float = 0
         self.spark_ignition_time: float = 0
         self.engaged_time: float = 0
-        print("self.mode = Mode.MODE_OPERATIONAL", type(self.mode))
         self.mode = Mode.MODE_OPERATIONAL
-        print("self.mode = Mode.MODE_OPERATIONAL ", type(self.mode))
         self.health = Health.HEALTH_OK
-
-    def random_rpm_change(self) -> int:
-        return secrets.randbelow(1000) 
+        self.prev_broadcast_time = 0
+        self.engine = Engine()
 
     def create_ice_reciprocating_status(self) -> dronecan.uavcan.equipment.ice.reciprocating.Status:
+        print("RPM\t| ", self.engine.rpm)
         return dronecan.uavcan.equipment.ice.reciprocating.Status(
-            state=self.status.value,
-            flags=0,
-            engine_load_percent=self.gas_throttle,
-            engine_speed_rpm=self.rpm,
-            spark_dwell_time_ms=0,
-            atmospheric_pressure_kpa=self.rpm,
-            intake_manifold_pressure_kpa=5,
-            intake_manifold_temperature=self.current,
-            coolant_temperature=0,
-            oil_pressure=self.voltage_in,
-            oil_temperature=self.temp,
-            fuel_pressure=0,
-            fuel_consumption_rate_cm3pm=0,
-            estimated_consumed_fuel_volume_cm3=self.spark_ignition_time,
-            throttle_position_percent=self.air_throttle,
             ecu_index=0,
+            state=self.engine.state.value,
+            engine_speed_rpm=int(self.engine.rpm),
+            atmospheric_pressure_kpa=int(self.engine.rpm),
+            engine_load_percent=self.gas_throttle,
+            throttle_position_percent=self.air_throttle,
+            oil_temperature=self.temp,  
+            coolant_temperature=self.int_temp,
             spark_plug_usage=0,
-            cylinder_status=[]
-        )
+            estimated_consumed_fuel_volume_cm3=self.spark_ignition_time,
+            intake_manifold_temperature=self.current,
+            intake_manifold_pressure_kpa=5,
+            oil_pressure=self.voltage_in,
+)
 
     def send_ice_reciprocating_status(self, msg: dronecan.uavcan.equipment.ice.reciprocating.Status) -> None:
         self.node.publish(msg)
 
     def get_raw_command(self, timeout_sec=0.03):
         res = self.node.sub_once(
-            dronecan.uavcan.equipment.esc.RawCommand, timeout_sec
+            dronecan.uavcan.equipment.esc.RawCommand, timeout_sec=timeout_sec
         )
+        if res is None:
+            return 0
         return res.message.cmd[ICE_CMD_CHANNEL]
 
-@pytest.mark.dependency()
-def test_node_existance():
-    """
-    This test is required just for optimization purposes.
-    Let's skip all tests if we don't have an online Cyphal node.
-    """
-    assert CanProtocolParser.verify_protocol(white_list=[Protocol.DRONECAN])
-
-# def compare_beeper_command_values(
-#     first: dronecan.uavcan.equipment.indication.BeepCommand,
-#     second: dronecan.uavcan.equipment.indication.BeepCommand,
-# ):
-#     return first.duration == second.duration and first.frequency == second.frequency
-
-
-def test_receive_get_raw_command():
-    node = ICENODE()
-    node.send_ice_reciprocating_status(node.create_ice_reciprocating_status())
-    assert node.get_raw_command() == 0
-
-def test_get_zero_cmd():
-    node = ICENODE()
-    node.status = ICENodeStatus.RUNNING
-    assert node.get_raw_command() == 0
-
-def test_mqtt_cmd():
-    client: Client = Client(client_id="raspberry_0", clean_session=True, userdata=None, protocol=MQTTv311)
-
-    node = ICENODE()
-
-# 1
-@pytest.mark.dependency()
-def test_transport():
-    """
-    This test is required just for optimization purposes.
-    Let's skip all tests if we don't have an online Cyphal node.
-    """
-    assert CanProtocolParser.verify_protocol(white_list=[Protocol.DRONECAN])
-
-
-# 2
-@pytest.mark.dependency()
-def test_beeper_command_feedback():
-    pmu = PMUNode()
-    config = [Parameter(name=PARAM_BUZZER_VERBOSE, value=1)]
-    pmu.configure(config)
-    time.sleep(5)
-    recv_sound = pmu.recv_sound()
-    assert recv_sound is not None
-
-
-@pytest.mark.dependency(depends=["test_transport", "test_beeper_command_feedback"])
-class TestGateOk:
-    """
-    The test class with maximum gate_threshold value, 
-    so the node will always listen to the BeepCommands
-    """
-
-    config = [
-        Parameter(name=PARAM_BATTERY_ID, value=0),
-        Parameter(name=PARAM_BATTERY_MODEL_INSTANCE_ID, value=0),
-        Parameter(name=PARAM_BUZZER_ERROR_MELODY, value=127),
-        Parameter(name=PARAM_BUZZER_FREQUENCY, value=ParamLightsType.SOLID),
-        Parameter(name=PARAM_GATE_THRESHOLD, value=4095),
-        Parameter(name=PARAM_BUZZER_VERBOSE, value=1),
-    ]
-    pmu = PMUNode()
-    randomizer = secrets.SystemRandom()
-    @staticmethod
-    def configure_node():
-        TestGateOk.pmu.configure(TestGateOk.config)
-        time.sleep(5)
-
-    @staticmethod
-    def test_healthy_node_sound_after_restart():
-        pmu = TestGateOk.pmu
-        TestGateOk.configure_node()
-        recv = pmu.recv_sound()
-        expected_duration = 0
-        assert recv is not None
-        assert compare_beeper_command_duration_values(
-            recv, expected_duration=expected_duration
+    def get_air_cmd(self, timeout_sec=0.03):
+        res = self.node.sub_once(
+            dronecan.uavcan.equipment.actuator.ArrayCommand, timeout_sec=timeout_sec
         )
+        if res is None:
+            return 0
+        for cmd in res.message.commands:
+            if cmd.actuator_id == ICE_AIR_CHANNEL:
+                return cmd.command_value
 
-    @pytest.mark.dependency(depends=["test_healthy_node_sound_after_restart"])
-    @staticmethod
-    def test_send_random_sound():
-        pmu = TestGateOk.pmu
-
-        frequency = TestGateOk.randomizer.randrange(start=PMUNode.min_frequency, stop=1000, step=10)
-        duration = 2
-        msg = make_beeper_cmd_from_values(frequency=frequency, duration=duration)
-        pmu.send_beeper_command(msg)
-        recv = None
-
-        assert pmu.check_beep_cmd_response(msg)
-
-    @pytest.mark.dependency()
-    @staticmethod
-    def test_silence_after_command_ttl():
-        pmu = TestGateOk.pmu
-        frequency = TestGateOk.randomizer.randrange(start=PMUNode.min_frequency, stop=1000, step=10)
-        duration = TestGateOk.randomizer.uniform(0.1, 1)
-
-        msg = make_beeper_cmd_from_values(frequency=frequency, duration=duration)
-        pmu.send_beeper_command(msg)
-
-        time.sleep(duration)
-        recv = None
-        for _ in range(20):
-            recv = pmu.recv_sound()
-        assert recv is not None
-        assert compare_beeper_command_duration_values(recv, expected_duration=0)
-
-    @staticmethod
-    def test_beep_command_subscription():
-        pmu = TestGateOk.pmu
-
-        expected_counter = 0
-        unexpected_counter = 0
-
-        number_of_notes = 20
-        
-        for _ in range(number_of_notes):
-            frequency = TestGateOk.randomizer.randrange(start=PMUNode.min_frequency, stop=1000, step=10)
-            duration = TestGateOk.randomizer.uniform(0.1, 1)
-
-            msg = make_beeper_cmd_from_values(frequency=frequency, duration=duration)
-            pmu.send_beeper_command(msg)
-
-            if pmu.check_beep_cmd_response(msg):
-                expected_counter += 1
-            else:
-                unexpected_counter += 1
-
-        total_counter = expected_counter + unexpected_counter
-
-        hint = (
-            f"{TestGateOk.__doc__}. "
-            f"Expected: {expected_counter}/{total_counter}. "
-            f"Unexpected: {unexpected_counter}/{total_counter}. "
-        )
-
-        assert unexpected_counter == 0, f"{hint}"
-        assert expected_counter > 0, f"{hint}"
-
-    @staticmethod
-    def test_beep_command_subscription_with_duration():
-        pmu = TestGateOk.pmu
-
-        expected_counter = 0
-        unexpected_counter = 0
-
-        duration_comply_failure_counter = 0
-        number_of_notes = 20
-        for _ in range(number_of_notes):
-            frequency = TestGateOk.randomizer.randrange(start=PMUNode.min_frequency, stop=1000, step=10)
-            duration = TestGateOk.randomizer.uniform(0.1, 1)
-
-            msg = make_beeper_cmd_from_values(frequency=frequency, duration=duration)
-            pmu.send_beeper_command(msg)
-            start_time = time.time()
-            timeout_sec = 0.05
-            while time.time() - start_time < duration - timeout_sec:
-                if pmu.check_beep_cmd_response(msg):
-                    expected_counter += 1
-                else:
-                    unexpected_counter += 1
-
-            for _ in range(15):
-                recv = pmu.recv_sound()
-            assert recv is not None
-            if not compare_beeper_command_duration_values(recv, expected_duration=0):
-                duration_comply_failure_counter += 1
-
-        total_counter = expected_counter + unexpected_counter
-
-        hint = (
-            f"{TestGateOk.__doc__}. "
-            f"Expected: {expected_counter}/{total_counter}. "
-            f"Unexpected: {unexpected_counter}/{total_counter}. "
-            f"Duration comply failures: {duration_comply_failure_counter}/{number_of_notes}. "
-        )
-
-        assert unexpected_counter == 0, f"{hint}"
-        assert expected_counter > 0, f"{hint}"
-        assert duration_comply_failure_counter == 0, f"{hint}"
-
-
-def main():
-    cmd = ["pytest", os.path.abspath(__file__)]
-    cmd += ["--tb=no"]  # No traceback at all
-    cmd += ["-v"]  # Increase verbosity
-    cmd += ["-W", "ignore::DeprecationWarning"]  # Ignore specific warnings
-    cmd += sys.argv[1:]  # Forward optional user flags
-    print(len(cmd))
-    print(cmd)
-    sys.exit(subprocess.call(cmd))
-
+    def spin(self) -> None:
+        self.node.node.spin(0.05)
+        cmd = self.get_raw_command()
+        air = self.get_air_cmd()
+        self.engine.update(cmd=cmd, air_cmd=air)
+        # self.rpm = int(self.rpm + self.random_d_rpm_change() * self.dt + cmd * 0.1)
+        if time.time() - self.prev_broadcast_time > self.status_timeout:
+            self.prev_broadcast_time = time.time()
+            self.node.publish(self.create_ice_reciprocating_status())
 
 if __name__ == "__main__":
-    main()
+    node = ICENODE()
+    while True:
+        node.spin()
+        node.node.node.spin(0.05)
+

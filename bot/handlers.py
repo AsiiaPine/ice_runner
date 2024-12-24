@@ -243,11 +243,16 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         await show_options(message, state)
         return
     rp_id = (await state.get_data())["rp_id"]
-    await message.answer(f"ID обкатчика: {rp_id}\n")
+    rp_state = mqtt_client.rp_states[rp_id]
+    await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
     await message.answer("Current configuration| Настройки обкатки:" + get_configuration_str(rp_id))
+    print(rp_state)
+    await state.set_state(Conf.starting_state)
+    if rp_state == "RUNNING" or rp_state == "STARTING":
+        await message.answer(f"Already running|Обкатка уже запущена")
+        return
     await message.answer(f"Send /cancel or /cancel to cancel the run. After the run is sent /stop or /stop to stop it\n\nОтправьте /cancel или /отмена чтобы отменить запуск обкатки. После запуска отправьте /stop или /стоп чтобы остановить ее")
     i = 0
-    await state.set_state(Conf.starting_state)
     is_starting = await state.get_state()
     logging.getLogger(__name__).info(f"received CMD START from user {message.from_user.username}")
     while i < 5 and is_starting:
@@ -260,9 +265,16 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
             await asyncio.sleep(0.1)
             continue
     if is_starting:
-        await message.answer(f"Started|Запущено")
-        logging.getLogger(__name__).info(f"CMD START send to Raspberry Pi {rp_id}")
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
+        for i in range(5):
+            await asyncio.sleep(2)
+            rp_state = mqtt_client.rp_states[rp_id]
+            if rp_state == "STARTING":
+                await message.answer(f"Started|Запущено")
+                break
+            else:
+                await message.answer(f"Failed|Ошибка\n\t{rp_state}\nПробуем еще раз")
+        logging.getLogger(__name__).info(f"CMD START send to Raspberry Pi {rp_id}")
 
 @dp.message(Command(commands=["help", "помощь"]))
 async def command_help_handler(message: Message) -> None:

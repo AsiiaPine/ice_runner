@@ -62,11 +62,16 @@ class RaspberryMqttClient:
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/status", str(status))
         cls.status = status
 
+    @classmethod
+    def publish_state(cls, state: Dict[str, Any]) -> None:
+        logging.getLogger(__name__).info(f"PUBLISH:\tstate")
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", str(state))
+        cls.state = state
+
 def handle_command(client, userdata, message):
     mes_text = message.payload.decode()
     if mes_text == "start":
         logging.getLogger(__name__).info("RECEIVED:\tstart")
-        RaspberryMqttClient.state = RPStatesDict["STARTING"]
         RaspberryMqttClient.to_run = 1
     if mes_text == "stop":
         logging.getLogger(__name__).info("RECEIVED:\tstop")

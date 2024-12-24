@@ -21,18 +21,18 @@ import logging
 # logger = logging_configurator.AsyncLogger(__name__)
 
 # GPIO setup
-import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-GPIO.setwarnings(True) # Ignore warning for now
-GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-# on_off_pin = 25
-start_stop_pin = 24
-# Setup CAN terminator
-resistor_pin = 23
-GPIO.setup(resistor_pin, GPIO.OUT)
-GPIO.output(resistor_pin, GPIO.HIGH)
+# import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
+# GPIO.setwarnings(True) # Ignore warning for now
+# GPIO.setmode(GPIO.BCM) # Use physical pin numbering
+# # on_off_pin = 25
+# start_stop_pin = 24
+# # Setup CAN terminator
+# resistor_pin = 23
+# GPIO.setup(resistor_pin, GPIO.OUT)
+# GPIO.output(resistor_pin, GPIO.HIGH)
 
-# GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
-GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
+# # GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
+# GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
 
 ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
@@ -117,6 +117,8 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
     logging.debug(f"MES:\tReceived raw imu")
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
+    if msg.transfer.source_node_id == DronecanCommander.node.node_id:
+        return
     DronecanCommander.state.update_with_node_status(msg)
     DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
     dump_msg(msg)
@@ -142,6 +144,7 @@ class ICEFlags:
         self.vin_ex = False
         self.vibration_ex = False
         self.time_ex = False
+        self.rpm_min_ex = False
 
 class ICERunnerMode(IntEnum):
     SIMPLE = 0 # Юзер задает 30-50% тяги, и просто сразу же ее выставляем, без ПИД-регулятора. Без проверки оборотов, но с проверкой температуры.
@@ -182,6 +185,7 @@ class ICECommander:
         self.prev_waiting_state_time = 0
         self.mode = ICERunnerMode(configuration.mode)
         self.prev_report_time = 0
+        self.prev_state_report_time = 0
         if self.mode == ICERunnerMode.PID:
             self.pid_controller = PIDController(configuration.rpm)
         self.last_button_cmd = 1
@@ -194,6 +198,8 @@ class ICECommander:
             self.rp_state = RPStatesDict["NOT_CONNECTED"]
             logging.getLogger(__name__).warning("STATUS:\tice not connected")
             return 0
+        if time.time() - DronecanCommander.last_sync_time > 2:
+            DronecanCommander.state = ICEState()
         if self.start_time <= 0 or state.ice_state > RPStatesDict["STARTING"]:
             self.flags.vin_ex = self.configuration.min_vin_voltage > state.voltage_in
             self.flags.temp_ex = self.configuration.max_temperature < state.temp
@@ -205,7 +211,10 @@ class ICECommander:
             if self.flags.vin_ex or self.flags.temp_ex or eng_time_ex:
                 logging.getLogger(__name__).warning(f"STATUS:\tFlags exceeded: vin {self.flags.vin_ex} temp {self.flags.temp_ex} engaged time {eng_time_ex}")
             return sum([self.flags.vin_ex, self.flags.temp_ex,eng_time_ex])
-
+        if state.ice_state == RecipStateDict["RUNNING"]:
+            self.flags.rpm_min_ex = 100 > state.rpm
+        else:
+            self.flags.rpm_min_ex = False
         self.flags.throttle_ex = self.configuration.max_gas_throttle < state.throttle
         self.flags.temp_ex = self.configuration.max_temperature < state.temp
         self.flags.rpm_ex = self.configuration.rpm < state.rpm
@@ -216,8 +225,8 @@ class ICECommander:
             self.fuel_level_ex = self.configuration.min_fuel_volume < state.fuel_level
         self.flags.vibration_ex = self.dronecan_commander.has_imu and self.configuration.max_vibration < state.vibration
         flags_attr = vars(self.flags)
-        if self.flags.vibration_ex or self.flags.time_ex or self.flags.rpm_ex or self.flags.throttle_ex or self.flags.temp_ex or self.fuel_level_ex:
-            logging.getLogger(__name__).warning(f"STATUS:\tFlags exceeded: vibration {self.flags.vibration_ex} time {self.flags.time_ex} rpm {self.flags.rpm_ex} throttle {self.flags.throttle_ex} temp {self.flags.temp_ex} fuel level {self.fuel_level_ex}")
+        if self.flags.vibration_ex or self.flags.time_ex or self.flags.rpm_ex or self.flags.throttle_ex or self.flags.temp_ex or self.fuel_level_ex or self.flags.rpm_min_ex:
+            logging.getLogger(__name__).warning(f"STATUS:\tFlags exceeded: vibration {self.flags.vibration_ex} time {self.flags.time_ex} rpm {self.flags.rpm_ex} throttle {self.flags.throttle_ex} temp {self.flags.temp_ex} fuel level {self.fuel_level_ex} rpm min {self.flags.rpm_min_ex}")
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
@@ -250,7 +259,7 @@ class ICECommander:
             time.sleep(1)
             self.dronecan_commander.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
             self.dronecan_commander.spin()
-            self.report_state()
+            self.report_status()
             await asyncio.sleep(1)
             return
 
@@ -278,19 +287,22 @@ class ICECommander:
 
         self.set_command()
         logging.getLogger(__name__).info(f"CMD:\t{list(self.dronecan_commander.cmd.cmd)}")
+        self.report_status()
         self.report_state()
         self.dronecan_commander.spin()
         await asyncio.sleep(0.05)
 
     def report_state(self) -> None:
+        if time.time() - self.prev_state_report_time > 0.5:
+            RaspberryMqttClient.get_client().publish("ice_runner/raspberry_pi/{rp_id}/state", get_rp_state_name(self.rp_state))
+
+    def report_status(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
             logging.getLogger(__name__).debug(f"REPORT\t| Sending state")
             state_dict = self.dronecan_commander.state.to_dict()
             state_dict["start_time"] = self.start_time
             state_dict["state"] = get_rp_state_name(self.rp_state)
-            RaspberryMqttClient.status = state_dict
             RaspberryMqttClient.publish_status(state_dict)
-            RaspberryMqttClient.get_client().publish("ice_runner/raspberry_pi/{rp_id}/state", get_rp_state_name(self.rp_state))
             RaspberryMqttClient.publish_messages(self.dronecan_commander.messages)
             self.prev_report_time = time.time()
             logging.getLogger(__name__).info(f"SEND:\tstate{get_rp_state_name(self.rp_state)}")
