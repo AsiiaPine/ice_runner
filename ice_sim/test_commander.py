@@ -1,25 +1,15 @@
 #!/usr/bin/env python3
 # This software is distributed under the terms of the MIT License.
-# Copyright (c) 2024 Dmitry Ponomarev.
-# Author: Dmitry Ponomarev <ponomarevda96@gmail.com>
-import os
-import sys
+# Copyright (c) 2024 Anastasiia Stepanova.
+# Author: Anastasiia Stepanova <asiiapine@gmail.com>
+
 import secrets
-import subprocess
 import numpy as np
-import pytest
 import dronecan
 import time
 from enum import IntEnum
-from paho.mqtt.client import MQTTv311, Client
 
-from raccoonlab_tools.common.protocol_parser import CanProtocolParser, Protocol
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-from raccoonlab_tools.dronecan.utils import (
-    Parameter,
-    ParametersInterface,
-    NodeCommander,
-)
 
 ICE_CMD_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
