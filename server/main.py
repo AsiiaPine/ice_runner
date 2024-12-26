@@ -1,7 +1,11 @@
+#!/usr/bin/env python3
+# This software is distributed under the terms of the MIT License.
+# Copyright (c) 2024 Anastasiia Stepanova.
+# Author: Anastasiia Stepanova <asiiapine@gmail.com>
+
 import logging
 import os
 import sys
-import time
 from typing import Any, Dict
 from dotenv import load_dotenv
 from paho.mqtt.client import MQTTv311

@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+# This software is distributed under the terms of the MIT License.
+# Copyright (c) 2024 Anastasiia Stepanova.
+# Author: Anastasiia Stepanova <asiiapine@gmail.com>
+
 import argparse
 import asyncio
 from asyncio.subprocess import Process
@@ -98,6 +103,10 @@ if __name__ == "__main__":
                             default=data["default"],
                             type=int,
                             help=data["help"] + "\n\n По умолчанию: " + str(data["default"]))
+    parser.add_argument("--loglevel",
+                        default='INFO',
+                        type=str,
+                        help="Logging level")
     args = parser.parse_args()
     if args.id is None:
         print("RP:\tNo ID provided, reading from environment variable")
@@ -105,7 +114,12 @@ if __name__ == "__main__":
     if args.id is None:
         print("RP:\tNo ID provided, exiting")
         sys.exit(-1)
-
+    loglevel = args.loglevel
+    numeric_level = getattr(logging, loglevel.upper(), None)
+    print(numeric_level)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % loglevel)
+    logging.root.level = numeric_level
     configuration = IceRunnerConfiguration(args.__dict__)
     RaspberryMqttClient.configuration = configuration
     asyncio.run(main(args.id))

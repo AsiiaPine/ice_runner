@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+# This software is distributed under the terms of the MIT License.
+# Copyright (c) 2024 Anastasiia Stepanova.
+# Author: Anastasiia Stepanova <asiiapine@gmail.com>
+
 import os
 import sys
 from typing import Any, Dict
@@ -33,13 +38,13 @@ def handle_commander_state(client, userdata, message):
         BotMqttClient.rp_states[rp_pi_id] = -1
     state_name = message.payload.decode()
     BotMqttClient.rp_states[rp_pi_id] = state_name
-    logging.getLogger(__name__).info(f"received RP state from Raspberry Pi {rp_pi_id}")
+    logging.getLogger(__name__).info(f"received RP state from Raspberry Pi {rp_pi_id}, state: {state_name}")
 
 def handle_commander_status(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
-    state = safe_literal_eval(message.payload.decode())
-    if state is not None:
-        BotMqttClient.rp_status[rp_pi_id] = state
+    status = safe_literal_eval(message.payload.decode())
+    if status is not None:
+        BotMqttClient.rp_status[rp_pi_id] = status
         logging.getLogger(__name__).info(f"received RP status from Raspberry Pi {rp_pi_id}")
 
 def handle_commander_config(client, userdata, message):
