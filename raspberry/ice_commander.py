@@ -157,9 +157,9 @@ class ICERunnerMode(IntEnum):
 class PIDController:
     def __init__(self, seeked_value: int) -> None:
         self.seeked_value = seeked_value
-        self.kp = 0.1
-        self.ki = 0.1
-        self.kd = 0.1
+        self.kp = 0.2
+        self.ki = 0.0
+        self.kd = 0.2
         self.error = 0
         self.prev_time = 0
         self.drpm = 0
@@ -167,12 +167,14 @@ class PIDController:
         self.integral = 0
 
     def get_pid_command(self, val: int) -> int:
-        self.prev_time = time.time()
-        self.error = val - self.seeked_value
-        self.drpm = (self.error - self.prev_error) / self.prev_time
-        self.integral += self.ki*self.error*(time - self.prev_time)
+        dt = time.time() - self.prev_time
+        self.error = self.seeked_value - val 
+        self.drpm = (self.error - self.prev_error) / dt
+        self.integral += self.ki*self.error* (dt)
 
+        self.prev_time = time.time()
         self.prev_error = self.error
+        print(self.seeked_value, val, self.kp*self.error, self.kd*self.drpm, self.ki * self.integral)
         return self.seeked_value + self.kp*self.error + self.kd*self.drpm + self.ki * self.integral
 
 class ICECommander:
@@ -201,7 +203,8 @@ class ICECommander:
             self.rp_state = RPStatesDict["NOT_CONNECTED"]
             logging.getLogger(__name__).warning("STATUS:\tice not connected")
             return 0
-        if time.time() - DronecanCommander.last_sync_time > 2:
+        if time.time() - DronecanCommander.last_sync_time > 4:
+            logging.critical("STATUS:\tToo long time without messages")
             DronecanCommander.state = ICEState()
         if self.start_time <= 0 or state.ice_state > RPStatesDict["STARTING"]:
             self.flags.vin_ex = self.configuration.min_vin_voltage > state.voltage_in
@@ -214,22 +217,23 @@ class ICECommander:
             if self.flags.vin_ex or self.flags.temp_ex or eng_time_ex:
                 logging.getLogger(__name__).warning(f"STATUS:\tFlags exceeded: vin {self.flags.vin_ex} temp {self.flags.temp_ex} engaged time {eng_time_ex}")
             return sum([self.flags.vin_ex, self.flags.temp_ex,eng_time_ex])
-        if state.ice_state == RecipStateDict["RUNNING"]:
+        if self.rp_state == RPStatesDict["RUNNING"]:
             self.flags.rpm_min_ex = 100 > state.rpm
         else:
             self.flags.rpm_min_ex = False
+        if self.configuration.min_fuel_volume < 100:
+            self.fuel_level_ex = self.configuration.min_fuel_volume > state.fuel_level_percent
+        else:
+            self.fuel_level_ex = self.configuration.min_fuel_volume > state.fuel_level
+
         self.flags.throttle_ex = self.configuration.max_gas_throttle < state.throttle
         self.flags.temp_ex = self.configuration.max_temperature < state.temp
-        self.flags.rpm_ex = self.configuration.rpm < state.rpm
+        self.flags.rpm_ex = self.configuration.rpm  + 1000 < state.rpm
         self.flags.time_ex = self.start_time > 0 and self.configuration.time < time.time() - self.start_time
-        if self.configuration.min_fuel_volume < 100:
-            self.fuel_level_ex = self.configuration.min_fuel_volume < state.fuel_level_percent
-        else:
-            self.fuel_level_ex = self.configuration.min_fuel_volume < state.fuel_level
         self.flags.vibration_ex = self.dronecan_commander.has_imu and self.configuration.max_vibration < state.vibration
         flags_attr = vars(self.flags)
         if self.flags.vibration_ex or self.flags.time_ex or self.flags.rpm_ex or self.flags.throttle_ex or self.flags.temp_ex or self.fuel_level_ex or self.flags.rpm_min_ex:
-            logging.getLogger(__name__).warning(f"STATUS:\tFlags exceeded: vibration {self.flags.vibration_ex} time {self.flags.time_ex} rpm {self.flags.rpm_ex} throttle {self.flags.throttle_ex} temp {self.flags.temp_ex} fuel level {self.fuel_level_ex} rpm min {self.flags.rpm_min_ex}")
+            logging.getLogger(__name__).warning(f"STATUS:\tFlags exceeded: vibration {self.flags.vibration_ex} time {self.flags.time_ex} rpm {self.flags.rpm_ex}: {self.configuration.rpm, state.rpm} throttle {self.flags.throttle_ex} temp {self.flags.temp_ex} fuel level {self.fuel_level_ex} rpm min {self.flags.rpm_min_ex}")
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
@@ -247,19 +251,46 @@ class ICECommander:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
             # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
         elif self.mode == ICERunnerMode.PID:
-            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.pid_controller.get_pid_command()
+            self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = int(self.pid_controller.get_pid_command(self.dronecan_commander.state.rpm))
             # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
         elif self.mode == ICERunnerMode.RPM:
             self.dronecan_commander.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
             # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
 
-    async def spin(self) -> None:
-        self.rp_state_start = self.rp_state
+    def set_state(self, cond_exceeded: bool) -> None:
+
         ice_state = self.dronecan_commander.state.ice_state
         rpm = self.dronecan_commander.state.rpm
+        rp_state = self.rp_state
+
+        if cond_exceeded or rp_state > RPStatesDict["STARTING"] or ice_state == RecipStateDict["FAULT"]:
+            self.start_time = 0
+            logging.getLogger(__name__).info(f"STOP:\tconditions exceeded {bool(cond_exceeded)}, rp state {rp_state}, ice state {ice_state}")
+            if self.rp_state < RPStatesDict["STOPPED"]:
+                self.rp_state = RPStatesDict["STOPPING"]
+                return
+        if rp_state == RPStatesDict["STARTING"]:
+            if time.time() - self.start_time > 30:
+                self.rp_state = RPStatesDict["STOPPING"]
+                logging.getLogger(__name__).error("STARTING:\tstart time exceeded")
+                return
+            if ice_state == RecipStateDict["RUNNING"] and rpm > 1500 and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
+                logging.getLogger(__name__).info("STARTING:\tstarted successfully")
+                self.rp_state = RPStatesDict["RUNNING"]
+                return
+        if ice_state == RecipStateDict["WAITING"]:
+            self.prev_waiting_state_time = time.time_ns()
+            self.rp_state = RPStatesDict["STARTING"]
+            logging.getLogger(__name__).info("WAITING:\twaiting state")
+
+    async def spin(self) -> None:
+        self.report_status()
+        self.report_state()
+        self.rp_state_start = self.rp_state
+        ice_state = self.dronecan_commander.state.ice_state
         if ice_state == RecipStateDict["NOT_CONNECTED"]:
             logging.getLogger(__name__).error("NOT_CONNECTED:\tNo ICE connected")
-            time.sleep(1)
+            self.rp_state = RPStatesDict["NOT_CONNECTED"]
             self.dronecan_commander.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
             self.dronecan_commander.spin()
             self.report_status()
@@ -271,27 +302,10 @@ class ICECommander:
                 self.rp_state = RPStatesDict["STOPPED"]
         # self.check_buttons()
         self.check_mqtt_cmd()
-        rp_state = self.rp_state
         cond_exceeded = self.check_conditions()
-        if cond_exceeded or rp_state > RPStatesDict["STARTING"] or ice_state == RecipStateDict["FAULT"]:
-            self.start_time = 0
-            logging.getLogger(__name__).info(f"STOP:\tconditions exceeded {bool(cond_exceeded)}, rp state {rp_state}, ice state {ice_state}")
-        if rp_state == RPStatesDict["STARTING"]:
-            if time.time() - self.start_time > 30:
-                self.rp_state = RPStatesDict["STOPPING"]
-                logging.getLogger(__name__).error("STARTING:\tstart time exceeded")
-            if ice_state == RecipStateDict["RUNNING"] and rpm > 1500 and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
-                logging.getLogger(__name__).info("STARTING:\tstarted successfully")
-                self.rp_state = RPStatesDict["RUNNING"]
-        if ice_state == RecipStateDict["WAITING"]:
-            self.prev_waiting_state_time = time.time_ns()
-            self.rp_state = RPStatesDict["STARTING"]
-            logging.getLogger(__name__).info("WAITING:\twaiting state")
-
+        self.set_state(cond_exceeded)
         self.set_command()
         logging.getLogger(__name__).info(f"CMD:\t{list(self.dronecan_commander.cmd.cmd)}")
-        self.report_status()
-        self.report_state()
         self.dronecan_commander.spin()
         await asyncio.sleep(0.05)
 
@@ -301,14 +315,13 @@ class ICECommander:
 
     def report_status(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
-            logging.getLogger(__name__).debug(f"REPORT\t| Sending state")
             state_dict = self.dronecan_commander.state.to_dict()
             state_dict["start_time"] = self.start_time
             state_dict["state"] = get_rp_state_name(self.rp_state)
             RaspberryMqttClient.publish_status(state_dict)
             RaspberryMqttClient.publish_messages(self.dronecan_commander.messages)
             self.prev_report_time = time.time()
-            logging.getLogger(__name__).info(f"SEND:\tstate{get_rp_state_name(self.rp_state)}")
+            logging.getLogger(__name__).info(f"SEND:\tstate {get_rp_state_name(self.rp_state)}")
 
     async def run(self) -> None:
         while True:

@@ -3,19 +3,14 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import ast
 import os
 import sys
 import time
 from typing import Any, Dict, List
-from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
-import yaml
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import logging
-# import logging_configurator
-# logging.getLogger(__name__) = logging_configurator.AsyncLogger(__file__)
 
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from common.RPStates import RPStatesDict

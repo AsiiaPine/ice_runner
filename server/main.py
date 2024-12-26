@@ -6,7 +6,6 @@
 import logging
 import os
 import sys
-import time
 from typing import Any, Dict
 from dotenv import load_dotenv
 from paho.mqtt.client import MQTTv311
