@@ -12,6 +12,7 @@ import time
 import traceback
 from typing import Any, Dict
 import dronecan
+from dronecan.node import Node
 from common.ICEState import ICEState, RecipStateDict
 from common.RPStates import RPState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
@@ -61,14 +62,14 @@ def safely_write_to_file(temp_filename: str, original_filename: str, last_sync_t
         logging.getLogger(__name__).error(f"An error occurred: {e}")
         return last_sync_time
 
-class DronecanCommander:
+class CanNode:
     node = None
 
     @classmethod
     def connect(cls) -> None:
         cls.state: ICEState = ICEState()
-        cls.node: DronecanNode = DronecanNode()
-        cls.param_interface: ParametersInterface = ParametersInterface(cls.node.node, target_node_id=cls.node.node.node_id)
+        cls.node: Node = DronecanNode().node
+        cls.param_interface: ParametersInterface = ParametersInterface(cls.node, target_node_id=cls.node.node_id)
 
         cls.air_cmd = dronecan.uavcan.equipment.actuator.Command(actuator_id=ICE_AIR_CHANNEL, command_value=0)
         cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
@@ -83,11 +84,11 @@ class DronecanCommander:
 
     @classmethod
     def spin(cls) -> None:
-        cls.node.node.spin(0.05)
+        cls.node.spin(0.05)
         if time.time() - cls.prev_broadcast_time > 0.1:
             cls.prev_broadcast_time = time.time()
-            cls.node.publish(cls.cmd)
-            cls.node.publish(dronecan.uavcan.equipment.actuator.ArrayCommand(commands = [cls.air_cmd]))
+            cls.node.broadcast(cls.cmd)
+            cls.node.broadcast(dronecan.uavcan.equipment.actuator.ArrayCommand(commands = [cls.air_cmd]))
 
     @classmethod
     def send_file(cls, filename: str) -> None:
@@ -104,45 +105,45 @@ class DronecanCommander:
         logging.info(f"SEND:\tchanged log file")
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
-    DronecanCommander.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
-    DronecanCommander.last_sync_time = safely_write_to_file(DronecanCommander.temp_output_filename, DronecanCommander.output_filename, DronecanCommander.last_sync_time)
+    CanNode.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
+    CanNode.last_sync_time = safely_write_to_file(CanNode.temp_output_filename, CanNode.output_filename, CanNode.last_sync_time)
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
-    DronecanCommander.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
-    DronecanCommander.state.update_with_fuel_tank_status(msg)
+    CanNode.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
+    CanNode.state.update_with_fuel_tank_status(msg)
     dump_msg(msg)
     logging.debug(f"MES:\tReceived fuel tank status")
 
 def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
-    DronecanCommander.state.update_with_raw_imu(msg)
-    DronecanCommander.messages['uavcan.equipment.ahrs.RawIMU'] = dronecan.to_yaml(msg.message)
-    DronecanCommander.has_imu = True
-    if DronecanCommander.state.engaged_time is None:
-        DronecanCommander.param_interface._target_node_id = msg.message.source_node_id
-        param = DronecanCommander.param_interface.get("status.engaged_time")
-        DronecanCommander.state.engaged_time = param.value
+    CanNode.state.update_with_raw_imu(msg)
+    CanNode.messages['uavcan.equipment.ahrs.RawIMU'] = dronecan.to_yaml(msg.message)
+    CanNode.has_imu = True
+    if CanNode.state.engaged_time is None:
+        CanNode.param_interface._target_node_id = msg.message.source_node_id
+        param = CanNode.param_interface.get("status.engaged_time")
+        CanNode.state.engaged_time = param.value
     dump_msg(msg)
     logging.debug(f"MES:\tReceived raw imu")
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
-    if msg.transfer.source_node_id == DronecanCommander.node.node_id:
+    if msg.transfer.source_node_id == CanNode.node_id:
         return
-    DronecanCommander.state.update_with_node_status(msg)
-    DronecanCommander.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
+    CanNode.state.update_with_node_status(msg)
+    CanNode.messages['uavcan.protocol.NodeStatus'] = dronecan.to_yaml(msg.message)
     dump_msg(msg)
     logging.debug(f"MES:\tReceived node status")
 
 def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
-    DronecanCommander.state.update_with_resiprocating_status(msg)
-    DronecanCommander.messages['uavcan.equipment.ice.reciprocating.Status'] = dronecan.to_yaml(msg.message)
+    CanNode.state.update_with_resiprocating_status(msg)
+    CanNode.messages['uavcan.equipment.ice.reciprocating.Status'] = dronecan.to_yaml(msg.message)
     dump_msg(msg)
     logging.debug(f"MES:\tReceived ICE reciprocating status")
 
 def start_dronecan_handlers() -> None:
-    DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ice.reciprocating.Status, ice_reciprocating_status_handler)
-    DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ahrs.RawIMU, raw_imu_handler)
-    DronecanCommander.node.node.add_handler(dronecan.uavcan.protocol.NodeStatus, node_status_handler)
-    DronecanCommander.node.node.add_handler(dronecan.uavcan.equipment.ice.FuelTankStatus, fuel_tank_status_handler)
+    CanNode.node.add_handler(dronecan.uavcan.equipment.ice.reciprocating.Status, ice_reciprocating_status_handler)
+    CanNode.node.add_handler(dronecan.uavcan.equipment.ahrs.RawIMU, raw_imu_handler)
+    CanNode.node.add_handler(dronecan.uavcan.protocol.NodeStatus, node_status_handler)
+    CanNode.node.add_handler(dronecan.uavcan.equipment.ice.FuelTankStatus, fuel_tank_status_handler)
 
 class ICEFlags:
     def __init__(self) -> None:
@@ -186,7 +187,7 @@ class ICECommander:
     def __init__(self, reporting_period: float = 1, configuration: IceRunnerConfiguration = None) -> None:
         self.rp_state: RPState = RPState.NOT_CONNECTED
         self.reporting_period: float = reporting_period
-        self.dronecan_commander:DronecanCommander = DronecanCommander
+        self.dronecan_commander:CanNode = CanNode
         self.dronecan_commander.connect()
         self.configuration: IceRunnerConfiguration = configuration
         self.flags: ICEFlags = ICEFlags()
@@ -209,9 +210,9 @@ class ICECommander:
             self.rp_state = RPState.NOT_CONNECTED
             logging.getLogger(__name__).warning("STATUS:\tice not connected")
             return 0
-        if time.time() - DronecanCommander.last_sync_time > 4:
+        if time.time() - CanNode.last_sync_time > 4:
             logging.critical("STATUS:\tToo long time without messages")
-            DronecanCommander.state = ICEState()
+            CanNode.state = ICEState()
         if self.start_time <= 0 or state.ice_state > RPState.STARTING:
             self.flags.vin_ex = self.configuration.min_vin_voltage > state.voltage_in
             self.flags.temp_ex = self.configuration.max_temperature < state.temp
@@ -369,9 +370,9 @@ class ICECommander:
             RaspberryMqttClient.to_run = 0
 
     def send_log(self) -> None:
-        DronecanCommander.send_file(DronecanCommander.output_filename)
-        DronecanCommander.change_file()
-        logging.getLogger(__name__).info(f"SEND:\tlog {DronecanCommander.output_filename}")
+        CanNode.send_file(CanNode.output_filename)
+        CanNode.change_file()
+        logging.getLogger(__name__).info(f"SEND:\tlog {CanNode.output_filename}")
 
     async def run(self) -> None:
         while True:
