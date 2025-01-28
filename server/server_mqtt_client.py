@@ -92,7 +92,17 @@ def handle_raspberry_pi_configuration(client, userdata, msg):
     logging.info(f"Received\t| Raspberry Pi {rp_id} send configuration")
     ServerMqttClient.rp_configuration[rp_id] = safe_literal_eval(msg.payload.decode())
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/config", str(ServerMqttClient.rp_configuration[rp_id]))
-    logging.info(f"Published\t| Bot received configuration for Raspberry Pi")
+
+def handle_raspberry_pi_log(client, userdata, msg):
+    rp_id = int(msg.topic.split("/")[2])
+    logging.info(f"Received\t| Raspberry Pi {rp_id} send log")
+    ServerMqttClient.rp_logs[rp_id] = msg.payload.decode()
+    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/log", str(ServerMqttClient.rp_logs[rp_id]))
+
+def handle_bot_usr_cmd_log(client, userdata, msg):
+    rp_id = int(msg.payload.decode())
+    logging.info(f"Recieved\t| Bot send command {rp_id} log")
+    ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "log")
 
 def handle_bot_usr_cmd_state(client, userdata,  msg):
     rp_id = int(msg.payload.decode())

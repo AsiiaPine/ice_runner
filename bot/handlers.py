@@ -17,6 +17,7 @@ from aiogram.fsm.strategy import FSMStrategy
 from aiogram.types import (
     Message,
     ReplyKeyboardRemove,
+    InputFile
 )
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -379,15 +380,35 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
         response = await res.edit_text(message_text, parse_mode=ParseMode.HTML)
         await asyncio.sleep(0.5)
 
+@form_router.message(Command(commands=["log", "лог"]))
+async def command_log_handler(message: Message, state: FSMContext) -> None:
+    """
+    This handler receives messages with `/log` command
+    """
+    if "rp_id" not in (await state.get_data()).keys():
+        await show_options(message, state)
+        return
+    rp_id = (await state.get_data())["rp_id"]
+    logging.getLogger(__name__).info(f"Getting logs for {rp_id}")
+    mqtt_client.client.publish("ice_runner/bot/usr_cmd/log", str(rp_id))
+    await asyncio.sleep(0.3)
+    header_str = html.bold(f"ICE Runner ID: {rp_id}\n\tСтатус:\n" )
+    if rp_id in mqtt_client.rp_logs.keys():
+        log_file = mqtt_client.rp_logs[rp_id]
+        message.answer_document(log_file)
+    else:
+        message.answer("Лог не найден")
+
+
 @form_router.message(Command(commands=["stop", "стоп"]))
 async def command_stop_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/stop` command
     """
+    await message.answer(f"Отправляем команду остановки")
     if "rp_id" not in (await state.get_data()).keys():
         await show_options(message, state)
         return
-    await message.answer(f"Отправляем команду остановки")
     rp_id = (await state.get_data())["rp_id"]
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")

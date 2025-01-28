@@ -109,8 +109,10 @@ class ICEState:
         self.vibration = msg.message.integration_interval
 
     def update_with_node_status(self, msg) -> None:
+        print("MODE\t| ", msg.message)
         if msg.message.mode > self.mode:
             self.mode = int(msg.message.mode)
+            print("MODE\t| ", self.mode)
         if msg.message.health > self.health:
             self.health = int(msg.message.health)
         if self.mode > ModeDict["MODE_SOFTWARE_UPDATE"] or self.health > HealthDict["HEALTH_WARNING"]:

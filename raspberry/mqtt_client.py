@@ -63,10 +63,15 @@ class RaspberryMqttClient:
         cls.status = status
 
     @classmethod
-    def publish_state(cls, state: Dict[str, Any]) -> None:
+    def publish_state(cls, state: int) -> None:
         logging.getLogger(__name__).info(f"PUBLISH:\tstate")
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", str(state))
         cls.state = state
+
+    @classmethod
+    def publish_log(cls, log: str) -> None:
+        logging.getLogger(__name__).info(f"PUBLISH:\tlog")
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/log", log)
 
 def handle_command(client, userdata, message):
     mes_text = message.payload.decode()

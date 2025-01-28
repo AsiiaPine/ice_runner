@@ -18,23 +18,18 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 from mqtt_client import RaspberryMqttClient
 from raccoonlab_tools.dronecan.utils import ParametersInterface
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-from logging import handlers
 import logging
-# import logging_configurator
-# logger = logging_configurator.AsyncLogger(__name__)
 
-# GPIO setup
+# # GPIO setup
 # import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 # GPIO.setwarnings(True) # Ignore warning for now
 # GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-# # on_off_pin = 25
 # start_stop_pin = 24
 # # Setup CAN terminator
 # resistor_pin = 23
 # GPIO.setup(resistor_pin, GPIO.OUT)
 # GPIO.output(resistor_pin, GPIO.HIGH)
 
-# # GPIO.setup(on_off_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # On/Off button TODO: check pin
 # GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
 
 ICE_THR_CHANNEL = 7
@@ -45,11 +40,9 @@ MAX_AIR_OPEN = 8191
 def safely_write_to_file(temp_filename: str, original_filename: str, last_sync_time: float) -> float:
     try:
         if time.time() - last_sync_time > 1:
-            logging.getLogger(__name__).info("CANDUMP\tSaving data")
+            logging.getLogger(__name__).info("LOGGER\tSaving data")
 
-            # With and open both files safely using 'with' context manager
             with open(temp_filename, "r+") as temp_output_file:
-                # Use os.open for setting O_SYNC flag for synchronous writing
                 fd = os.open(original_filename, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_SYNC)
                 with open(fd, "a") as output:
                     lines = temp_output_file.readlines()
@@ -79,13 +72,11 @@ class DronecanCommander:
         cls.state: ICEState = ICEState()
         cls.air_cmd = dronecan.uavcan.equipment.actuator.Command(actuator_id=ICE_AIR_CHANNEL, command_value=0)
         cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
-        cls.node.sub_once(dronecan.uavcan.equipment.ice.reciprocating.Status)
-        cls.node.sub_once(dronecan.uavcan.equipment.ahrs.RawIMU)
         cls.prev_broadcast_time = 0
         cls.param_interface = ParametersInterface(node.node, target_node_id=node.node.node_id)
         cls.has_imu = False
-        cls.output_filename = f"logs/raspberry/messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
-        cls.temp_output_filename = f"logs/raspberry/temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.output_filename = f"logs/raspberry/rp{RaspberryMqttClient.rp_id}_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.temp_output_filename = f"logs/raspberry/rp{RaspberryMqttClient.rp_id}_temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
         cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a")
         cls.last_sync_time = 0
         print("all messages will be in ", cls.output_filename)
@@ -97,6 +88,20 @@ class DronecanCommander:
             cls.prev_broadcast_time = time.time()
             cls.node.publish(cls.cmd)
             cls.node.publish(dronecan.uavcan.equipment.actuator.ArrayCommand(commands = [cls.air_cmd]))
+
+    @classmethod
+    def send_file(cls, filename: str) -> None:
+        cls.last_sync_time = safely_write_to_file(cls.temp_output_filename, cls.output_filename, cls.last_sync_time)
+        RaspberryMqttClient.publish_log(filename)
+        logging.info(f"SEND:\tlog {filename}")
+
+    @classmethod
+    def change_file(cls) -> None:
+        cls.temp_output_filename = f"logs/raspberry/rp{RaspberryMqttClient.rp_id}_temp_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.output_filename = f"logs/raspberry/rp{RaspberryMqttClient.rp_id}_messages_{datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')}.log"
+        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a")
+
+        logging.info(f"SEND:\tchanged log file")
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
     DronecanCommander.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
@@ -141,13 +146,13 @@ def start_dronecan_handlers() -> None:
 
 class ICEFlags:
     def __init__(self) -> None:
-        self.throttle_ex = False
-        self.temp_ex = False
-        self.rpm_ex = False
-        self.vin_ex = False
-        self.vibration_ex = False
-        self.time_ex = False
-        self.rpm_min_ex = False
+        self.throttle_ex: bool = False
+        self.temp_ex: bool = False
+        self.rpm_ex: bool = False
+        self.vin_ex: bool = False
+        self.vibration_ex: bool = False
+        self.time_ex: bool = False
+        self.rpm_min_ex: bool = False
 
 class ICERunnerMode(IntEnum):
     SIMPLE = 0 # Юзер задает 30-50% тяги, и просто сразу же ее выставляем, без ПИД-регулятора. Без проверки оборотов, но с проверкой температуры.
@@ -194,7 +199,6 @@ class ICECommander:
         if self.mode == ICERunnerMode.PID:
             self.pid_controller = PIDController(configuration.rpm)
         self.last_button_cmd = 1
-
 
     def check_conditions(self) -> int:
         # check if conditions are exeeded
@@ -268,11 +272,13 @@ class ICECommander:
             logging.getLogger(__name__).info(f"STOP:\tconditions exceeded {bool(cond_exceeded)}, rp state {rp_state}, ice state {ice_state}")
             if self.rp_state < RPStatesDict["STOPPED"]:
                 self.rp_state = RPStatesDict["STOPPING"]
+                self.send_log()
                 return
         if rp_state == RPStatesDict["STARTING"]:
             if time.time() - self.start_time > 30:
                 self.rp_state = RPStatesDict["STOPPING"]
                 logging.getLogger(__name__).error("STARTING:\tstart time exceeded")
+                self.send_log()
                 return
             if ice_state == RecipStateDict["RUNNING"] and rpm > 1500 and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
                 logging.getLogger(__name__).info("STARTING:\tstarted successfully")
@@ -311,7 +317,7 @@ class ICECommander:
 
     def report_state(self) -> None:
         if time.time() - self.prev_state_report_time > 0.5:
-            RaspberryMqttClient.get_client().publish("ice_runner/raspberry_pi/{rp_id}/state", get_rp_state_name(self.rp_state))
+            RaspberryMqttClient.publish_state(get_rp_state_name(self.rp_state))
 
     def report_status(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
@@ -322,17 +328,6 @@ class ICECommander:
             RaspberryMqttClient.publish_messages(self.dronecan_commander.messages)
             self.prev_report_time = time.time()
             logging.getLogger(__name__).info(f"SEND:\tstate {get_rp_state_name(self.rp_state)}")
-
-    async def run(self) -> None:
-        while True:
-            try:
-                await self.spin()
-            except dronecan.transport.TransferError as e:
-                logging.getLogger(__name__).error(f"{e}\n{traceback.format_exc()}")
-                continue
-            except Exception as e:
-                logging.getLogger(__name__).error(f"{e}\n{traceback.format_exc()}")
-                continue
 
     def check_buttons(self):
         """The function checks the state of the stop button"""
@@ -355,6 +350,7 @@ class ICECommander:
         if RaspberryMqttClient.to_stop:
             self.rp_state = RPStatesDict["STOPPING"]
             RaspberryMqttClient.to_stop = 0
+            self.send_log()
             logging.getLogger(__name__).info(f"MQTT:\tCOMMAND\t| stop, state: {self.rp_state}")
         if RaspberryMqttClient.to_run:
             if self.rp_state > RPStatesDict["STARTING"]:
@@ -362,3 +358,16 @@ class ICECommander:
                 self.start_time = time.time()
             logging.getLogger(__name__).info(f"MQTT:\tCOMMAND\t| run, state: {self.rp_state}")
             RaspberryMqttClient.to_run = 0
+
+    def send_log(self) -> None:
+        DronecanCommander.send_file(DronecanCommander.output_filename)
+        DronecanCommander.change_file()
+        logging.getLogger(__name__).info(f"SEND:\tlog {DronecanCommander.output_filename}")
+
+    async def run(self) -> None:
+        while True:
+            try:
+                await self.spin()
+            except Exception as e:
+                logging.getLogger(__name__).error(f"{e}\n{traceback.format_exc()}")
+                continue
