@@ -328,7 +328,10 @@ class ICECommander:
     def report_status(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
             state_dict = self.dronecan_commander.state.to_dict()
-            state_dict["start_time"] = self.start_time
+            if self.start_time > 0:
+                state_dict["start_time"] = datetime.datetime.fromtimestamp(self.start_time).strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                state_dict["start_time"] = "not started"
             state_dict["state"] = self.rp_state.name
             RaspberryMqttClient.publish_status(state_dict)
             RaspberryMqttClient.publish_messages(self.dronecan_commander.messages)
