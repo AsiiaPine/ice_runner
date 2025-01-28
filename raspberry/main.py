@@ -57,22 +57,14 @@ last_sync_time = time.time()
 
 async def run_candump():
     global last_sync_time
-    temp_output_filename = f"logs/raspberry/temp_candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     output_filename = f"logs/raspberry/candump_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-    temp_output = open(temp_output_filename, "wb", buffering=0)
-    subprocess.Popen(["candump", "-ta", "can0"], stdout=temp_output, bufsize=0)
+    output_file = open(output_filename, "wb", buffering=0)
+    subprocess.Popen(["candump", "-L", "slcan0,0x15500~0xFFFF00"], stdout=output_file, bufsize=0)
     while True:
         if time.time() - last_sync_time > 1:
             logging.getLogger(__name__).info("CANDUMP\t| Saving data")
-            output = open(output_filename, "a")
-            temp_output_file = open(temp_output_filename, "r+")
-            for line in temp_output_file.readlines():
-                output.write(line)
-            output.flush()
-            os.fsync(output.fileno())
-            output.close()
-            temp_output_file.truncate(0)
-            temp_output_file.close()
+            output_file.flush()
+            os.fsync(output_file.fileno()) # TODO: remove
             last_sync_time = time.time()
         await asyncio.sleep(1)
 
@@ -83,7 +75,6 @@ async def main(id: int) -> None:
     load_dotenv(dotenv_path, verbose=True)
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
-    # run_candump()
     RaspberryMqttClient.set_id(id)
     RaspberryMqttClient.connect(id, SERVER_IP, SERVER_PORT)
 
