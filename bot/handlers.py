@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 
 from bot_mqtt_client import BotMqttClient
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.RPStates import RPStatesDict
+from common.RPStates import RPState
 import pprint
 import time
 from datetime import datetime, timezone
@@ -412,12 +412,11 @@ async def command_stop_handler(message: Message, state: FSMContext) -> None:
     rp_id = (await state.get_data())["rp_id"]
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
-    rp_status = int(mqtt_client.rp_status[rp_id]["state"])
+    rp_status = RPState(mqtt_client.rp_status[rp_id]["state"])
     while True:
-        if rp_status != RPStatesDict["RUNNING"]:
+        if rp_status != RPState.RUNNING:
             break
-        state = list(RPStatesDict.keys())[list(RPStatesDict.values()).index(int(BotMqttClient.rp_states[rp_status["state"]]))]
-        await message.answer(f"Команда отправленна на обкатчик {rp_id}. Текущий статус: {state}")
+        await message.answer(f"Команда отправленна на обкатчик {rp_id}. Текущий статус: {rp_status.name}")
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
         await asyncio.sleep(1)
     await message.answer(f"Остановлено")

@@ -13,7 +13,7 @@ from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
 import ast
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.RPStates import RPStatesDict, safe_literal_eval
+from common.RPStates import safe_literal_eval
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 import logging
 

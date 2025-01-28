@@ -13,7 +13,7 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import logging
 
 from common.IceRunnerConfiguration import IceRunnerConfiguration
-from common.RPStates import RPStatesDict
+from common.RPStates import RPState
 
 def on_disconnect(client, userdata, rc):
     if rc != 0:
@@ -27,7 +27,7 @@ class RaspberryMqttClient:
     setpoint_command: float = 0
     to_run: bool = 0
     to_stop: bool = 0
-    state = RPStatesDict["STOPPED"]
+    state = RPState.NOT_CONNECTED
     status: Dict[str, Any] = {}
     configuration: IceRunnerConfiguration
 
@@ -42,7 +42,7 @@ class RaspberryMqttClient:
         cls.client = Client(client_id=f"raspberry_{rp_id}", clean_session=True, protocol=MQTTv311, reconnect_on_failure=True)
         logging.getLogger(__name__).info(f"Connecting to {server_ip}:{port}")
         cls.client.connect(server_ip, port, 60)
-        cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", RPStatesDict["STOPPED"])
+        cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", cls.state.name)
         logging.getLogger(__name__).info(f"PUBLISH:\tstate")
 
     @classmethod
