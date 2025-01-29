@@ -204,7 +204,7 @@ class ICECommander:
 
     def report_state(self) -> None:
         if time.time() - self.prev_state_report_time > 0.5:
-            RaspberryMqttClient.publish_state(self.rp_state.name)
+            RaspberryMqttClient.publish_state(self.rp_state.value)
 
     def report_status(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():

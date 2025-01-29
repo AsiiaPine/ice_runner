@@ -9,14 +9,14 @@ from typing import Any, Dict
 from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.RPStates import safe_literal_eval
+from common.RPStates import safe_literal_eval, RPState
 import logging
 # import logging_configurator
 # logger = logging.getLogger(__name__)
 
 class BotMqttClient:
     client = Client(client_id="bot", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
-    rp_states: Dict[int, str] = {}
+    rp_states: Dict[int, RPState] = {}
     rp_status: Dict[int, str] = {}
     rp_logs: Dict[int, str] = {}
     rp_configuration: Dict[int, Dict[str, Any]] = {}
@@ -36,10 +36,10 @@ class BotMqttClient:
 def handle_commander_state(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     if rp_pi_id not in BotMqttClient.rp_states.keys():
-        BotMqttClient.rp_states[rp_pi_id] = -1
-    state_name = message.payload.decode()
-    BotMqttClient.rp_states[rp_pi_id] = state_name
-    logging.getLogger(__name__).info(f"received RP state from Raspberry Pi {rp_pi_id}, state: {state_name}")
+        BotMqttClient.rp_states[rp_pi_id] = RPState.NOT_CONNECTED
+    state = RPState(int(message.payload.decode()))
+    BotMqttClient.rp_states[rp_pi_id] = state.name
+    logging.getLogger(__name__).info(f"received RP state from Raspberry Pi {rp_pi_id}, state: {state.name}")
 
 def handle_commander_status(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])

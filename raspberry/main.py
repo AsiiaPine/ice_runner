@@ -75,7 +75,6 @@ async def main(id: int) -> None:
     load_dotenv(dotenv_path, verbose=True)
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
-    RaspberryMqttClient.set_id(id)
     RaspberryMqttClient.connect(id, SERVER_IP, SERVER_PORT)
 
     ice_commander = ICECommander(reporting_period=2,

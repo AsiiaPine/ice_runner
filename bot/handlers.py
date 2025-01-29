@@ -308,13 +308,18 @@ async def command_show_all_handler(message: Message, state: FSMContext) -> None:
     if len(connected_nodes) == 0:
         return
 
+    logging.info(f"Data for {mqtt_client.rp_status}")
+    logging.info(f"Data for {mqtt_client.rp_states}")
     for rp_id in list(mqtt_client.rp_states.keys()):
-        logging.info(f"Sending config for {rp_id}")
-        mqtt_client.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
-        await asyncio.sleep(0.3)
+        logging.info(f"Sending status cmd for {rp_id}")
+        mqtt_client.client.publish(f"ice_runner/bot/usr_cmd/command/status", str(rp_id))
+        await asyncio.sleep(0.5)
         header_str = html.bold(f"ID обкатчика: {rp_id}\n\tСтатус:\n" )
         report_period = 10
         data = await state.get_data()
+        mqtt_client.client.publish(f"ice_runner/bot/usr_cmd/command/config", str(rp_id))
+        await asyncio.sleep(0.5)
+        logging.info(f"Config {mqtt_client.rp_configuration}")
         if mqtt_client.rp_configuration[int(rp_id)] is None:
             conf_str = html.bold("\tНет настроек обкатки\n")
         else:

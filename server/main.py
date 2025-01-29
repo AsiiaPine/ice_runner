@@ -6,6 +6,7 @@
 import logging
 import os
 import sys
+import time
 from typing import Any, Dict
 from dotenv import load_dotenv
 from paho.mqtt.client import MQTTv311
@@ -25,7 +26,12 @@ def start_server() -> None:
         ServerMqttClient.connect(SERVER_IP, SERVER_PORT)
         logger.info("Started")
         start()
+        last_keep_alive = 0
         while ServerMqttClient.client.is_connected: #wait in loop
+            if time.time() - last_keep_alive > 0.5:
+                for i in ServerMqttClient.rp_status.keys():
+                    ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{i}/command", "keep alive")
+                last_keep_alive = time.time()
             pass
         logger.error("STATUS\t| Disconnected")
         ServerMqttClient.client.disconnect() # disconnect
