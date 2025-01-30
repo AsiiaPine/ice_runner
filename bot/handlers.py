@@ -134,7 +134,7 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
     mqtt_client.rp_status[rp_id] = None
     mqtt_client.rp_states[rp_id] = None
     if rp_state is not None:
-        status_str = "\t\tСтатус: " + rp_state + '\n'
+        status_str = "\t\tСтатус: " + rp_state.name + '\n'
         if status is None:
             status_str = "\tОбкатчик не шлет свой статус\n"
         else:   
@@ -158,7 +158,7 @@ async def show_options(message: types.Message, state: FSMContext) -> None:
     if len(available_rps) == 0:
         await message.answer("Нет доступных обкатчиков")
         return
-    kb = [[types.KeyboardButton(text=str(rp_id) + "\tStatus: " + BotMqttClient.rp_states[rp_id]) for rp_id in available_rps]]
+    kb = [[types.KeyboardButton(text=str(rp_id) + "\tStatus: " + BotMqttClient.rp_states[rp_id].name) for rp_id in available_rps]]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     await message.reply("Выберите ID обкатчика", reply_markup=keyboard)
     await state.set_state(Conf.rp_id)
@@ -244,7 +244,7 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         return
     rp_id = (await state.get_data())["rp_id"]
     rp_state = mqtt_client.rp_states[rp_id]
-    await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
+    await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state.name}\n")
     await message.answer("Настройки обкатки:" + get_configuration_str(rp_id))
     print(rp_state)
     await state.set_state(Conf.starting_state)
@@ -269,7 +269,7 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         message.answer(f"Пробуем еще раз")
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
         await asyncio.sleep(1)
-        rp_state = mqtt_client.rp_states[rp_id]
+        rp_state = mqtt_client.rp_states[rp_id].name
         if rp_state == "STARTING":
             await message.answer(f"Запущено")
             break
@@ -303,8 +303,6 @@ async def command_show_all_handler(message: Message, state: FSMContext) -> None:
     if len(connected_nodes) == 0:
         return
 
-    logging.info(f"Data for {mqtt_client.rp_status}")
-    logging.info(f"Data for {mqtt_client.rp_states}")
     for rp_id in list(mqtt_client.rp_states.keys()):
         logging.info(f"Sending status cmd for {rp_id}")
         mqtt_client.client.publish(f"ice_runner/bot/usr_cmd/command/status", str(rp_id))
@@ -412,7 +410,7 @@ async def command_stop_handler(message: Message, state: FSMContext) -> None:
     rp_id = (await state.get_data())["rp_id"]
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
-    rp_status = RPState(mqtt_client.rp_status[rp_id]["state"])
+    rp_status = mqtt_client.rp_states[rp_id]
     while True:
         if rp_status != RPState.RUNNING:
             break

@@ -38,7 +38,7 @@ def handle_commander_state(client, userdata, message):
     if rp_pi_id not in BotMqttClient.rp_states.keys():
         BotMqttClient.rp_states[rp_pi_id] = RPState.NOT_CONNECTED
     state = RPState(int(message.payload.decode()))
-    BotMqttClient.rp_states[rp_pi_id] = state.name
+    BotMqttClient.rp_states[rp_pi_id] = state
     logging.getLogger(__name__).info(f"received RP state from Raspberry Pi {rp_pi_id}, state: {state.name}")
 
 def handle_commander_status(client, userdata, message):

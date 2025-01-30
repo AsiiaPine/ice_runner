@@ -253,6 +253,7 @@ class ICECommander:
     def send_log(self) -> None:
         CanNode.save_file()
         RaspberryMqttClient.publish_log(CanNode.output_filename)
+        RaspberryMqttClient.publish_log(CanNode.candump_filename)
         CanNode.change_file()
         logging.getLogger(__name__).info(f"SEND:\tlog {CanNode.output_filename}")
 
