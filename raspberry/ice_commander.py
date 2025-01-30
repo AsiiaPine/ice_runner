@@ -9,7 +9,7 @@ from enum import IntEnum
 import time
 import traceback
 from node import CanNode, start_dronecan_handlers, MAX_AIR_OPEN, ICE_THR_CHANNEL, ICE_AIR_CHANNEL
-from common.ICEState import ICEState, RecipStateDict
+from common.ICEState import ICEState, RecipState
 from common.RPStates import RPState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from mqtt_client import RaspberryMqttClient
@@ -84,14 +84,17 @@ class ICECommander:
         self.last_button_cmd = 1
         start_dronecan_handlers()
 
+    async def run_candump(self) -> None:
+        self.candump_task = asyncio.create_task(CanNode.run_candump())
+
     def check_conditions(self) -> int:
         # check if conditions are exeeded
         state = self.node.state
-        if state.ice_state == RecipStateDict["NOT_CONNECTED"]:
+        if state.ice_state == RecipState["NOT_CONNECTED"]:
             self.rp_state = RPState.NOT_CONNECTED
             logging.getLogger(__name__).warning("STATUS:\tice not connected")
             return 0
-        if time.time() - CanNode.last_sync_time > 4:
+        if time.time() - CanNode.last_message_receive_time > 1:
             logging.critical("STATUS:\tToo long time without messages")
             CanNode.state = ICEState()
         if self.start_time <= 0 or state.ice_state > RPState.STARTING:
@@ -126,12 +129,10 @@ class ICECommander:
 
     def set_command(self) -> None:
         if self.rp_state == RPState.NOT_CONNECTED or self.rp_state > RPState.STARTING:
-        # if self.rp_state == RPStatesDict["NOT_CONNECTED"] or self.rp_state > RPStatesDict["STARTING"]:
             self.node.cmd.cmd = [0]* (ICE_AIR_CHANNEL + 1)
             self.node.air_cmd.command_value = 0
             return
 
-        # if self.rp_state == "STARTING"]:
         if self.rp_state == RPState.STARTING:
             self.node.cmd.cmd[ICE_THR_CHANNEL] = 3500
             self.node.air_cmd.command_value = 2000
@@ -153,7 +154,7 @@ class ICECommander:
         rpm = self.node.state.rpm
         rp_state = self.rp_state
 
-        if cond_exceeded or rp_state > RPState.STARTING or ice_state == RecipStateDict["FAULT"]:
+        if cond_exceeded or rp_state > RPState.STARTING or ice_state == RecipState["FAULT"]:
             self.start_time = 0
             logging.getLogger(__name__).info(f"STOP:\tconditions exceeded {bool(cond_exceeded)}, rp state {rp_state}, ice state {ice_state}")
             if self.rp_state < RPState.STOPPED:
@@ -167,11 +168,11 @@ class ICECommander:
                 logging.getLogger(__name__).error("STARTING:\tstart time exceeded")
                 self.send_log()
                 return
-            if ice_state == RecipStateDict["RUNNING"] and rpm > 1500 and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
+            if ice_state == RecipState.RUNNING and rpm > 1500 and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
                 logging.getLogger(__name__).info("STARTING:\tstarted successfully")
                 self.rp_state = RPState.RUNNING
                 return
-        if ice_state == RecipStateDict["WAITING"]:
+        if ice_state == RecipState.WAITING:
             self.prev_waiting_state_time = time.time_ns()
             self.rp_state = RPState.STARTING
             logging.getLogger(__name__).info("WAITING:\twaiting state")
@@ -181,7 +182,7 @@ class ICECommander:
         self.report_state()
         self.rp_state_start = self.rp_state
         ice_state = self.node.state.ice_state
-        if ice_state == RecipStateDict["NOT_CONNECTED"]:
+        if ice_state == RecipState.NOT_CONNECTED:
             logging.getLogger(__name__).error("NOT_CONNECTED:\tNo ICE connected")
             self.rp_state = RPState.NOT_CONNECTED
             self.node.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
@@ -190,7 +191,7 @@ class ICECommander:
             await asyncio.sleep(1)
             return
 
-        if ice_state == RecipStateDict["STOPPED"]:
+        if ice_state == RecipState.STOPPED:
             if self.rp_state != RPState.STARTING:
                 self.rp_state = RPState.STOPPED
         # self.check_buttons()
@@ -250,7 +251,7 @@ class ICECommander:
             RaspberryMqttClient.to_run = 0
 
     def send_log(self) -> None:
-        CanNode.save_file(CanNode.output_filename)
+        CanNode.save_file()
         RaspberryMqttClient.publish_log(CanNode.output_filename)
         CanNode.change_file()
         logging.getLogger(__name__).info(f"SEND:\tlog {CanNode.output_filename}")

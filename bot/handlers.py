@@ -349,7 +349,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.5)
 
     header_str = html.bold(f"ICE Runner ID: {rp_id}\n\tСтатус:\n")
 

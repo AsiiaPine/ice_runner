@@ -1,9 +1,11 @@
 
 
 from ast import Dict
+import asyncio
 import datetime
 import logging
 import os
+import subprocess
 import time
 from io import TextIOWrapper
 from typing import Any
@@ -17,29 +19,34 @@ ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
-def safely_write_to_file(temp_filename: str, original_filename: str, last_sync_time: float) -> float:
+def file_safely_copy_from_temp(temp_filename: str, original_filename: str) -> float:
     try:
-        if time.time() - last_sync_time > 1:
-            logging.getLogger(__name__).info("LOGGER\tSaving data")
-
-            with open(temp_filename, "r+") as temp_output_file:
-                fd = os.open(original_filename, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_SYNC)
-                with open(fd, "a") as output:
-                    lines = temp_output_file.readlines()
-                    output.writelines(lines)
-                    output.flush()
-                    os.fsync(output.fileno())
-                    output.close()
-                # safely truncate the temporary file after successful copying
-                temp_output_file.truncate(0)
-
-            last_sync_time = time.time()
-        return last_sync_time
+        logging.getLogger(__name__).info(f"LOGGER\tSaving data to {original_filename}")
+        with open(temp_filename, "r+") as temp_output_file:
+            fd = os.open(original_filename, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_SYNC)
+            with open(fd, "a") as output:
+                lines = temp_output_file.readlines()
+                output.writelines(lines)
+                output.flush()
+                os.fsync(output.fileno())
+                output.close()
+            # safely truncate the temporary file after successful copying
+            temp_output_file.truncate(0)
 
     except Exception as e:
         print(f"An error occurred: {e}")
         logging.getLogger(__name__).error(f"An error occurred: {e}")
-        return last_sync_time
+
+def safely_write_to_file(filename: str) -> float:
+    try:
+        logging.getLogger(__name__).info(f"LOGGER\t| Saving data to {filename}")
+        with open(filename, "a") as output:
+            output.flush()
+            os.fsync(output.fileno())
+            output.close()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        logging.getLogger(__name__).error(f"An error occurred: {e}")
 
 class CanNode:
     node = None
@@ -56,6 +63,7 @@ class CanNode:
 
         cls.change_file()
         cls.last_sync_time = 0
+        cls.last_message_receive_time = 0
         print("all messages will be in ", cls.output_filename)
 
         cls.messages: Dict[str, Any] = {}
@@ -68,11 +76,17 @@ class CanNode:
             cls.prev_broadcast_time = time.time()
             cls.node.broadcast(cls.cmd)
             cls.node.broadcast(dronecan.uavcan.equipment.actuator.ArrayCommand(commands = [cls.air_cmd]))
+            cls.save_file()
 
     @classmethod
-    def save_file(cls, filename: str) -> None:
-        cls.last_sync_time = safely_write_to_file(cls.temp_output_filename, cls.output_filename, cls.last_sync_time)
-        logging.info(f"SEND:\tlog {filename}")
+    def save_file(cls) -> None:
+        try:
+            if time.time() - cls.last_sync_time > 1:
+                file_safely_copy_from_temp(cls.temp_output_filename, cls.output_filename)
+                safely_write_to_file(cls.candump_filename)
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            logging.getLogger(__name__).error(f"An error occurred: {e}")
 
     @classmethod
     def change_file(cls) -> None:
@@ -80,11 +94,26 @@ class CanNode:
         cls.temp_output_filename = f"logs/raspberry/temp_messages_{crnt_time}.log"
         cls.output_filename = f"logs/raspberry/messages_{crnt_time}.log"
         cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a")
-        logging.info(f"SEND:\tchanged log file")
+
+        cls.stop_candump()
+        cls.candump_filename = f"logs/raspberry/candump_{crnt_time}.log"
+        cls.run_candump()
+        logging.info(f"SEND:\tchanged log files")
+
+    @classmethod
+    def run_candump(cls) -> None:
+        cls.candump_file = open(cls.candump_filename, "wb", buffering=0)
+        # filter NodeStatus messages
+        cls.candump_task = subprocess.Popen(["candump", "-L", "slcan0,0x15500~0xFFFF00"], stdout=cls.candump_file, bufsize=0)
+
+    @classmethod
+    def stop_candump(cls) -> None:
+        if hasattr(cls, "candump_task"):
+            cls.candump_task.terminate()
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
     CanNode.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
-    CanNode.last_sync_time = safely_write_to_file(CanNode.temp_output_filename, CanNode.output_filename, CanNode.last_sync_time)
+    CanNode.last_message_receive_time = time.time()
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     CanNode.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = dronecan.to_yaml(msg.message)
