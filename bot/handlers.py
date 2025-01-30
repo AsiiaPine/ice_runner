@@ -215,13 +215,7 @@ async def rp_id_handler(message: types.Message, state: FSMContext) -> None:
 # Commands handlers
 @dp.message(Command(commands=["conf", "настроить_обкатку", "configure", "настройка"]))
 async def command_conf_handler(message: types.Message, state: FSMContext):
-    if "rp_id" not in (await state.get_data()).keys():
-        await show_options(message, state)
-        return
-
-    await state.set_state(Conf.conf_state)
-    await message.reply("Отправьте мне конфигурацию в формате --name value")
-    await message.answer("Доступные параметры:\n" + conf_params_description)
+    await message.reply("Данная команда в разработке")
 
 @form_router.message(Command(commands=["cancel", "отмена"]))
 async def cancel_handler(message: Message, state: FSMContext) -> None:
@@ -240,7 +234,7 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
         reply_markup=ReplyKeyboardRemove(),
     )
 
-@form_router.message(Command(commands=["run", "start", "запустить"], ignore_case=True))
+@form_router.message(Command(commands=["run", "запустить"], ignore_case=True))
 async def command_run_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/run` command
@@ -259,28 +253,29 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         return
     await message.answer(f"Отправьте /cancel или /отмена чтобы отменить запуск обкатки. После запуска отправьте /stop или /стоп чтобы остановить ее")
     i = 0
-    is_starting = await state.get_state()
     logging.getLogger(__name__).info(f"received CMD START from user {message.from_user.username}")
-    while i < 5 and is_starting:
+    while i < 5 and ((await state.get_state()) == Conf.starting_state):
         await message.answer(f"Запуск через {5-i}")
         i += 1
         await asyncio.sleep(1)
-        is_starting = await state.get_state()
-        if is_starting is None:
-            logging.getLogger(__name__).info(f"CMD START aborted by user")
-            await asyncio.sleep(0.1)
-            continue
-    if is_starting:
+
+    if ((await state.get_state()) != Conf.starting_state):
+        logging.getLogger(__name__).info(f"CMD START aborted by user")
+        return
+
+    for i in range(5):
+        if (await state.get_state()) != Conf.starting_state:
+            return
+        message.answer(f"Пробуем еще раз")
         mqtt_client.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
-        for i in range(5):
-            await asyncio.sleep(2)
-            rp_state = mqtt_client.rp_states[rp_id]
-            if rp_state == "STARTING":
-                await message.answer(f"Запущено")
-                break
-            else:
-                await message.answer(f"Ошибка\n\t{rp_state}\nПробуем еще раз")
-        logging.getLogger(__name__).info(f"CMD START send to Raspberry Pi {rp_id}")
+        await asyncio.sleep(1)
+        rp_state = mqtt_client.rp_states[rp_id]
+        if rp_state == "STARTING":
+            await message.answer(f"Запущено")
+            break
+        else:
+            await message.answer(f"Ошибка\n\t{rp_state}")
+    logging.getLogger(__name__).info(f"CMD START send to Raspberry Pi {rp_id}")
 
 @dp.message(Command(commands=["help", "помощь"]))
 async def command_help_handler(message: Message) -> None:
