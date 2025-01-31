@@ -4,9 +4,7 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
 import datetime
-import errno
 import logging.config
-from logging.handlers import QueueHandler
 from os import path
 import os
 import sys

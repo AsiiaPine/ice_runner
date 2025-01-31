@@ -7,7 +7,7 @@ import ast
 import math
 from enum import IntEnum
 
-class RPState(IntEnum):
+class RPFlags(IntEnum):
     NOT_CONNECTED=-1,
     RUNNING=0,
     STARTING=1,

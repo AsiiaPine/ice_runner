@@ -3,10 +3,8 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import math
 import os
 import sys
-import time
 from typing import Any, Dict
 import yaml
 from paho import mqtt

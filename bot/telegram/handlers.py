@@ -10,7 +10,7 @@ import sys
 import os
 
 from typing import Any, Dict, List, Tuple
-from aiogram import Router, Bot, Dispatcher, types, F, html
+from aiogram import Router, Dispatcher, types, F, html
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.strategy import FSMStrategy
@@ -21,23 +21,17 @@ from aiogram.types import (
 )
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.types import Message
 import yaml
-from dotenv import load_dotenv
 
-from bot_mqtt_client import BotMqttClient
+from mqtt.client import MqttClient
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.RPStates import RPState
+from common.RPStates import RPFlags
 import pprint
 import time
-from datetime import datetime, timezone
-datetime.now(timezone.utc)
-
-# import logging_configurator
-
+from datetime import datetime
 
 conf_params_description = '''
 *rpm*:
@@ -67,7 +61,7 @@ conf_params_description = '''
 '''
 
 commands_discription : Dict[str, str] = {
-    "/start": "Запускает автоматическую обкатку ДВС используя последние настроенные параметры/\nStart the automatic running using the last configuration\n",
+    "/run": "Запускает автоматическую обкатку ДВС используя последние настроенные параметры/\nStart the automatic running using the last configuration\n",
     "/status": "Получить статус подключенных блоков ДВС и текущие настройки/\nGet the status of the connected blocks and current configuration\n",
     "/show_all": "Показать все состояния блоков ДВС/\nShow all states of connected blocks\n",
     "/server": "Проверяет работу сервера./\n Check server status\n",
@@ -78,14 +72,12 @@ commands_discription : Dict[str, str] = {
     "/cancel": "Отменить последнее действие/\nCancel any action\n",
 }
 
-# rp_id = None
 dp = Dispatcher(storage=MemoryStorage(), fsm_strategy=FSMStrategy.CHAT)
 form_router = Router()
 dp.include_router(form_router)
 
 configuration: Dict[int, Dict[str, Any]] = {}
 configuration_file_path: str = None
-mqtt_client = BotMqttClient
 
 def get_configuration_from_file(path: str) -> None:
     global configuration_file_path
@@ -97,9 +89,9 @@ def get_configuration_from_file(path: str) -> None:
         configuration = yaml.safe_load(file)
 
 def get_configuration_str(rp_id: int) -> str:
-    if rp_id not in mqtt_client.rp_configuration.keys():
+    if rp_id not in MqttClient.rp_configuration.keys():
         return "Нет настроек обкатки для обкатчика " + str(rp_id)
-    conf = mqtt_client.rp_configuration[int(rp_id)]
+    conf = MqttClient.rp_configuration[int(rp_id)]
     conf_str = ""
     if conf:
         if pprint.isrecursive(conf):
@@ -129,10 +121,10 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
             return "\tОбкатчик не обновил свой статус\n", False
 
     await asyncio.sleep(0.5)
-    status = mqtt_client.rp_status[rp_id]
-    rp_state = mqtt_client.rp_states[rp_id]
-    mqtt_client.rp_status[rp_id] = None
-    mqtt_client.rp_states[rp_id] = None
+    status = MqttClient.rp_status[rp_id]
+    rp_state = MqttClient.rp_states[rp_id]
+    MqttClient.rp_status[rp_id] = None
+    MqttClient.rp_states[rp_id] = None
     if rp_state is not None:
         status_str = "\t\tСтатус: " + rp_state.name + '\n'
         if status is None:
@@ -141,8 +133,8 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
             for name, value in list(status.items()):
                 status_str += f"\t\t\t{name}: {value}\n"
     else:
-        mqtt_client.rp_status.pop(rp_id)
-        mqtt_client.rp_states.pop(rp_id)
+        MqttClient.rp_status.pop(rp_id)
+        MqttClient.rp_states.pop(rp_id)
         status_str = "\tОбкатчик молчит\n"
 
     last_status_update = time.time()
@@ -152,13 +144,13 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
     return status_str + "\n\tвремя обновления: " + update_time, True
 
 async def show_options(message: types.Message, state: FSMContext) -> None:
-    BotMqttClient.client.publish("ice_runner/bot/usr_cmd/who_alive")
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/who_alive")
     await asyncio.sleep(0.5)
-    available_rps = list(BotMqttClient.rp_states.keys())
+    available_rps = list(MqttClient.rp_states.keys())
     if len(available_rps) == 0:
         await message.answer("Нет доступных обкатчиков")
         return
-    kb = [[types.KeyboardButton(text=str(rp_id) + "\tStatus: " + BotMqttClient.rp_states[rp_id].name) for rp_id in available_rps]]
+    kb = [[types.KeyboardButton(text=str(rp_id) + "\tStatus: " + MqttClient.rp_states[rp_id].name) for rp_id in available_rps]]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
     await message.reply("Выберите ID обкатчика", reply_markup=keyboard)
     await state.set_state(Conf.rp_id)
@@ -182,7 +174,7 @@ async def process_configuration(message: types.Message, state: FSMContext):
         configuration[int(rp_id)] = {}
     for name, value in matches:
         configuration[int(rp_id)][name] = value
-    mqtt_client.client.publish(f"ice_runner/bot/configure/{rp_id}", conf_str)
+    MqttClient.client.publish(f"ice_runner/bot/configure/{rp_id}", conf_str)
     await asyncio.sleep(0.3)
     conf_str = get_configuration_str(rp_id)
     await message.reply("Конфигурация: " + conf_str)
@@ -205,7 +197,7 @@ async def rp_id_handler(message: types.Message, state: FSMContext) -> None:
         return
 
     rp_id_num = int(id)
-    if rp_id_num not in mqtt_client.rp_status.keys():
+    if rp_id_num not in MqttClient.rp_status.keys():
         await message.reply("Обкатчик с таким ID не найден")
         return
     await message.reply(f"ID выбранного обкатчика: {rp_id_num}")
@@ -243,7 +235,7 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         await show_options(message, state)
         return
     rp_id = (await state.get_data())["rp_id"]
-    rp_state = mqtt_client.rp_states[rp_id]
+    rp_state = MqttClient.rp_states[rp_id]
     await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state.name}\n")
     await message.answer("Настройки обкатки:" + get_configuration_str(rp_id))
     print(rp_state)
@@ -267,9 +259,9 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         if (await state.get_state()) != Conf.starting_state:
             return
         message.answer(f"Пробуем еще раз")
-        mqtt_client.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
+        MqttClient.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
         await asyncio.sleep(1)
-        rp_state = mqtt_client.rp_states[rp_id].name
+        rp_state = MqttClient.rp_states[rp_id].name
         if rp_state == "STARTING":
             await message.answer(f"Запущено")
             break
@@ -293,30 +285,30 @@ async def command_show_all_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/show_all` command
     """
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/who_alive")
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/who_alive")
     await state.set_state(Conf.show_all_state)
     await asyncio.sleep(1)
     messages: List[Dict[str, Any]] = []
     message_text = ""
-    connected_nodes = mqtt_client.rp_status.keys()
+    connected_nodes = MqttClient.rp_status.keys()
     await message.answer(f"Количество подключенных обкатчиков: {len(connected_nodes)}")
     if len(connected_nodes) == 0:
         return
 
-    for rp_id in list(mqtt_client.rp_states.keys()):
+    for rp_id in list(MqttClient.rp_states.keys()):
         logging.info(f"Sending status cmd for {rp_id}")
-        mqtt_client.client.publish(f"ice_runner/bot/usr_cmd/command/status", str(rp_id))
+        MqttClient.client.publish(f"ice_runner/bot/usr_cmd/command/status", str(rp_id))
         await asyncio.sleep(0.5)
         header_str = html.bold(f"ID обкатчика: {rp_id}\n\tСтатус:\n" )
         report_period = 10
         data = await state.get_data()
-        mqtt_client.client.publish(f"ice_runner/bot/usr_cmd/command/config", str(rp_id))
+        MqttClient.client.publish(f"ice_runner/bot/usr_cmd/command/config", str(rp_id))
         await asyncio.sleep(0.5)
-        logging.info(f"Config {mqtt_client.rp_configuration}")
-        if mqtt_client.rp_configuration[int(rp_id)] is None:
+        logging.info(f"Config {MqttClient.rp_configuration}")
+        if MqttClient.rp_configuration[int(rp_id)] is None:
             conf_str = html.bold("\tНет настроек обкатки\n")
         else:
-            report_period = int(mqtt_client.rp_configuration[int(rp_id)]["report_period"])
+            report_period = int(MqttClient.rp_configuration[int(rp_id)]["report_period"])
             conf_str = html.bold("\tНастройки обкатки:\n") + get_configuration_str(rp_id)
         data["rp_id"] = rp_id
         data["report_period"] = report_period
@@ -344,22 +336,22 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
         return
     rp_id = data["rp_id"]
 
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
     await asyncio.sleep(0.5)
 
     header_str = html.bold(f"ICE Runner ID: {rp_id}\n\tСтатус:\n")
 
-    if rp_id not in mqtt_client.rp_configuration.keys():
+    if rp_id not in MqttClient.rp_configuration.keys():
         conf_str = html.bold("\tНет настроек обкатки")
     else:
         conf_result = get_configuration_str(int(rp_id))
         if conf_result:
             conf_str = html.bold("\tНастройки обкатки\n") + conf_result
         if "report_period" not in data.keys():
-            if "report_period" in mqtt_client.rp_configuration[int(rp_id)].keys():
-                report_period = int(mqtt_client.rp_configuration[int(rp_id)]["report_period"])
+            if "report_period" in MqttClient.rp_configuration[int(rp_id)].keys():
+                report_period = int(MqttClient.rp_configuration[int(rp_id)]["report_period"])
             else:
                 report_period = 10
             data["report_period"] = report_period
@@ -388,15 +380,19 @@ async def command_log_handler(message: Message, state: FSMContext) -> None:
         return
     rp_id = (await state.get_data())["rp_id"]
     logging.getLogger(__name__).info(f"Getting logs for {rp_id}")
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/log", str(rp_id))
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/log", str(rp_id))
     await asyncio.sleep(0.3)
-    logging.info(f"Data for {mqtt_client.rp_logs}")
-    if rp_id in mqtt_client.rp_logs.keys():
-        log_files = mqtt_client.rp_logs[rp_id]
+    logging.info(f"Data for {MqttClient.rp_logs}")
+    if rp_id in MqttClient.rp_logs.keys():
+        log_files = MqttClient.rp_logs[rp_id]
         for name, log_file in log_files.items():
             logging.info(f"Sending log {name}")
-            log = FSInputFile(log_file)
-            await message.answer_document(log, caption=name)
+            try:
+                log = FSInputFile(log_file)
+                await message.answer_document(log, caption=name)
+            except Exception as e:
+                await message.answer(f"Ошибка при отправке лога {name}: {e}")
+                logging.getLogger(__name__).error(f"Error sending log {name}: {e}")
     else:
         await message.answer("Лог не найден")
 
@@ -410,14 +406,14 @@ async def command_stop_handler(message: Message, state: FSMContext) -> None:
         await show_options(message, state)
         return
     rp_id = (await state.get_data())["rp_id"]
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
-    mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
-    rp_status = mqtt_client.rp_states[rp_id]
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
+    rp_status = MqttClient.rp_states[rp_id]
     while True:
-        if rp_status != RPState.RUNNING:
+        if rp_status != RPFlags.RUNNING:
             break
         await message.answer(f"Команда отправленна на обкатчик {rp_id}. Текущий статус: {rp_status.name}")
-        mqtt_client.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
+        MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
         await asyncio.sleep(1)
     await message.answer(f"Остановлено")
 
@@ -427,29 +423,16 @@ async def command_server(message: Message, state: FSMContext) -> None:
     This handler receives messages with `/server` command
     """
     await message.answer("Проверяем работу сервера")
-    BotMqttClient.client.publish("ice_runner/bot/usr_cmd/server", "server")
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/server", "server")
     await asyncio.sleep(1)
-    if BotMqttClient.server_connected:
+    if MqttClient.server_connected:
         await message.answer("Сервер подключен")
     else:
         await message.answer("Сервер не подключен")
-    BotMqttClient.server_connected = False
+    MqttClient.server_connected = False
 
 @form_router.message(F.text.lower().not_in(commands_discription.keys()))
 async def unknown_message(msg: types.Message, state: FSMContext):
     message_text = 'Я не знаю, что с этим делать \nЯ просто напомню, что есть команда /help'
     logging.getLogger(__name__).warning(msg.text, await state.get_state())
     await msg.reply(message_text, parse_mode=ParseMode.HTML)
-
-async def main() -> None:
-    # Initialize Bot instance with default bot properties which will be passed to all API calls
-    load_dotenv()
-    TOKEN = os.getenv("BOT_TOKEN")
-    bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    print("TG:\t" + configuration_file_path)
-    logging.getLogger(__name__).info(f"Bot started")
-    dp.include_router(form_router)
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())

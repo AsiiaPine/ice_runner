@@ -13,7 +13,6 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import logging
 
 from common.IceRunnerConfiguration import IceRunnerConfiguration
-from common.RPStates import RPState
 connected_flag=False
 
 def on_disconnect(client, userdata, rc):
@@ -45,7 +44,7 @@ class RaspberryMqttClient:
 
         logging.getLogger(__name__).info(f"Connecting to {server_ip}:{port}")
         cls.client.connect(server_ip, port, 60)
-        cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", RPState.NOT_CONNECTED.name)
+        cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", cls.state)
         logging.getLogger(__name__).info(f"PUBLISH:\tstate")
 
     @classmethod
@@ -62,14 +61,14 @@ class RaspberryMqttClient:
 
     @classmethod
     def publish_state(cls, state: int) -> None:
-        logging.getLogger(__name__).info(f"PUBLISH:\tstate")
+        logging.getLogger(__name__).info(f"PUBLISH:\tstate {state}")
         RaspberryMqttClient.state = state
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", state)
 
     @classmethod
     def publish_log(cls) -> None:
         logging.getLogger(__name__).info(f"PUBLISH:\tlog")
-        logging.getLogger(__name__).info(f"PUBLISH:\t logs: {cls.rp_logs}")
+        logging.getLogger(__name__).info(f"PUBLISH:\tlogs: {cls.rp_logs}")
         RaspberryMqttClient.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/log", str(RaspberryMqttClient.rp_logs))
 
     @classmethod
@@ -82,6 +81,7 @@ def handle_command(client, userdata, message):
     if mes_text == "start":
         logging.getLogger(__name__).info("RECEIVED:\tstart")
         RaspberryMqttClient.to_run = 1
+
     if mes_text == "stop":
         logging.getLogger(__name__).info("RECEIVED:\tstop")
         RaspberryMqttClient.to_stop = 1
@@ -92,8 +92,8 @@ def handle_command(client, userdata, message):
 
     if mes_text == "status":
         logging.getLogger(__name__).info("RECEIVED:\tStatus request")
-        RaspberryMqttClient.publish_status(str(RaspberryMqttClient.status))
-        RaspberryMqttClient.publish_state(str(RaspberryMqttClient.state))
+        RaspberryMqttClient.publish_status(RaspberryMqttClient.status)
+        RaspberryMqttClient.publish_state(RaspberryMqttClient.state)
 
     if mes_text == "config":
         logging.getLogger(__name__).info("RECEIVED:\tConfiguration request")
@@ -105,7 +105,8 @@ def handle_command(client, userdata, message):
 
 def handle_who_alive(client, userdata, message):
     logging.getLogger(__name__).info("RECEIVED:\tWHO ALIVE")
-    RaspberryMqttClient.client.publish(f"ice_runner/raspberry_pi/{RaspberryMqttClient.rp_id}/status", str(RaspberryMqttClient.state))
+    RaspberryMqttClient.publish_state(RaspberryMqttClient.state)
+    RaspberryMqttClient.publish_status(RaspberryMqttClient.status)
     RaspberryMqttClient.publish_configuration()
 
 async def start() -> None:

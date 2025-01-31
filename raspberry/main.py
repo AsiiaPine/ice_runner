@@ -5,17 +5,12 @@
 
 import argparse
 import asyncio
-from asyncio.subprocess import Process
-from io import TextIOWrapper
 import os
 from pathlib import Path
-import shutil
 import sys
-import datetime
 import time
 from dotenv import load_dotenv
 from mqtt_client import RaspberryMqttClient, start
-import subprocess
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
@@ -70,7 +65,7 @@ async def main(id: int) -> None:
     await asyncio.gather(ice_commander.run(), start())
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Raspberry Pi CAN node for automatic ICE runner')
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(description='Raspberry Pi CAN node for automatic ICE runner')
     parser.add_argument("--id",
                         default='None',
                         type=int,
@@ -84,16 +79,15 @@ if __name__ == "__main__":
                         default='INFO',
                         type=str,
                         help="Logging level")
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
     if args.id is None:
         print("RP:\tNo ID provided, reading from environment variable")
         args.id = int(os.getenv("RASPBERRY_ID"))
     if args.id is None:
         print("RP:\tNo ID provided, exiting")
         sys.exit(-1)
-    loglevel = args.loglevel
+    loglevel: str = args.loglevel
     numeric_level = getattr(logging, loglevel.upper(), None)
-    print(numeric_level)
     if not isinstance(numeric_level, int):
         raise ValueError('Invalid log level: %s' % loglevel)
     logging.root.level = numeric_level
