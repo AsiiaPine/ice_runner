@@ -29,7 +29,7 @@ class ServerMqttClient:
     rp_status: Dict[int, Any] = {}
     rp_states: Dict[int, str] = {}
     rp_cur_setpoint: Dict[int, float] = {}
-
+    rp_logs: Dict[int, Dict[str, str]] = {}
     last_ready_transmit = 0
     rp_configuration: Dict[int, IceRunnerConfiguration] = {}
 
@@ -159,11 +159,13 @@ def handle_bot_server(client, userdata, msg):
 def start() -> None:
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/status", handle_raspberry_pi_status)
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/state", handle_raspberry_pi_state)
+    ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/log", handle_raspberry_pi_log)
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/dronecan/#", handle_raspberry_pi_dronecan_message)
 
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/config", handle_raspberry_pi_configuration)
 
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/state", handle_bot_usr_cmd_state)
+    ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/log", handle_bot_usr_cmd_log)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/stop", handle_bot_usr_cmd_stop)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/start", handle_bot_usr_cmd_start)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/status", handle_bot_usr_cmd_status)

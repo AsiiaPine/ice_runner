@@ -17,7 +17,7 @@ from aiogram.fsm.strategy import FSMStrategy
 from aiogram.types import (
     Message,
     ReplyKeyboardRemove,
-    InputFile
+    FSInputFile
 )
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -390,13 +390,15 @@ async def command_log_handler(message: Message, state: FSMContext) -> None:
     logging.getLogger(__name__).info(f"Getting logs for {rp_id}")
     mqtt_client.client.publish("ice_runner/bot/usr_cmd/log", str(rp_id))
     await asyncio.sleep(0.3)
-    header_str = html.bold(f"ICE Runner ID: {rp_id}\n\tСтатус:\n" )
+    logging.info(f"Data for {mqtt_client.rp_logs}")
     if rp_id in mqtt_client.rp_logs.keys():
-        log_file = mqtt_client.rp_logs[rp_id]
-        message.answer_document(log_file)
+        log_files = mqtt_client.rp_logs[rp_id]
+        for name, log_file in log_files.items():
+            logging.info(f"Sending log {name}")
+            log = FSInputFile(log_file)
+            await message.answer_document(log, caption=name)
     else:
-        message.answer("Лог не найден")
-
+        await message.answer("Лог не найден")
 
 @form_router.message(Command(commands=["stop", "стоп"]))
 async def command_stop_handler(message: Message, state: FSMContext) -> None:

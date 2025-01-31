@@ -252,12 +252,14 @@ class ICECommander:
 
     def send_log(self) -> None:
         CanNode.save_file()
-        RaspberryMqttClient.publish_log(CanNode.output_filename)
-        RaspberryMqttClient.publish_log(CanNode.candump_filename)
+        RaspberryMqttClient.rp_logs["candump"] = CanNode.candump_filename
+        RaspberryMqttClient.rp_logs["output"] = CanNode.output_filename
+        RaspberryMqttClient.publish_log()
         CanNode.change_file()
         logging.getLogger(__name__).info(f"SEND:\tlog {CanNode.output_filename}")
 
     async def run(self) -> None:
+        self.send_log()
         while True:
             try:
                 await self.spin()

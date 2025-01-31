@@ -29,6 +29,8 @@ class RaspberryMqttClient:
     to_stop: bool = 0
     status: Dict[str, Any] = {}
     configuration: IceRunnerConfiguration
+    state: int = -1
+    rp_logs: Dict[str, str] = {}
 
     @classmethod
     def get_client(cls) -> Client:
@@ -62,12 +64,13 @@ class RaspberryMqttClient:
     def publish_state(cls, state: int) -> None:
         logging.getLogger(__name__).info(f"PUBLISH:\tstate")
         RaspberryMqttClient.state = state
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", str(state))
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", state)
 
     @classmethod
-    def publish_log(cls, log: str) -> None:
+    def publish_log(cls) -> None:
         logging.getLogger(__name__).info(f"PUBLISH:\tlog")
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/log", log)
+        logging.getLogger(__name__).info(f"PUBLISH:\t logs: {cls.rp_logs}")
+        RaspberryMqttClient.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/log", str(RaspberryMqttClient.rp_logs))
 
     @classmethod
     def publish_configuration(cls) -> None:
@@ -95,6 +98,10 @@ def handle_command(client, userdata, message):
     if mes_text == "config":
         logging.getLogger(__name__).info("RECEIVED:\tConfiguration request")
         RaspberryMqttClient.publish_configuration()
+
+    if mes_text == "log":
+        logging.getLogger(__name__).info("RECEIVED:\tLog request")
+        RaspberryMqttClient.publish_log()
 
 def handle_who_alive(client, userdata, message):
     logging.getLogger(__name__).info("RECEIVED:\tWHO ALIVE")

@@ -59,7 +59,8 @@ def handle_commander_server(client, userdata, message):
 
 def handle_commander_log(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
-    BotMqttClient.rp_logs[rp_pi_id] = message.payload.decode()
+    logging.getLogger(__name__).info(f"received LOG from Raspberry Pi {message.payload.decode()}")
+    BotMqttClient.rp_logs[rp_pi_id] = safe_literal_eval(message.payload.decode())
     logging.getLogger(__name__).info(f"received LOG from Raspberry Pi {rp_pi_id}")
 
 async def start() -> None:
