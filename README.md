@@ -9,6 +9,13 @@ The project is a contoller for Internal Combustion engines (ICE) runners. Each I
 
 ## How to run the project 
 0. Specify telergam bot token and mqtt server ip in the file `.env`.
+e.g.
+```
+BOT_TOKEN=*************
+SERVER_PORT = 1883
+SERVER_IP=localhost
+```
+
 1. Raspberry Pi ICE controller installation
     - Install mqtt broker
         ```bash
