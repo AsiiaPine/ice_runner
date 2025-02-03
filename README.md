@@ -35,12 +35,17 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
         ```bash
         python server/main.py
         ```
-2.1 Bot start
+3. Bot start
     - Run the script
 
         ```bash
         python bot/main.py
         ```
+
+To start a simulator of the ICE create slcan, run the following script:
+```bash
+python ice_sim/test_commander.py
+```
 
 ## Project structure
 Server is the main controller of the project.
@@ -54,3 +59,4 @@ Raspberry Pi subscribes to its commander topic and sends parsed dronecan message
 
 
 # TODO:
+- [ ] Fix the command sending rate of ice_commander

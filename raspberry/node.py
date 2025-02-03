@@ -13,6 +13,7 @@ import dronecan
 from dronecan.node import Node
 from raccoonlab_tools.dronecan.utils import ParametersInterface
 from raccoonlab_tools.dronecan.global_node import DronecanNode
+from raccoonlab_tools.common.device_manager import DeviceManager
 from common.ICEState import ICEState
 
 ICE_THR_CHANNEL = 7
@@ -56,7 +57,7 @@ class CanNode:
         cls.state: ICEState = ICEState()
         cls.node: Node = DronecanNode().node
         cls.param_interface: ParametersInterface = ParametersInterface(cls.node, target_node_id=cls.node.node_id)
-
+        cls.transport = DeviceManager.get_device_port()
         cls.air_cmd = dronecan.uavcan.equipment.actuator.Command(actuator_id=ICE_AIR_CHANNEL, command_value=0)
         cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
         cls.prev_broadcast_time: float = 0
@@ -104,7 +105,7 @@ class CanNode:
     def run_candump(cls) -> None:
         cls.candump_file = open(cls.candump_filename, "wb", buffering=0)
         # filter NodeStatus messages
-        cls.candump_task = subprocess.Popen(["candump", "-L", "slcan0,0x15500~0xFFFF00"], stdout=cls.candump_file, bufsize=0)
+        cls.candump_task = subprocess.Popen(["candump", "-L", f"{cls.transport},0x15500~0xFFFF00"], stdout=cls.candump_file, bufsize=0)
 
     @classmethod
     def stop_candump(cls) -> None:
