@@ -6,6 +6,7 @@
 import asyncio
 import datetime
 from enum import IntEnum
+import os
 import time
 import traceback
 from node import CanNode, start_dronecan_handlers, MAX_AIR_OPEN, ICE_THR_CHANNEL, ICE_AIR_CHANNEL
@@ -15,17 +16,19 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 from mqtt_client import RaspberryMqttClient
 import logging
 
-# # GPIO setup
-# import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-# GPIO.setwarnings(True) # Ignore warning for now
-# GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-# start_stop_pin = 24
-# # Setup CAN terminator
-# resistor_pin = 23
-# GPIO.setup(resistor_pin, GPIO.OUT)
-# GPIO.output(resistor_pin, GPIO.HIGH)
+if (os.path.exists("/proc/device-tree/model")):
+    rpi_model = os.popen('cat /proc/device-tree/model').read()
+    # GPIO setup
+    import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
+    GPIO.setwarnings(True) # Ignore warning for now
+    GPIO.setmode(GPIO.BCM) # Use physical pin numbering
+    start_stop_pin = 24
+    # Setup CAN terminator
+    resistor_pin = 23
+    GPIO.setup(resistor_pin, GPIO.OUT)
+    GPIO.output(resistor_pin, GPIO.HIGH)
 
-# GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
+    GPIO.setup(start_stop_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
 
 class ExceedanceTracker:
     def __init__(self) -> None:
