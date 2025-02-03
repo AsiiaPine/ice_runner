@@ -186,7 +186,7 @@ class ICECommander:
         self.rp_state_start = self.rp_state
         ice_state = self.node.state.ice_state
         if ice_state == RecipFlags.NOT_CONNECTED:
-            logging.getLogger(__name__).error("NOT_CONNECTED:\tNo ICE connected")
+            logging.getLogger(__name__).warning("NOT_CONNECTED:\tNo ICE connected")
             self.rp_state = RPFlags.NOT_CONNECTED
             self.node.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
             self.node.spin()
