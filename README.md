@@ -54,5 +54,3 @@ Raspberry Pi subscribes to its commander topic and sends parsed dronecan message
 
 
 # TODO:
-- [ ] Check requirements
-- [ ] Sometimes connection to mqtt is lost and server doesn't fetch raspberry pi statuses
