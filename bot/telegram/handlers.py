@@ -61,15 +61,15 @@ conf_params_description = '''
 '''
 
 commands_discription : Dict[str, str] = {
+    "/cancel": "Отменить последнее действие/\nCancel any action\n",
+    "/choose_rp": "Выберите ID обкатчика/\n Choose ID of the ICE runner\n",
+    "/log": "Прислать логи блока ДВС/\nSend logs of the connected block\n",
     "/run": "Запускает автоматическую обкатку ДВС используя последние настроенные параметры/\nStart the automatic running using the last configuration\n",
-    "/status": "Получить статус подключенных блоков ДВС и текущие настройки/\nGet the status of the connected blocks and current configuration\n",
-    "/show_all": "Показать все состояния блоков ДВС/\nShow all states of connected blocks\n",
     "/server": "Проверяет работу сервера./\n Check server status\n",
+    "/show_all": "Показать все состояния блоков ДВС/\nShow all states of connected blocks\n",
+    "/status": "Получить статус подключенных блоков ДВС и текущие настройки/\nGet the status of the connected blocks and current configuration\n",
     "/stop": "Остановить обкатку двигателей/\nStop the automatic running immediately\n",
     "/help": "Выдать список доступных команд/\nSend a list of available commands\n",
-    "/conf": "Начать процесс настройки параметров\. После нажатия кнопки бот отправит сообщение с текущей конфигурацией и ждет в ответе новые параметры в формате \-\-имя значение\. Используйте комманду /cancel чтобы отменить конфигурирование и оставить старые параметры/\nStarts configuration process, after call you have specify configuration parameters in format \-\-name value\. Use /cancel to cancel the action\n",
-    "/choose_rp": "Выберите ID обкатчика/\n Choose ID of the ICE runner\n",
-    "/cancel": "Отменить последнее действие/\nCancel any action\n",
 }
 
 dp = Dispatcher(storage=MemoryStorage(), fsm_strategy=FSMStrategy.CHAT)
@@ -165,23 +165,10 @@ class Conf(StatesGroup):
 @form_router.message(Conf.conf_state)
 async def process_configuration(message: types.Message, state: FSMContext):
     """Process configuration of the runner"""
-    if "rp_id" not in (await state.get_data()).keys():  
-        await show_options(message, state)
-        return
-    rp_id = (await state.get_data())["rp_id"]
-    matches = re.findall(r'--(\S+) (\d+)', message.text)
-    if configuration[int(rp_id)] is None:
-        configuration[int(rp_id)] = {}
-    for name, value in matches:
-        configuration[int(rp_id)][name] = value
-    MqttClient.client.publish(f"ice_runner/bot/configure/{rp_id}", conf_str)
-    await asyncio.sleep(0.3)
-    conf_str = get_configuration_str(rp_id)
-    await message.reply("Конфигурация: " + conf_str)
-    await message.reply("Конфигурация завершена")
-    await state.clear()
+    # The configuration is not implemented
+    pass
 
-@form_router.message(Command(commands=["chose_rp", "выбрать_ДВС"]))
+@form_router.message(Command(commands=["choose_rp", "выбрать_ДВС"]))
 async def choose_rp_id(message: types.Message, state: FSMContext) -> None:
     await state.set_state(Conf.rp_id)
     await show_options(message, state)
@@ -207,7 +194,8 @@ async def rp_id_handler(message: types.Message, state: FSMContext) -> None:
 # Commands handlers
 @dp.message(Command(commands=["conf", "настроить_обкатку", "configure", "настройка"]))
 async def command_conf_handler(message: types.Message, state: FSMContext):
-    await message.reply("Данная команда в разработке")
+    # The configuration is not implemented
+    pass
 
 @form_router.message(Command(commands=["cancel", "отмена"]))
 async def cancel_handler(message: Message, state: FSMContext) -> None:

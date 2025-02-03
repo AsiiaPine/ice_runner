@@ -3,3 +3,4 @@ __py*
 *.log*
 lats_config.yml
 *.txt
+logs/*
