@@ -206,7 +206,9 @@ class ICENODE:
         if time.time() - self.prev_broadcast_time > self.status_timeout:
             self.prev_broadcast_time = time.time()
             self.node.publish(self.create_ice_reciprocating_status())
-
+            self.node.publish(dronecan.uavcan.protocol.NodeStatus(mode=0))
+            self.node.publish(dronecan.uavcan.equipment.ice.FuelTankStatus(available_fuel_volume_percent=100))
+            self.node.publish(dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=0))
 
 def get_raw_command(res: dronecan.node.TransferEvent) -> int:
     if res is None:
@@ -233,5 +235,3 @@ if __name__ == "__main__":
     node.node.node.add_handler(dronecan.uavcan.equipment.actuator.ArrayCommand, get_air_cmd)
     while True:
         node.spin()
-        node.node.node.spin(0.05)
-

@@ -5,31 +5,15 @@
 
 import ast
 import math
+from enum import IntEnum
 
-RPStatesDict = {
-    "NOT_CONNECTED" : -1,
-    "RUNNING" : 0,
-    "STARTING" : 1,
-    "STOPPED" : 2,
-    "STOPPING" : 3,
-    "FAULT" : 4
-}
-
-def get_rp_state_name(state):
-    if state == RPStatesDict["NOT_CONNECTED"]:
-        return "NOT_CONNECTED"
-    elif state == RPStatesDict["RUNNING"]:
-        return "RUNNING"
-    elif state == RPStatesDict["STARTING"]:
-        return "STARTING"
-    elif state == RPStatesDict["STOPPED"]:
-        return "STOPPED"
-    elif state == RPStatesDict["STOPPING"]:
-        return "STOPPING"
-    elif state == RPStatesDict["FAULT"]:
-        return "FAULT"
-    else:
-        return "UNKNOWN"
+class RPFlags(IntEnum):
+    NOT_CONNECTED=-1,
+    RUNNING=0,
+    STARTING=1,
+    STOPPED=2
+    STOPPING=3,
+    FAULT=4
 
 def safe_literal_eval(val):
     try:

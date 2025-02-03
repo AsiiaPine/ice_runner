@@ -16,7 +16,7 @@ yakut
 pytest-asyncio
 # bot
 pyTelegramBotAPI
-aiogram<3.0
+aiogram==3.16
 
 #rpi
 RPi.GPIO

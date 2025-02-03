@@ -1,5 +1,6 @@
-__*
+__py*
 *.env
 *.log*
 lats_config.yml
 *.txt
+logs/*
