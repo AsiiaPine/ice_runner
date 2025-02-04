@@ -200,7 +200,7 @@ class ICENODE:
         self.node.publish(msg)
 
     def spin(self) -> None:
-        self.node.node.spin(0.05)
+        self.node.node.spin(0)
 
         self.engine.update(cmd=self.command, air_cmd=self.air_cmd)
         if time.time() - self.prev_broadcast_time > self.status_timeout:
