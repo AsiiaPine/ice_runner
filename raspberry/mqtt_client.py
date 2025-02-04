@@ -8,16 +8,17 @@ import sys
 import time
 from typing import Any, Dict, List
 from paho.mqtt.client import MQTTv311, Client
-
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import logging
 
+sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
+
+logger = logging.getLogger(__name__)
 connected_flag=False
 
 def on_disconnect(client, userdata, rc):
     if rc != 0:
-        logging.getLogger(__name__).error("Unexpected MQTT disconnection. Will auto-reconnect")
+        logger.error("Unexpected MQTT disconnection. Will auto-reconnect")
 
 class RaspberryMqttClient:
     client: Client
@@ -42,69 +43,74 @@ class RaspberryMqttClient:
         cls.client = Client(client_id=f"raspberry_{rp_id}", clean_session=True, protocol=MQTTv311, reconnect_on_failure=True)
         cls.client.disconnect_callback = on_disconnect
 
-        logging.getLogger(__name__).info(f"Connecting to {server_ip}:{port}")
+        logger.info(f"Connecting to {server_ip}:{port}")
         cls.client.connect(server_ip, port, 60)
         cls.client.publish(f"ice_runner/raspberry_pi/{rp_id}/state", cls.state)
-        logging.getLogger(__name__).info(f"PUBLISH:\tstate")
+        logger.debug(f"PUBLISH\t-\tstate")
 
     @classmethod
     def publish_messages(cls, messages: Dict[str, Any]) -> None:
         for dronecan_type in messages.keys():
             cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/dronecan/{dronecan_type}", str(messages[dronecan_type]))
-        logging.getLogger(__name__).info(f"PUBLISH:\tdronecan messages")
+        logger.debug(f"PUBLISH\t-\tdronecan messages")
 
     @classmethod
     def publish_status(cls, status: Dict[str, Any]) -> None:
-        logging.getLogger(__name__).info(f"PUBLISH:\tstatus")
+        logger.debug(f"PUBLISH\t-\tstatus")
         RaspberryMqttClient.status = status
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/status", str(status))
 
     @classmethod
     def publish_state(cls, state: int) -> None:
-        logging.getLogger(__name__).info(f"PUBLISH:\tstate {state}")
+        logger.debug(f"PUBLISH\t-\tstate {state}")
         RaspberryMqttClient.state = state
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/state", state)
 
     @classmethod
     def publish_log(cls) -> None:
-        logging.getLogger(__name__).info(f"PUBLISH:\tlog")
-        logging.getLogger(__name__).info(f"PUBLISH:\tlogs: {cls.rp_logs}")
+        logger.debug(f"PUBLISH\t-\tlog")
+        logger.debug(f"PUBLISH\t-\tlogs: {cls.rp_logs}")
         RaspberryMqttClient.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/log", str(RaspberryMqttClient.rp_logs))
 
     @classmethod
     def publish_configuration(cls) -> None:
-        logging.getLogger(__name__).info(f"PUBLISH:\tconfiguration")
+        logger.debug(f"PUBLISH\t-\tconfiguration")
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/config", str(cls.configuration.to_dict()))
+
+    @classmethod
+    def publish_stop_reason(cls, reason: str) -> None:
+        logger.info(f"PUBLISH\t-\tstop reason: {reason}")
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.rp_id}/stop_reason", reason)
 
 def handle_command(client, userdata, message):
     mes_text = message.payload.decode()
     if mes_text == "start":
-        logging.getLogger(__name__).info("RECEIVED:\tstart")
+        logger.info("RECEIVED\t-\tstart")
         RaspberryMqttClient.to_run = 1
 
     if mes_text == "stop":
-        logging.getLogger(__name__).info("RECEIVED:\tstop")
+        logger.info("RECEIVED\t-\tstop")
         RaspberryMqttClient.to_stop = 1
 
     if mes_text == "keep alive":
-        logging.getLogger(__name__).info("RECEIVED:\tkeep alive")
+        logger.debug("RECEIVED\t-\tkeep alive")
         RaspberryMqttClient.last_message_receive_time = time.time()
 
     if mes_text == "status":
-        logging.getLogger(__name__).info("RECEIVED:\tStatus request")
+        logger.info("RECEIVED\t-\tStatus request")
         RaspberryMqttClient.publish_status(RaspberryMqttClient.status)
         RaspberryMqttClient.publish_state(RaspberryMqttClient.state)
 
     if mes_text == "config":
-        logging.getLogger(__name__).info("RECEIVED:\tConfiguration request")
+        logger.info("RECEIVED\t-\tConfiguration request")
         RaspberryMqttClient.publish_configuration()
 
     if mes_text == "log":
-        logging.getLogger(__name__).info("RECEIVED:\tLog request")
+        logger.info("RECEIVED\t-\tLog request")
         RaspberryMqttClient.publish_log()
 
 def handle_who_alive(client, userdata, message):
-    logging.getLogger(__name__).info("RECEIVED:\tWHO ALIVE")
+    logger.debug("RECEIVED\t-\tWHO ALIVE")
     RaspberryMqttClient.publish_state(RaspberryMqttClient.state)
     RaspberryMqttClient.publish_status(RaspberryMqttClient.status)
     RaspberryMqttClient.publish_configuration()

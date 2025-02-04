@@ -5,6 +5,7 @@
 
 import argparse
 import asyncio
+import datetime
 import os
 from pathlib import Path
 import sys
@@ -17,13 +18,6 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 from ice_commander import ICECommander
 import logging
 import logging_configurator
-# disable existing modules
-for name, logger in logging.root.manager.loggerDict.items():
-    logger.disabled=True
-    logger.propagate=False
-
-logger = logging_configurator.getLogger(__file__)
-
 
 conf_params_description = {
 "rpm":
@@ -48,10 +42,12 @@ conf_params_description = {
     {"default": 0, "help": "Команда на N оборотов (RPMCommand) без ПИД-регулятора"}
 }
 
+logger = logging_configurator.getLogger(__file__)
+
 last_sync_time = time.time()
 
 async def main(id: int) -> None:
-    print(f"RP:\tStarting raspberry {id}")
+    print(f"RP\t-\tStarting raspberry {id}")
     os.environ.clear()
     dotenv_path = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env')))
     load_dotenv(dotenv_path, verbose=True)
@@ -75,22 +71,13 @@ if __name__ == "__main__":
                             default=data["default"],
                             type=int,
                             help=data["help"] + "\n\n По умолчанию: " + str(data["default"]))
-    parser.add_argument("--loglevel",
-                        default='INFO',
-                        type=str,
-                        help="Logging level")
     args: argparse.Namespace = parser.parse_args()
     if args.id is None:
-        print("RP:\tNo ID provided, reading from environment variable")
+        print("RP\t-\tNo ID provided, reading from environment variable")
         args.id = int(os.getenv("RASPBERRY_ID"))
     if args.id is None:
-        print("RP:\tNo ID provided, exiting")
+        print("RP\t-\tNo ID provided, exiting")
         sys.exit(-1)
-    loglevel: str = args.loglevel
-    numeric_level = getattr(logging, loglevel.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: %s' % loglevel)
-    logging.root.level = numeric_level
     configuration = IceRunnerConfiguration(args.__dict__)
     RaspberryMqttClient.configuration = configuration
     asyncio.run(main(args.id))

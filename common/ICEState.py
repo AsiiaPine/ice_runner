@@ -7,7 +7,6 @@ import copy
 from enum import IntEnum
 from typing import Any, Dict
 import logging
-import logging_configurator
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +68,8 @@ class ICEState:
         self.vibration = msg.message.integration_interval
 
     def update_with_node_status(self, msg) -> None:
-        print("MODE\t| ", msg.message)
         if msg.message.mode > self.mode:
             self.mode = Mode(msg.message.mode)
-            print("MODE\t| ", self.mode)
         if msg.message.health > self.health:
             self.health = Health(msg.message.health)
         if self.mode > Mode.MODE_SOFTWARE_UPDATE or self.health > Health.HEALTH_WARNING:

@@ -1,6 +1,6 @@
 # ice_runner
 
-The project is a contoller for Internal Combustion engines (ICE) runners. Each ICE is connected to RaccoonLab Dronecan ice_node and mini_node. The nodes are connected to RaspberryPi it sends ICE status and listens to commands from specific topic of MQTT server. User may send commands to the Raspberry Pi using Telegram bot.
+The project is a contoller for Internal Combustion engines (ICE) runners. Each ICE is connected to RaccoonLab Dronecan ice_node and mini_node. The nodes are connected to RaspberryPi. It sends ICE status and listens to commands from specific topic of MQTT server. User may send commands to the Raspberry Pi using Telegram bot.
 
 ## Requirements
 

@@ -226,7 +226,6 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     rp_state = MqttClient.rp_states[rp_id]
     await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state.name}\n")
     await message.answer("Настройки обкатки:" + get_configuration_str(rp_id))
-    print(rp_state)
     await state.set_state(Conf.starting_state)
     if rp_state == "RUNNING" or rp_state == "STARTING":
         await message.answer(f"Обкатка уже запущена")
@@ -246,7 +245,6 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     for i in range(5):
         if (await state.get_state()) != Conf.starting_state:
             return
-        message.answer(f"Пробуем еще раз")
         MqttClient.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
         await asyncio.sleep(1)
         rp_state = MqttClient.rp_states[rp_id].name
@@ -396,8 +394,8 @@ async def command_stop_handler(message: Message, state: FSMContext) -> None:
     rp_id = (await state.get_data())["rp_id"]
     MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
     MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", f"{rp_id}")
-    rp_status = MqttClient.rp_states[rp_id]
     while True:
+        rp_status = MqttClient.rp_states[rp_id]
         if rp_status != RPFlags.RUNNING:
             break
         await message.answer(f"Команда отправленна на обкатчик {rp_id}. Текущий статус: {rp_status.name}")

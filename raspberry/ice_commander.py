@@ -16,6 +16,8 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 from mqtt_client import RaspberryMqttClient
 import logging
 
+logger = logging.getLogger(__name__)
+
 if (os.path.exists("/proc/device-tree/model")):
     rpi_model = os.popen('cat /proc/device-tree/model').read()
     # GPIO setup
@@ -95,10 +97,10 @@ class ICECommander:
         state = self.node.state
         if state.ice_state == RecipFlags.NOT_CONNECTED:
             self.rp_state = RPFlags.NOT_CONNECTED
-            logging.getLogger(__name__).warning("STATUS:\tice not connected")
+            logger.warning("STATUS\t-\tice not connected")
             return 0
         if time.time() - CanNode.last_message_receive_time > 1:
-            logging.critical("STATUS:\tToo long time without messages")
+            logging.critical("STATUS\t-\tToo long time without messages")
             CanNode.state = ICEState()
         if self.start_time <= 0 or state.ice_state > RPFlags.STARTING:
             self.ex_tracker.vin = self.configuration.min_vin_voltage > state.voltage_in
@@ -107,9 +109,9 @@ class ICECommander:
             if state.engaged_time is not None:
               eng_time_ex = state.engaged_time > 40 * 60 * 60 # 40 hours
               if eng_time_ex:
-                  logging.getLogger(__name__).warning(f"STATUS:\tEngaged time {state.engaged_time} is exeeded")
+                  logger.warning(f"STATUS\t-\tEngaged time {state.engaged_time} is exeeded")
             if self.ex_tracker.vin or self.ex_tracker.temp or eng_time_ex:
-                logging.getLogger(__name__).warning(f"STATUS:\tFlags exceeded: vin {self.ex_tracker.vin} temp {self.ex_tracker.temp} engaged time {eng_time_ex}")
+                logger.warning(f"STATUS\t-\tFlags exceeded: vin {self.ex_tracker.vin} temp {self.ex_tracker.temp} engaged time {eng_time_ex}")
             return sum([self.ex_tracker.vin, self.ex_tracker.temp,eng_time_ex])
         if self.rp_state == RPFlags.RUNNING:
             self.ex_tracker.rpm_min = 100 > state.rpm
@@ -127,7 +129,7 @@ class ICECommander:
         self.ex_tracker.vibration = self.node.has_imu and self.configuration.max_vibration < state.vibration
         flags_attr = vars(self.ex_tracker)
         if self.ex_tracker.vibration or self.ex_tracker.time or self.ex_tracker.rpm or self.ex_tracker.throttle or self.ex_tracker.temp or self.fuel_level_ex or self.ex_tracker.rpm_min:
-            logging.getLogger(__name__).warning(f"STATUS:\tFlags exceeded: vibration {self.ex_tracker.vibration} time {self.ex_tracker.time} rpm {self.ex_tracker.rpm}: {self.configuration.rpm, state.rpm} throttle {self.ex_tracker.throttle} temp {self.ex_tracker.temp} fuel level {self.fuel_level_ex} rpm min {self.ex_tracker.rpm_min}")
+            logger.warning(f"STATUS\t-\tFlags exceeded: vibration {self.ex_tracker.vibration} time {self.ex_tracker.time} rpm {self.ex_tracker.rpm}: {self.configuration.rpm, state.rpm} throttle {self.ex_tracker.throttle} temp {self.ex_tracker.temp} fuel level {self.fuel_level_ex} rpm min {self.ex_tracker.rpm_min}")
         return sum([flags_attr[name] for name in flags_attr.keys() if flags_attr[name]])
 
     def set_command(self) -> None:
@@ -151,34 +153,44 @@ class ICECommander:
             self.node.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
             # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
 
+    def stop(self) -> None:
+        self.rp_state = RPFlags.STOPPING
+        RaspberryMqttClient.to_stop = 0
+        self.send_log()
+        self.start_time = 0
+
     def set_state(self, cond_exceeded: bool) -> None:
 
         ice_state = self.node.state.ice_state
         rpm = self.node.state.rpm
         rp_state = self.rp_state
 
-        if cond_exceeded or rp_state > RPFlags.STARTING or ice_state == RecipFlags["FAULT"]:
+        if cond_exceeded:
+            logging.info(f"STOP\t-\tconditions exceeded")
+            self.stop()
+            RaspberryMqttClient.publish_stop_reason("Conditions exceeded")
+            return
+
+        if rp_state > RPFlags.STARTING or ice_state == RecipFlags["FAULT"]:
             self.start_time = 0
-            logging.getLogger(__name__).info(f"STOP:\tconditions exceeded {bool(cond_exceeded)}, rp state {rp_state}, ice state {ice_state}")
-            if self.rp_state < RPFlags.STOPPED:
-                self.rp_state = RPFlags.STOPPING
-                self.send_log()
-                return
+            logger.debug(f"STATE\t-\t stopped, rp state {rp_state.name}, ice state {ice_state.name}")
+            return
 
         if rp_state == RPFlags.STARTING:
             if time.time() - self.start_time > 30:
                 self.rp_state = RPFlags.STOPPING
-                logging.getLogger(__name__).error("STARTING:\tstart time exceeded")
+                logger.error("STARTING\t-\tstart time exceeded")
                 self.send_log()
                 return
             if ice_state == RecipFlags.RUNNING and rpm > 1500 and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
-                logging.getLogger(__name__).info("STARTING:\tstarted successfully")
+                logger.info("STARTING\t-\tstarted successfully")
                 self.rp_state = RPFlags.RUNNING
                 return
+
         if ice_state == RecipFlags.WAITING:
             self.prev_waiting_state_time = time.time_ns()
             self.rp_state = RPFlags.STARTING
-            logging.getLogger(__name__).info("WAITING:\twaiting state")
+            logger.info("WAITING\t-\twaiting state")
 
     async def spin(self) -> None:
         self.report_status()
@@ -186,11 +198,11 @@ class ICECommander:
         self.rp_state_start = self.rp_state
         ice_state = self.node.state.ice_state
         if ice_state == RecipFlags.NOT_CONNECTED:
-            logging.getLogger(__name__).warning("NOT_CONNECTED:\tNo ICE connected")
+            logger.warning("NOT_CONNECTED\t-\tNo ICE connected")
             self.rp_state = RPFlags.NOT_CONNECTED
             self.node.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
-            self.node.spin()
             self.report_status()
+            self.node.spin()
             await asyncio.sleep(1)
             return
 
@@ -202,7 +214,7 @@ class ICECommander:
         cond_exceeded = self.check_conditions()
         self.set_state(cond_exceeded)
         self.set_command()
-        logging.getLogger(__name__).info(f"CMD:\t{list(self.node.cmd.cmd)}")
+        logger.debug(f"CMD\t-\t{list(self.node.cmd.cmd)}")
         self.node.spin()
         await asyncio.sleep(0.05)
 
@@ -230,12 +242,12 @@ class ICECommander:
         if stop_switch:
             if self.rp_state == RPFlags.STARTING or self.rp_state == RPFlags.RUNNING:
                 self.rp_state = RPFlags.STOPPING
-            logging.getLogger(__name__).info(f"BUTTON\t|  Button released, state: {self.rp_state}")
+            logger.info(f"BUTTON\t  Button released, state: {self.rp_state}")
         else:
             if self.rp_state > RPFlags.STARTING:
                 self.rp_state = RPFlags.STARTING
                 self.start_time = time.time()
-            logging.getLogger(__name__).info(f"BUTTON\t|  Button pressed, state: {self.rp_state}")
+            logger.info(f"BUTTON\t  Button pressed, state: {self.rp_state}")
         self.last_button_cmd = stop_switch
 
     def check_mqtt_cmd(self):
@@ -243,12 +255,12 @@ class ICECommander:
             self.rp_state = RPFlags.STOPPING
             RaspberryMqttClient.to_stop = 0
             self.send_log()
-            logging.getLogger(__name__).info(f"MQTT:\tCOMMAND\t| stop, state: {self.rp_state}")
+            logger.info(f"MQTT\t-\tCOMMAND\t stop, state: {self.rp_state}")
         if RaspberryMqttClient.to_run:
             if self.rp_state > RPFlags.STARTING:
                 self.rp_state = RPFlags.STARTING
                 self.start_time = time.time()
-            logging.getLogger(__name__).info(f"MQTT:\tCOMMAND\t| run, state: {self.rp_state}")
+            logger.info(f"MQTT\t-\tCOMMAND\t run, state: {self.rp_state}")
             RaspberryMqttClient.to_run = 0
 
     def send_log(self) -> None:
@@ -257,7 +269,7 @@ class ICECommander:
         RaspberryMqttClient.rp_logs["output"] = CanNode.output_filename
         RaspberryMqttClient.publish_log()
         CanNode.change_file()
-        logging.getLogger(__name__).info(f"SEND:\tlog {CanNode.output_filename}")
+        logger.info(f"SEND\t-\tlog {CanNode.output_filename}")
 
     async def run(self) -> None:
         self.send_log()
@@ -265,5 +277,5 @@ class ICECommander:
             try:
                 await self.spin()
             except Exception as e:
-                logging.getLogger(__name__).error(f"{e}\n{traceback.format_exc()}")
+                logger.error(f"{e}\n{traceback.format_exc()}")
                 continue

@@ -7,8 +7,11 @@ import datetime
 import logging.config
 from os import path
 import os
-import sys
 import yaml
+
+for name, logger in logging.root.manager.loggerDict.items():
+    logger.disabled=True
+    logger.propagate=False
 
 # open the file in read mode
 log_conf_file = None
@@ -33,33 +36,5 @@ def getLogger(filepath):
     # Apply the modified logging configuration
     logging.config.dictConfig(log_conf_file)
     logger = logging.getLogger(name)
-    logger.propagate = True
+
     return logger
-
-
-import concurrent.futures 
-import logging
-
-class AsyncLogger():
-    def __init__(self, name):
-        self.name = name
-        self.logger = logging.getLogger(name)
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1) 
-
-    def info(self, msg, *args):
-        self.executor.submit(self.logger, msg, *args)
-
-    def debug(self, msg, *args):
-        self.executor.submit(self.logger, msg, *args)
-
-    def warning(self, msg, *args):
-        self.executor.submit(self.logger, msg, *args)
-
-    def error(self, msg, *args):
-        self.executor.submit(self.logger, msg, *args)
-
-    def critical(self, msg, *args):
-        self.executor.submit(self.logger, msg, *args)
-
-    def exception(self, msg, *args, exc_info=True):
-        self.executor.submit(self.logger, msg, *args, exc_info=exc_info)

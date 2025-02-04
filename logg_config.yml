@@ -1,20 +1,18 @@
 version: 1
-disable_existing_loggers: false
+disable_existing_loggers: true
+propagate: false
 
 handlers:
   fileHandler:
     class: logging.FileHandler  # Change to FileHandler programmatically
     formatter: brief
     filename: placeholder.log  # Placeholder to be replaced programmatically
+    level: DEBUG
 
   consoleHandler:
     class: logging.StreamHandler
     formatter: precise
-
-loggers:
-  root:
-    level: DEBUG
-    handlers: [fileHandler, consoleHandler]
+    level: INFO
 
 # Root logger should be specified if common settings are needed
 root:
@@ -23,11 +21,8 @@ root:
 
 formatters:
   brief:
-    format: "%(asctime)s | %(name)-12s |  %(levelname)-6s | %(message)s"
+    format: "%(asctime)s - %(levelname)-8s - %(filename)s - %(message)s"
     datefmt: "%Y-%m-%d %H:%M:%S"
   precise:
-    format: "%(asctime)s | %(name)-12s | %(levelname)-8s | %(filename)-20s | %(message)s"
+    format: "%(asctime)s - %(levelname)-8s - %(filename)s - %(message)s"
     datefmt: "%H:%M:%S"
-  rawMessage:
-    format: "%(asctime)s | %(name)-12s |  %(message)s"
-    datefmt: "%Y-%m-%d %H:%M:%S"
