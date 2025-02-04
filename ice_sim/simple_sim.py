@@ -6,39 +6,38 @@ import numpy as np
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from common.ICEState import Health, Mode
-from ice_sim.test_commander import ICE_AIR_CHANNEL, ICE_CMD_CHANNEL, ICENodeStatus
+from common.ICEState import Health, Mode, RecipState
+from ice_sim.test_commander import ICE_AIR_CHANNEL, ICE_CMD_CHANNEL
 
 class Engine:
     def __init__(self):
-        self.state = ICENodeStatus.STOPPED
+        self.state = RecipState.STOPPED
         self.rpm = 0
         self.n_tries = 0
         self.prev_time = 0
 
     def update(self, cmd: int, air_cmd: int) -> None:
         if cmd == 0:
-            self.state = ICENodeStatus.STOPPED
+            self.state = RecipState.STOPPED
             self.rpm = 0
             return
         if self.n_tries > 2:
             self.rpm = cmd + np.sin((time.time() % 1000) * np.pi / 1000) * 500
-            self.state = ICENodeStatus.RUNNING
+            self.state = RecipState.RUNNING
             return
 
-        if time.time() - self.prev_time > 2:
-            if self.rpm == 0:
-                self.state = ICENodeStatus.RUNNING
-                self.rpm = 3000
-                self.n_tries += 1
+        if time.time() - self.prev_time > 1.5:
+            if self.rpm > 0:
                 self.prev_time = time.time()
+                self.state = RecipState.WAITING
+                self.rpm = 0
+                print("WAITING")
                 return
-
+            self.state = RecipState.RUNNING
+            self.rpm = 3000
+            self.n_tries += 1
             self.prev_time = time.time()
-            self.state = ICENodeStatus.WAITING
-            self.rpm = 0
-            return
-
+            print("RUNNING")
 
 class ICENODE:
     min_command: int = 2000
@@ -52,7 +51,7 @@ class ICENODE:
         self.node = DronecanNode(node_id= 101)
         self.dt = 0.05
         self.rpm = 0
-        self.status = ICENodeStatus.STOPPED
+        self.status = RecipState.STOPPED
         self.temp: float = 0
         self.int_temp: float = 0
 
@@ -99,7 +98,7 @@ class ICENODE:
             self.node.publish(dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=0))
 
 def get_raw_command(res: dronecan.node.TransferEvent) -> int:
-    if res is None:
+    if len(res.message.cmd) < ICE_CMD_CHANNEL:
         return 0
     cmd = res.message.cmd[ICE_CMD_CHANNEL]
     ICENODE.command = cmd

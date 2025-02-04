@@ -9,11 +9,11 @@ import sys
 from typing import Any, Dict
 from paho.mqtt.client import MQTTv311, Client
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from common.RPStates import RPFlags
+from common.RPStates import RunnerState
 
 class MqttClient:
     client = Client(client_id="bot", clean_session=True, userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
-    rp_states: Dict[int, RPFlags] = {}
+    rp_states: Dict[int, RunnerState] = {}
     rp_status: Dict[int, str] = {}
     rp_logs: Dict[int, str] = {}
     rp_configuration: Dict[int, Dict[str, Any]] = {}
