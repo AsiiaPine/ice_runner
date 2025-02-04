@@ -138,17 +138,16 @@ class Engine:
                 self.rpm = 0
                 return
         # print(self.rpm, self.ice_acceleration * dt, cmd, (cmd - self.rpm) * 0.4, self.rpm + self.ice_acceleration * dt + (cmd - self.rpm) * 0.1)
-        print(self.rpm, self.ice_acceleration * dt, (cmd - self.rpm) * 0.2)
         self.rpm = int(max(0, self.rpm + self.ice_acceleration * dt + (cmd - self.rpm) * 0.2))
 
     def random_rpm_change(self) -> float:
         rmp = secrets.randbelow(100)
-        self.rpm = max(0, min(self.rpm + rmp, 8500))
+        i = secrets.choice([1, -1])
+        self.rpm = max(0, min(self.rpm + i*rmp, 8500))
 
     def random_d_rpm_change(self) -> int:
         # d_rpm = secrets.randbelow(100)
-        d_rpm = np.sin((time.time() % 100) / (2*3)) * 10
-        # return d_rpm * secrets.choice([1, -1])
+        d_rpm = np.sin((time.time() % 100) / (2*3))
         return d_rpm
 
 class ICENODE:
@@ -200,7 +199,7 @@ class ICENODE:
         self.node.publish(msg)
 
     def spin(self) -> None:
-        self.node.node.spin(0.05)
+        self.node.node.spin(0)
 
         self.engine.update(cmd=self.command, air_cmd=self.air_cmd)
         if time.time() - self.prev_broadcast_time > self.status_timeout:

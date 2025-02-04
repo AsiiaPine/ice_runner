@@ -7,7 +7,6 @@ import copy
 from enum import IntEnum
 from typing import Any, Dict
 import logging
-import logging_configurator
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class Health(IntEnum):
     HEALTH_ERROR = 2
     HEALTH_CRITICAL = 3
 
-class RecipFlags(IntEnum):
+class RecipState(IntEnum):
     NOT_CONNECTED = -1
     STOPPED = 0
     RUNNING = 1
@@ -33,7 +32,7 @@ class RecipFlags(IntEnum):
 
 class ICEState:
     def __init__(self) -> None:
-        self.ice_state: RecipFlags = RecipFlags.NOT_CONNECTED
+        self.ice_state: RecipState = RecipState.NOT_CONNECTED
         self.rpm: int = 0
         self.throttle: int = 0
         self.temp: int = 0
@@ -55,7 +54,7 @@ class ICEState:
 
     def update_with_resiprocating_status(self, msg) -> None:
         logging.getLogger(__name__).info(f"UPD STATE: {msg.message.state}")
-        self.ice_state = RecipFlags(msg.message.state)
+        self.ice_state = RecipState(msg.message.state)
         self.rpm = msg.message.engine_speed_rpm
         self.throttle = msg.message.throttle_position_percent
         self.temp = msg.message.oil_temperature
@@ -69,14 +68,12 @@ class ICEState:
         self.vibration = msg.message.integration_interval
 
     def update_with_node_status(self, msg) -> None:
-        print("MODE\t| ", msg.message)
         if msg.message.mode > self.mode:
             self.mode = Mode(msg.message.mode)
-            print("MODE\t| ", self.mode)
         if msg.message.health > self.health:
             self.health = Health(msg.message.health)
         if self.mode > Mode.MODE_SOFTWARE_UPDATE or self.health > Health.HEALTH_WARNING:
-            self.ice_state = RecipFlags.FAULT
+            self.ice_state = RecipState.FAULT
 
     def update_with_fuel_tank_status(self, msg) -> None:
         self.fuel_level = msg.message.available_fuel_volume_cm3
