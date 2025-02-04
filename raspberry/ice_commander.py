@@ -167,8 +167,9 @@ class ICECommander:
 
         if cond_exceeded:
             logging.info(f"STOP\t-\tconditions exceeded")
+            logging.debug(f"STOP\t-\tconditions: {vars(self.ex_tracker)}")
             self.stop()
-            RaspberryMqttClient.publish_stop_reason("Conditions exceeded")
+            RaspberryMqttClient.publish_stop_reason(f"Conditions exceeded: {vars(self.ex_tracker)}")
             return
 
         if rp_state > RPFlags.STARTING or ice_state == RecipFlags["FAULT"]:
