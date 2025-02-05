@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
@@ -8,8 +7,7 @@ import logging
 import re
 import sys
 import os
-
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 from aiogram import Router, Dispatcher, types, F, html
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
@@ -17,7 +15,7 @@ from aiogram.fsm.strategy import FSMStrategy
 from aiogram.types import (
     Message,
     ReplyKeyboardRemove,
-    FSInputFile
+    FSInputFile,
 )
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -26,6 +24,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 import yaml
 
+from bot.telegram.filters import ChatIdFilter
 from mqtt.client import MqttClient
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RunnerState
@@ -168,8 +167,9 @@ async def process_configuration(message: types.Message, state: FSMContext):
     # The configuration is not implemented
     pass
 
-@form_router.message(Command(commands=["choose_rp", "выбрать_ДВС"]))
+@form_router.message(Command(commands=["choose_rp", "выбрать_ДВС"]), ChatIdFilter())
 async def choose_rp_id(message: types.Message, state: FSMContext) -> None:
+    await message.answer(f"messid {message.chat.id}")
     await state.set_state(Conf.rp_id)
     await show_options(message, state)
 
@@ -197,7 +197,7 @@ async def command_conf_handler(message: types.Message, state: FSMContext):
     # The configuration is not implemented
     pass
 
-@form_router.message(Command(commands=["cancel", "отмена"]))
+@form_router.message(Command(commands=["cancel", "отмена"]), ChatIdFilter())
 async def cancel_handler(message: Message, state: FSMContext) -> None:
     """
     Allow user to cancel any action
@@ -214,7 +214,7 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
         reply_markup=ReplyKeyboardRemove(),
     )
 
-@form_router.message(Command(commands=["run", "запустить"], ignore_case=True))
+@form_router.message(Command(commands=["run", "запустить"], ignore_case=True), ChatIdFilter())
 async def command_run_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/run` command
@@ -266,7 +266,7 @@ async def command_help_handler(message: Message) -> None:
     await message.answer(
         "Список команд:\n" + help_str, parse_mode=ParseMode.HTML)
 
-@dp.message(Command(commands=["show_all", "показать_все"]))
+@dp.message(Command(commands=["show_all", "показать_все"]), ChatIdFilter())
 async def command_show_all_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/show_all` command
@@ -308,7 +308,7 @@ async def command_show_all_handler(message: Message, state: FSMContext) -> None:
     res = await message.answer(message_text, parse_mode=ParseMode.HTML)
     await state.set_data({})
 
-@form_router.message(Command(commands=["status", "статус"]))
+@form_router.message(Command(commands=["status", "статус"]), ChatIdFilter())
 async def command_status_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/status` command
@@ -356,7 +356,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
         response = await res.edit_text(message_text, parse_mode=ParseMode.HTML)
         await asyncio.sleep(0.5)
 
-@form_router.message(Command(commands=["log", "лог"]))
+@form_router.message(Command(commands=["log", "лог"]), ChatIdFilter())
 async def command_log_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/log` command
@@ -382,7 +382,7 @@ async def command_log_handler(message: Message, state: FSMContext) -> None:
     else:
         await message.answer("Лог не найден")
 
-@form_router.message(Command(commands=["stop", "стоп"]))
+@form_router.message(Command(commands=["stop", "стоп"]), ChatIdFilter())
 async def command_stop_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/stop` command
@@ -403,7 +403,7 @@ async def command_stop_handler(message: Message, state: FSMContext) -> None:
         await asyncio.sleep(1)
     await message.answer(f"Остановлено")
 
-@form_router.message(Command(commands=["server", "сервер"]))
+@form_router.message(Command(commands=["server", "сервер"]), ChatIdFilter())
 async def command_server(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/server` command
@@ -417,8 +417,14 @@ async def command_server(message: Message, state: FSMContext) -> None:
         await message.answer("Сервер не подключен")
     MqttClient.server_connected = False
 
-@form_router.message(F.text.lower().not_in(commands_discription.keys()))
+@form_router.message(F.text.lower().not_in(commands_discription.keys()), ChatIdFilter())
 async def unknown_message(msg: types.Message, state: FSMContext):
     message_text = 'Я не знаю, что с этим делать \nЯ просто напомню, что есть команда /help'
-    logging.getLogger(__name__).warning(msg.text, await state.get_state())
+    logging.getLogger(__name__).warning(msg.text)
+    await msg.reply(message_text, parse_mode=ParseMode.HTML)
+
+@form_router.message(ChatIdFilter(invert=True))
+async def unknown_user(msg: types.Message, state: FSMContext):
+    message_text = 'Я вас не знаю, уходите'
+    logging.getLogger(__name__).warning(msg.text)
     await msg.reply(message_text, parse_mode=ParseMode.HTML)
