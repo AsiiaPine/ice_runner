@@ -16,10 +16,10 @@ import telegram.handlers as telegram_
 from telegram.handlers import *
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import logging
+from telegram.scheduler import Scheduler
+import logging_configurator
 
-# import logging_configurator
-
-# logger = logging_configurator.getLogger(__file__)
+logger = logging_configurator.getLogger(__file__)
 
 async def start_bot() -> None:
     os.environ.clear()
@@ -34,6 +34,7 @@ async def start_bot() -> None:
     await mqtt_.MqttClient.connect(server_ip=SERVER_IP, port=SERVER_PORT)
     mqtt_.add_handlers(mqtt_.MqttClient.client)
     # Run both the Telegram bot and MQTT listener in parallel
+    Scheduler.start(bot, CHAT_ID)
     await asyncio.gather(
         telegram_.dp.start_polling(bot),
         mqtt_.MqttClient.start()

@@ -28,6 +28,7 @@ class ServerMqttClient:
     rp_states: Dict[int, str] = {}
     rp_cur_setpoint: Dict[int, float] = {}
     rp_logs: Dict[int, Dict[str, str]] = {}
+    rp_stop_reason: Dict[int, str] = {}
     last_ready_transmit = 0
     rp_configuration: Dict[int, IceRunnerConfiguration] = {}
 
@@ -102,6 +103,12 @@ def handle_raspberry_pi_log(client, userdata, msg):
     ServerMqttClient.rp_logs[rp_id] = msg.payload.decode()
     ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/log", str(ServerMqttClient.rp_logs[rp_id]))
 
+def handle_raspberry_pi_stop_reason(client, userdata, msg):
+    rp_id = int(msg.topic.split("/")[2])
+    logging.info(f"Received\t| Raspberry Pi {rp_id} send stop reason")
+    ServerMqttClient.rp_stop_reason[rp_id] = msg.payload.decode()
+    ServerMqttClient.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/stop_reason", ServerMqttClient.rp_stop_reason[rp_id])
+
 def handle_bot_usr_cmd_log(client, userdata, msg):
     rp_id = int(msg.payload.decode())
     logging.info(f"Recieved\t| Bot send command {rp_id} log")
@@ -161,6 +168,7 @@ def start() -> None:
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/dronecan/#", handle_raspberry_pi_dronecan_message)
 
     ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/config", handle_raspberry_pi_configuration)
+    ServerMqttClient.client.message_callback_add("ice_runner/raspberry_pi/+/stop_reason", handle_raspberry_pi_stop_reason)
 
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/state", handle_bot_usr_cmd_state)
     ServerMqttClient.client.message_callback_add("ice_runner/bot/usr_cmd/log", handle_bot_usr_cmd_log)
