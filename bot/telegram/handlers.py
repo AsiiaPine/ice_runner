@@ -4,10 +4,10 @@
 
 import asyncio
 import logging
-import re
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 import sys
 import os
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple
 from aiogram import Router, Dispatcher, types, F, html
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
@@ -18,7 +18,6 @@ from aiogram.types import (
     FSInputFile,
 )
 from aiogram.fsm.storage.memory import MemoryStorage
-
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -74,7 +73,6 @@ commands_discription : Dict[str, str] = {
 dp = Dispatcher(storage=MemoryStorage(), fsm_strategy=FSMStrategy.CHAT)
 form_router = Router()
 dp.include_router(form_router)
-
 configuration: Dict[int, Dict[str, Any]] = {}
 configuration_file_path: str = None
 
@@ -149,13 +147,19 @@ async def show_options(message: types.Message, state: FSMContext) -> None:
     if len(available_rps) == 0:
         await message.answer("Нет доступных обкатчиков")
         return
-    kb = [[types.KeyboardButton(text=str(rp_id) + "\tStatus: " + MqttClient.rp_states[rp_id].name) for rp_id in available_rps]]
-    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
-    await message.reply("Выберите ID обкатчика", reply_markup=keyboard)
-    await state.set_state(Conf.rp_id)
+    builder = InlineKeyboardBuilder()
+
+    for rp_id in available_rps:
+        builder.add(types.InlineKeyboardButton(
+            text= f"{rp_id}\tStatus: { MqttClient.rp_states[rp_id].name}",
+            callback_data=str(rp_id))
+        )
+    await message.answer(
+        "Нажмите на кнопку, чтобы выбрать ID обкатчика",
+        reply_markup=builder.as_markup()
+    )
 
 class Conf(StatesGroup):
-    rp_id = State()
     conf_state = State()
     status_state = State()
     show_all_state = State()
@@ -169,26 +173,12 @@ async def process_configuration(message: types.Message, state: FSMContext):
 
 @form_router.message(Command(commands=["choose_rp", "выбрать_ДВС"]), ChatIdFilter())
 async def choose_rp_id(message: types.Message, state: FSMContext) -> None:
-    await message.answer(f"messid {message.chat.id}")
-    await state.set_state(Conf.rp_id)
     await show_options(message, state)
 
-@form_router.message(Conf.rp_id)
-async def rp_id_handler(message: types.Message, state: FSMContext) -> None:
-    id = message.text.split(" ")[0]
-    if not id.isdigit():
-        if "/cancel" in message.text.casefold() or "cancel" in message.text.casefold():
-            await cancel_handler(message, state)
-        else:
-            await message.reply("Пожалуйста, введите числовой ID обкатчика или отмените команду с помощью /cancel.")
-        return
-
-    rp_id_num = int(id)
-    if rp_id_num not in MqttClient.rp_status.keys():
-        await message.reply("Обкатчик с таким ID не найден")
-        return
-    await message.reply(f"ID выбранного обкатчика: {rp_id_num}")
-    await state.clear()
+@form_router.callback_query(F.data.isdigit())
+async def choose_rp_id_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    rp_id_num = int(callback_query.data)
+    await callback_query.message.answer(f"ID выбранного обкатчика: {rp_id_num}")
     await state.set_data({"rp_id": rp_id_num})
 
 # Commands handlers
@@ -223,12 +213,15 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         await show_options(message, state)
         return
     rp_id = (await state.get_data())["rp_id"]
-    rp_state = MqttClient.rp_states[rp_id]
-    await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state.name}\n")
+    rp_state = MqttClient.rp_states[rp_id].name
+    await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
     await message.answer("Настройки обкатки:" + get_configuration_str(rp_id))
     await state.set_state(Conf.starting_state)
     if rp_state == "RUNNING" or rp_state == "STARTING":
-        await message.answer(f"Обкатка уже запущена")
+        await message.answer(f"Ошибка\nОбкатка уже запущена")
+        return
+    if rp_state == "NOT_CONNECTED":
+        await message.answer(f"Ошибка\nОбкатчик не подключен")
         return
     await message.answer(f"Отправьте /cancel или /отмена чтобы отменить запуск обкатки. После запуска отправьте /stop или /стоп чтобы остановить ее")
     i = 0
