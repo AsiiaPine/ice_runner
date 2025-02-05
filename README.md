@@ -1,6 +1,8 @@
 # ice_runner
 
-The project is a contoller for Internal Combustion engines (ICE) runners. Each ICE is connected to RaccoonLab Dronecan ice_node and mini_node. The nodes are connected to RaspberryPi. It sends ICE status and listens to commands from specific topic of MQTT server. User may send commands to the Raspberry Pi using Telegram bot.
+The project is a contoller for Internal Combustion engines (ICE) runners. Each ICE is connected to RaccoonLab Dronecan ice_node. The ice_nodes are connected to individual Raspberry Pi. 
+
+One can control the ICE runners using the telegram bot. The bot can send commands to the Raspberry Pi and receive the statuses and logs from the Raspberry Pi.
 
 ## Requirements
 
@@ -8,12 +10,13 @@ The project is a contoller for Internal Combustion engines (ICE) runners. Each I
 - ICE block
 
 ## How to run the project 
-0. Specify telergam bot token and mqtt server ip in the file `.env`.
+0. Specify telergam bot token, chat_id and mqtt server ip in the file `.env`.
 e.g.
 ```
-BOT_TOKEN=*************
+BOT_TOKEN=***
 SERVER_PORT = 1883
 SERVER_IP=localhost
+CHAT_ID=***
 ```
 
 1. Raspberry Pi ICE controller installation

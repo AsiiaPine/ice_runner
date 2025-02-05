@@ -5,42 +5,20 @@
 
 import argparse
 import asyncio
-import datetime
 import os
 from pathlib import Path
 import sys
 import time
 from dotenv import load_dotenv
+import yaml
 from mqtt_client import RaspberryMqttClient, start
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from ice_commander import ICECommander
-import logging
 import logging_configurator
 
-conf_params_description = {
-"rpm":
-    {"default": 4500, "help": "Целевые обороты ДВС"},
-"max-temperature":
-    {"default": 190, "help": "Максимальная допустимая температура ДВС, после которой скрипт завершит выполнение"},
-"max-gas-throttle":
-    {"default": 100, "help": "Максимальное допустимый уровень газовой заслонки в процентах. Значение 100 означает, что нет ограничений."},
-"report-period":
-    {"default": 600, "help": "Период публикации статус сообщения в секундах "},
-"chat-id":
-    {"default": 0, "help": "Идентификатор телеграм-чата, с которым бот будет взаимодействовать."},
-"time":
-    {"default": 600, "help": "Время в секундах, через которое скрипт автоматически закончит свое выполнение"},
-"max-vibration":
-    {"default": 1000, "help": "Максимальный допустимый уровень вибрации"},
-"min-fuel-volume":
-    {"default": 0, "help": "Минимальный уровень топлива (процент или cm3), после которого прекращаем обкатку/выдаем предупреждение."},
-"mode":
-    {"default": 0, "help": "Есть 3 варианта работы: 0 - просто сразу же выставляем команду, 1 - ПИД-регулятор на стороне скрипта, 2 - ПИД-регулятор на стороне платы"},
-"command":
-    {"default": 0, "help": "Команда на N оборотов (RPMCommand) без ПИД-регулятора"}
-}
+conf_params_description = yaml.safe_load(open('ice_configuration.yml'))
 
 logger = logging_configurator.getLogger(__file__)
 
