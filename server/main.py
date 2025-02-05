@@ -3,14 +3,11 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import datetime
 import logging
 import os
 import sys
 import time
-from typing import Any, Dict
 from dotenv import load_dotenv
-from paho.mqtt.client import MQTTv311
 from server_mqtt_client import ServerMqttClient, start
 import logging_configurator
 logger = logging_configurator.getLogger(__file__)
