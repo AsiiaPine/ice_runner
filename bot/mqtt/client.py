@@ -17,6 +17,7 @@ class MqttClient:
     rp_status: Dict[int, str] = {}
     rp_logs: Dict[int, str] = {}
     rp_configuration: Dict[int, Dict[str, Any]] = {}
+    rp_stop_handlers: Dict[int, str] = {}
     server_connected = False
 
     @classmethod

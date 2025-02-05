@@ -1,6 +1,6 @@
 version: 1
 disable_existing_loggers: true
-propagate: false
+# propagate: false
 
 handlers:
   fileHandler:
