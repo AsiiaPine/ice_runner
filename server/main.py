@@ -8,28 +8,29 @@ import os
 import sys
 import time
 from dotenv import load_dotenv
-from server_mqtt_client import ServerMqttClient, start
+from mqtt.handlers import ServerMqttClient
+sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import logging_configurator
-logger = logging_configurator.getLogger(__file__)
-from pathlib import Path
 
+logger = logging_configurator.getLogger(__file__)
 
 def start_server() -> None:
     os.environ.clear()
     load_dotenv()
-    TOKEN = os.getenv("BOT_TOKEN")
-    SERVER_IP = os.getenv("SERVER_IP")
-    SERVER_PORT = int(os.getenv("SERVER_PORT"))
+    ServerIP = os.getenv("SERVER_IP")
+    ServerPort = int(os.getenv("SERVER_PORT"))
 
     while True:
-        ServerMqttClient.connect(SERVER_IP, SERVER_PORT)
+        ServerMqttClient.connect(ServerIP, ServerPort)
         logger.info("Started")
-        start()
+        ServerMqttClient.start()
+
         last_keep_alive = 0
         while ServerMqttClient.client.is_connected: #wait in loop
             if time.time() - last_keep_alive > 0.5:
                 for i in ServerMqttClient.rp_status.keys():
-                    ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{i}/command", "keep alive")
+                    ServerMqttClient.client.publish(
+                                        f"ice_runner/server/rp_commander/{i}/command", "keep alive")
                 last_keep_alive = time.time()
             pass
         logger.error("STATUS\t| Disconnected")

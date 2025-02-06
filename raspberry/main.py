@@ -11,11 +11,10 @@ import sys
 import time
 from dotenv import load_dotenv
 import yaml
-from mqtt_client import RaspberryMqttClient, start
-
+from mqtt.handlers import MqttClient
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
-from ice_commander import ICECommander
+from raspberry.can_control.ice_commander import ICECommander
 import logging_configurator
 
 conf_params_description = yaml.safe_load(open('ice_configuration.yml'))
@@ -31,12 +30,12 @@ async def main(id: int) -> None:
     load_dotenv(dotenv_path, verbose=True)
     SERVER_IP = os.getenv("SERVER_IP")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
-    RaspberryMqttClient.connect(id, SERVER_IP, SERVER_PORT)
+    MqttClient.connect(id, SERVER_IP, SERVER_PORT)
 
     ice_commander = ICECommander(reporting_period=2,
                                  configuration=IceRunnerConfiguration(args.__dict__))
 
-    await asyncio.gather(ice_commander.run(), start())
+    await asyncio.gather(ice_commander.run(), MqttClient.start())
 
 if __name__ == "__main__":
     parser: argparse.ArgumentParser = argparse.ArgumentParser(description='Raspberry Pi CAN node for automatic ICE runner')
@@ -57,5 +56,5 @@ if __name__ == "__main__":
         print("RP\t-\tNo ID provided, exiting")
         sys.exit(-1)
     configuration = IceRunnerConfiguration(args.__dict__)
-    RaspberryMqttClient.configuration = configuration
+    MqttClient.configuration = configuration
     asyncio.run(main(args.id))
