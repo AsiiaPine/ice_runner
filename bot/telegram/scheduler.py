@@ -49,6 +49,9 @@ class Scheduler:
     @classmethod
     async def send_log(cls, rp_id):
         log_files: Dict = MqttClient.rp_logs[rp_id]
+        if not log_files:
+            logging.debug("No logs to send")
+            return
         for name, log_file in log_files.items():
             logging.info(f"Sending log {name}")
             try:
@@ -56,12 +59,13 @@ class Scheduler:
                 await cls.bot.send_document(cls.CHAT_ID, document=log, caption=name)
             except Exception as e:
                 await cls.bot.send_message(cls.CHAT_ID, f"Ошибка при отправке лога {name}: {e}")
-                logging.getLogger(__name__).error(f"Error sending log {name}: {e}")
+                logging.error(f"Error sending log {name}: {e}")
         MqttClient.rp_logs[rp_id] = {}
 
     @classmethod
     async def send_stop_reason(cls, rp_id: int):
         if rp_id not in MqttClient.rp_stop_handlers:
+            logging.debug("No stop reason to send")
             return
         stop_reason = MqttClient.rp_stop_handlers[rp_id]
         await cls.bot.send_message(cls.CHAT_ID, f"Остановлено по причине: {stop_reason}")

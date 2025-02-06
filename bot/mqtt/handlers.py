@@ -40,7 +40,7 @@ def handle_commander_log(client, userdata, message):
 
 def handle_commander_stop_handlers(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
-    logging.getLogger(__name__).info(f"received STOP_HANDLERS from Raspberry Pi {message.payload.decode()}")
+    logging.getLogger(__name__).info(f"received STOP_REASON from Raspberry Pi {rp_pi_id} {message.payload.decode()}")
     MqttClient.rp_stop_handlers[rp_pi_id] = message.payload.decode()
 
 def add_handlers(client: Client) -> None:
