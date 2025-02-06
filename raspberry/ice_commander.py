@@ -163,7 +163,7 @@ class ICECommander:
         rpm = self.node.state.rpm
         run_state = self.run_state
 
-        if cond_exceeded and run_state != RunnerState.STOPPED:
+        if cond_exceeded:
             logging.info(f"STOP\t-\tconditions exceeded")
             logging.debug(f"STOP\t-\tconditions: {vars(self.ex_tracker)}")
             self.stop()
@@ -187,7 +187,7 @@ class ICECommander:
                 self.prev_waiting_state_time = 0
                 return
 
-        if ice_state == RecipState.WAITING and self.prev_waiting_state_time + 3*10**9 < time.time_ns():
+        if ice_state == RecipState.WAITING:
             self.prev_waiting_state_time = time.time_ns()
             self.run_state = RunnerState.STARTING
             logging.info("WAITING\t-\twaiting state")
@@ -221,7 +221,6 @@ class ICECommander:
     def report_state(self) -> None:
         if time.time() - self.prev_state_report_time > 0.5:
             RaspberryMqttClient.publish_state(self.run_state.value)
-            self.prev_state_report_time = time.time()
 
     def report_status(self) -> None:
         if self.prev_report_time + self.reporting_period < time.time():
@@ -255,8 +254,7 @@ class ICECommander:
         if RaspberryMqttClient.to_stop:
             self.run_state = RunnerState.STOPPING
             RaspberryMqttClient.to_stop = 0
-            self.stop()
-            RaspberryMqttClient.publish_stop_reason(f"Got stop command from MQTT")
+            self.send_log()
             logging.info(f"MQTT\t-\tCOMMAND\t stop, state: {self.run_state}")
         if RaspberryMqttClient.to_run:
             if self.run_state > RunnerState.STARTING:
