@@ -306,7 +306,6 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/status` command
     """
-    await state.set_state()
     await state.set_state(Conf.status_state)
     data = await state.get_data()
     data["last_status_update"] = None
