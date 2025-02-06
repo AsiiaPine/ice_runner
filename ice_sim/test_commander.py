@@ -174,8 +174,8 @@ class ICENODE:
         self.vibration: float = 0
         self.spark_ignition_time: float = 0
         self.engaged_time: float = 0
-        self.mode = Mode.MODE_OPERATIONAL
-        self.health = Health.HEALTH_OK
+        self.node.node.mode = Mode.MODE_OPERATIONAL
+        self.node.node.health = Health.HEALTH_OK
         self.prev_broadcast_time = 0
         self.engine = Engine()
 
@@ -205,7 +205,6 @@ class ICENODE:
         if time.time() - self.prev_broadcast_time > self.status_timeout:
             self.prev_broadcast_time = time.time()
             self.node.publish(self.create_ice_reciprocating_status())
-            self.node.publish(dronecan.uavcan.protocol.NodeStatus(mode=0))
             self.node.publish(dronecan.uavcan.equipment.ice.FuelTankStatus(available_fuel_volume_percent=100))
             self.node.publish(dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=0))
 

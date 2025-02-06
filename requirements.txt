@@ -17,6 +17,7 @@ pytest-asyncio
 # bot
 pyTelegramBotAPI
 aiogram==3.16
+apscheduler
 
 #rpi
 RPi.GPIO

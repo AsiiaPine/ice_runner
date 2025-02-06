@@ -17,18 +17,18 @@ class Scheduler:
     bot: Bot
     scheduler: AsyncIOScheduler
     CHAT_ID: int
-    jobs: Dict[int, Job]
+    jobs: Dict[int, Job] = {}
 
     @classmethod
     def start(cls, bot: Bot, chat_id: int):
         cls.bot: Bot = bot
         cls.scheduler: AsyncIOScheduler = AsyncIOScheduler(timezone='Europe/Moscow')
-        cls.jobs = {}
         cls.CHAT_ID = chat_id
         cls.scheduler.start()
 
     @classmethod
-    def wait_untill_stop(cls, rp_id: int):
+    def guard(cls, rp_id: int):
+        """The function guards the RP state and waits until it stops"""
         cls.jobs[rp_id] = cls.scheduler.add_job(cls.check_rp_state, 'interval', seconds=1, kwargs={"rp_id": rp_id})
         logging.info(f"Waiting for RP {rp_id} to stop")
 
@@ -45,6 +45,9 @@ class Scheduler:
             await cls.send_stop_reason(rp_id=rp_id)
             cls.jobs[rp_id].pause()
             cls.jobs[rp_id].remove()
+            cls.jobs.pop(rp_id)
+            MqttClient.rp_states.pop(rp_id)
+            MqttClient.rp_logs.pop(rp_id)
 
     @classmethod
     async def send_log(cls, rp_id):
