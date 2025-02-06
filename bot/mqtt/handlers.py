@@ -12,7 +12,7 @@ def handle_commander_state(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     if rp_pi_id not in MqttClient.rp_states.keys():
         MqttClient.rp_states[rp_pi_id] = RunnerState.NOT_CONNECTED
-        Scheduler.wait_untill_stop(rp_pi_id)
+        Scheduler.guard(rp_pi_id)
     state = RunnerState(int(message.payload.decode()))
     MqttClient.rp_states[rp_pi_id] = state
     logging.getLogger(__name__).debug(f"received RP state from Raspberry Pi {rp_pi_id}, state: {state.name}")
