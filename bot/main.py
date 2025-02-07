@@ -1,4 +1,4 @@
-"""The module is used to start the telegram bot with the specified chat id and its MQTT client"""
+"""The script is used to start the telegram bot with the specified chat id and its MQTT client"""
 
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.

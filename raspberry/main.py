@@ -1,4 +1,4 @@
-"""The module is used to start the engine running-in."""
+"""The script is used to start the engine running-in."""
 
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
