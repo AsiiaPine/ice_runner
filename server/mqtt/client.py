@@ -1,3 +1,5 @@
+"""The module defines mqtt client for server"""
+
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
@@ -6,20 +8,20 @@ import os
 import sys
 import logging
 from typing import Any, Dict
-from paho import mqtt
 from paho.mqtt.client import MQTTv311, Client
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 
 def on_disconnect(client: Client, userdata: Any, rc: int) -> None:
     """The callback for mqtt client disconnection"""
-    logging.getLogger(__name__).error("Disconnected")
+    del userdata, client
+    logging.error("Disconnected")
     if rc != 0:
         logging.error("Unexpected MQTT disconnection. Will auto-reconnect")
 
 class ServerMqttClient:
     """The class for server mqtt client"""
-    client: Client = Client(client_id="server",clean_session=False, 
+    client: Client = Client(client_id="server",clean_session=False,
                             userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
     rp_messages: Dict[int, Dict[str, Dict[str, Any]]] = {}
     rp_status: Dict[int, Any] = {}
@@ -40,35 +42,32 @@ class ServerMqttClient:
         logging.info("started server")
 
     @classmethod
-    def get_client(cls) -> mqtt.client.Client:
-        return cls.client
-
-    @classmethod
     def publish_rp_state(cls, rp_id: int) -> None:
         """The function publishes the state of the Raspberry Pi to the bot"""
-        if rp_id not in cls.rp_status.keys():
-            logging.debug(f"Published\t| Raspberry Pi {rp_id} is not connected ")
+        if rp_id not in cls.rp_status:
+            logging.debug(f"Published\t| Raspberry Pi %d is not connected ", rp_id)
             return
         if cls.rp_status[rp_id] is None:
-            logging.debug(f"Published\t| Raspberry Pi {rp_id} no state set")
+            logging.debug("Published\t| Raspberry Pi %d no state set", rp_id)
             return
-        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", cls.rp_states[rp_id])
+        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state",
+                           cls.rp_states[rp_id])
 
     @classmethod
     def publish_rp_status(cls, rp_id: int) -> None:
         """The function publishes the status of the Raspberry Pi to the bot"""
-        if rp_id not in cls.rp_status.keys():
-            logging.debug(f"Published\t| Raspberry Pi is not connected")
+        if rp_id not in cls.rp_status:
+            logging.debug("Published\t| Raspberry Pi is not connected")
             return
         status = cls.rp_status[rp_id]
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", str(status))
-        logging.debug(f"Published\t| Raspberry Pi {rp_id} status")
+        logging.debug("Published\t| Raspberry Pi %d status", rp_id)
         cls.rp_status[rp_id] = None
 
     @classmethod
     def publish_rp_states(cls) -> None:
         """The function publishes state and status of all Raspberry Pis to the bot"""
-        for rp_id in cls.rp_status.keys():
+        for rp_id in cls.rp_status:
             cls.publish_rp_state(rp_id)
             cls.publish_rp_status(rp_id)
 
