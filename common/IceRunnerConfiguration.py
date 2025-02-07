@@ -13,13 +13,12 @@ class IceRunnerConfiguration:
     min_fuel_volume: int = 0
     min_vin_voltage: int = 40
     time: int = 0
-    report_period: int = 600
+    report_period: int = 10
     chat_id: int = 0
     num_cells: int = 3
     setpoint_ch: int = 7
     mode: int = 0
 
-    # @classmethod
     def __init__(self, conf: Dict[str, Any]) -> Any:
         self.rpm = conf["rpm"] if conf["rpm"] else 4500
         self.time = conf["time"] if conf["time"] else 0
