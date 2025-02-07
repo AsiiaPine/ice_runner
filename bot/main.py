@@ -8,7 +8,6 @@ import sys
 from aiogram import Bot
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
-from aiogram.types import MenuButtonCommands
 from dotenv import load_dotenv
 import os
 import mqtt.handlers as mqtt_
