@@ -1,4 +1,10 @@
+# This software is distributed under the terms of the MIT License.
+# Copyright (c) 2024 Anastasiia Stepanova.
+# Author: Anastasiia Stepanova <asiiapine@gmail.com>
+"""The module is used to control the DroneCAN ICE node by raccoonlab"""
+
 from ast import Dict
+import asyncio
 import datetime
 import logging
 import os
@@ -57,7 +63,7 @@ class CanNode:
                                             actuator_id=ICE_AIR_CHANNEL, command_value=0)
         cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
         cls.prev_broadcast_time: float = 0
-
+        cls.candump_task: asyncio.Task = None
         cls.node.health = Health.HEALTH_OK
         cls.node.mode = Mode.MODE_OPERATIONAL
         cls.change_file()
@@ -109,14 +115,15 @@ class CanNode:
         """The function runs candump, used to save dronecan messages"""
         with open(cls.candump_filename, "wb", buffering=0) as cls.candump_file:
             # filter NodeStatus messages
-            subprocess.Popen(["candump", "-L", f"{cls.transport},0x15500~0xFFFF00"],
-                             stdout=cls.candump_file, bufsize=0)
+            cls.candump_task = subprocess.Popen(
+                                ["candump", "-L", f"{cls.transport},0x15500~0xFFFF00"],
+                                stdout=cls.candump_file, bufsize=0)
 
     @classmethod
     def __stop_candump__(cls) -> None:
         """The function stops candump"""
-        if hasattr(cls, "candump_task"):
-            cls.candump_task.terminate()
+        if cls.candump_task:
+            subprocess.Popen.kill(cls.candump_task)
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
     """The function dumps dronecan message in human-readable format"""
@@ -161,7 +168,8 @@ def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
 
 def start_dronecan_handlers() -> None:
     """The function starts all handlers for dronecan messages"""
-    CanNode.node.add_handler(dronecan.uavcan.equipment.ice.reciprocating.Status, ice_reciprocating_status_handler)
+    CanNode.node.add_handler(dronecan.uavcan.equipment.ice.reciprocating.Status,
+                             ice_reciprocating_status_handler)
     CanNode.node.add_handler(dronecan.uavcan.equipment.ahrs.RawIMU, raw_imu_handler)
     CanNode.node.add_handler(dronecan.uavcan.protocol.NodeStatus, node_status_handler)
     CanNode.node.add_handler(dronecan.uavcan.equipment.ice.FuelTankStatus, fuel_tank_status_handler)

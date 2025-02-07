@@ -1,17 +1,18 @@
+"""The module defines callbacks for the MQTT client"""
+
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import os
-import sys
 import time
 import logging
 
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from mqtt.client import MqttClient
 
 @MqttClient.client.topic_callback("ice_runner/server/rp_commander/#")
 def handle_command(client, userdata, message):
+    """The function handles the command from the server"""
+    del userdata, client
     mes_text = message.payload.decode()
     if mes_text == "start":
         logging.info("RECEIVED\t-\tstart")
@@ -29,6 +30,7 @@ def handle_command(client, userdata, message):
         logging.info("RECEIVED\t-\tStatus request")
         MqttClient.publish_status(MqttClient.status)
         MqttClient.publish_state(MqttClient.state)
+        MqttClient.publish_configuration()
 
     if mes_text == "config":
         logging.info("RECEIVED\t-\tConfiguration request")
@@ -40,7 +42,7 @@ def handle_command(client, userdata, message):
 
 @MqttClient.client.topic_callback("ice_runner/server/rp_commander/who_alive")
 def handle_who_alive(client, userdata, message):
+    """Handler of message used to check all connected ICE Runners. All RPi should reply"""
+    del userdata, message, client
     logging.debug("RECEIVED\t-\tWHO ALIVE")
     MqttClient.publish_state(MqttClient.state)
-    MqttClient.publish_status(MqttClient.status)
-    MqttClient.publish_configuration()
