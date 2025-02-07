@@ -5,6 +5,7 @@
 
 import logging
 import os
+import platform
 import sys
 import time
 from dotenv import load_dotenv
@@ -14,7 +15,8 @@ import logging_configurator
 
 logger = logging_configurator.getLogger(__file__)
 
-def start_server() -> None:
+def main() -> None:
+    """The function starts the server"""
     os.environ.clear()
     load_dotenv()
     ServerIP = os.getenv("SERVER_IP")
@@ -39,4 +41,4 @@ def start_server() -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    start_server()
+    main()
