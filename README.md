@@ -24,7 +24,7 @@ One can control the ICE runners using the telegram bot. The bot can send command
     python3 -m venv venv
     source venv/bin/activate
     pip install -r ***name_of_project_part***/requirements.txt
-    pip install . # Install the project common part
+    pip install -e . # Install the project common part
     ```
 
 1. Raspberry Pi ICE controller installation

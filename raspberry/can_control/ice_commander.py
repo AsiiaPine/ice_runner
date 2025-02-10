@@ -20,20 +20,6 @@ from common.ICEState import ICEState, RecipState
 from common.RunnerState import RunnerState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 
-# Setup GPIO pin for CAN terminator for Raspberry Pi
-if os.path.exists("/proc/device-tree/model"):
-    # GPIO setup
-    from RPi import GPIO # Import Raspberry Pi GPIO library
-    GPIO.setwarnings(True) # Ignore warning for now
-    GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-    START_STOP_PIN = 24
-    # Setup CAN terminator
-    RESISTOR_PIN = 23
-    GPIO.setup(RESISTOR_PIN, GPIO.OUT)
-    GPIO.output(RESISTOR_PIN, GPIO.HIGH)
-
-    GPIO.setup(START_STOP_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
-
 class ExceedanceTracker:
     """The class is used to track the excedance of the conditions"""
     def __init__(self) -> None:
