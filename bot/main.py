@@ -15,8 +15,7 @@ from aiogram.client.default import DefaultBotProperties
 import mqtt.handlers as mqtt_
 import telegram.handlers as telegram_
 from telegram.scheduler import Scheduler
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import logging_configurator
+import common.logging_configurator as logging_configurator
 
 logger = logging_configurator.getLogger(__file__)
 

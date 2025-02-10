@@ -14,10 +14,9 @@ import argparse
 import yaml
 from dotenv import load_dotenv
 from mqtt.handlers import MqttClient
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
-from raspberry.can_control.ice_commander import ICECommander
-import logging_configurator
+from can_control.ice_commander import ICECommander
+import common.logging_configurator as logging_configurator
 
 with open('ice_configuration.yml') as file:
     conf_params_description = yaml.safe_load(file)

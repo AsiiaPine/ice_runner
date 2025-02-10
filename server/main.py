@@ -10,8 +10,7 @@ import time
 import logging
 from dotenv import load_dotenv
 from mqtt.handlers import ServerMqttClient
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import logging_configurator
+import common.logging_configurator as logging_configurator
 
 logger = logging_configurator.getLogger(__file__)
 
@@ -34,7 +33,6 @@ def main() -> None:
                     ServerMqttClient.client.publish(
                                         f"ice_runner/server/rp_commander/{i}/command", "keep alive")
                 last_keep_alive = time.time()
-            pass
         logger.error("STATUS\t| Disconnected")
         ServerMqttClient.client.disconnect() # disconnect
         ServerMqttClient.client.loop_stop()

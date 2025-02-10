@@ -10,7 +10,6 @@ import logging
 import yaml
 from mqtt.client import ServerMqttClient
 from paho.mqtt.client import Client
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from common.RPStates import safe_literal_eval
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/dronecan/#")
