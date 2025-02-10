@@ -1,41 +1,42 @@
-#!/usr/bin/env python3
+"""The script is used to start the server"""
+
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import logging
 import os
 import sys
 import time
+import logging
 from dotenv import load_dotenv
-from server_mqtt_client import ServerMqttClient, start
-import logging_configurator
+from mqtt.handlers import ServerMqttClient
+from common import logging_configurator
+
 logger = logging_configurator.getLogger(__file__)
-from pathlib import Path
 
-
-def start_server() -> None:
+def main() -> None:
+    """The function starts the server"""
     os.environ.clear()
     load_dotenv()
-    TOKEN = os.getenv("BOT_TOKEN")
-    SERVER_IP = os.getenv("SERVER_IP")
-    SERVER_PORT = int(os.getenv("SERVER_PORT"))
+    server_ip = os.getenv("SERVER_IP")
+    server_port = int(os.getenv("SERVER_PORT"))
 
     while True:
-        ServerMqttClient.connect(SERVER_IP, SERVER_PORT)
+        ServerMqttClient.connect(server_ip, server_port)
         logger.info("Started")
-        start()
+        ServerMqttClient.start()
+
         last_keep_alive = 0
         while ServerMqttClient.client.is_connected: #wait in loop
             if time.time() - last_keep_alive > 0.5:
-                for i in ServerMqttClient.rp_status.keys():
-                    ServerMqttClient.client.publish(f"ice_runner/server/rp_commander/{i}/command", "keep alive")
+                for i in ServerMqttClient.rp_status:
+                    ServerMqttClient.client.publish(
+                                        f"ice_runner/server/rp_commander/{i}/command", "keep alive")
                 last_keep_alive = time.time()
-            pass
         logger.error("STATUS\t| Disconnected")
         ServerMqttClient.client.disconnect() # disconnect
         ServerMqttClient.client.loop_stop()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    start_server()
+    main()

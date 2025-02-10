@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+"""The module is used to configure logging using yaml file"""
+
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
@@ -9,7 +10,7 @@ from os import path
 import os
 import yaml
 
-for name, logger in logging.root.manager.loggerDict.items():
+for _, logger in logging.root.manager.loggerDict.items():
     logger.disabled=True
     logger.propagate=False
 

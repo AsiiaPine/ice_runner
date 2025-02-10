@@ -1,45 +1,63 @@
-#!/usr/bin/env python3
+"""The script is used to start the engine running-in."""
+
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import argparse
-import asyncio
 import os
-from pathlib import Path
 import sys
 import time
-from dotenv import load_dotenv
+from pathlib import Path
+
+import asyncio
+import argparse
 import yaml
-from mqtt_client import RaspberryMqttClient, start
-
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from dotenv import load_dotenv
+from mqtt.handlers import MqttClient
+from can_control.ice_commander import ICECommander
 from common.IceRunnerConfiguration import IceRunnerConfiguration
-from ice_commander import ICECommander
-import logging_configurator
+from common import logging_configurator
 
-conf_params_description = yaml.safe_load(open('ice_configuration.yml'))
+with open('ice_configuration.yml') as file:
+    conf_params_description = yaml.safe_load(file)
 
 logger = logging_configurator.getLogger(__file__)
 
 last_sync_time = time.time()
 
-async def main(id: int) -> None:
-    print(f"RP\t-\tStarting raspberry {id}")
+async def main(run_id: int, configuration: IceRunnerConfiguration) -> None:
+    """The function starts the ICE runner"""
+    print(f"RP\t-\tStarting raspberry {run_id}")
     os.environ.clear()
     dotenv_path = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env')))
     load_dotenv(dotenv_path, verbose=True)
-    SERVER_IP = os.getenv("SERVER_IP")
-    SERVER_PORT = int(os.getenv("SERVER_PORT"))
-    RaspberryMqttClient.connect(id, SERVER_IP, SERVER_PORT)
+    server_ip = os.getenv("SERVER_IP")
+    serve_port = int(os.getenv("SERVER_PORT"))
+    MqttClient.connect(run_id, server_ip, serve_port)
 
-    ice_commander = ICECommander(reporting_period=2,
-                                 configuration=IceRunnerConfiguration(args.__dict__))
+    ice_commander = ICECommander(configuration=configuration)
+    background_tasks = set()
+    mqtt_task = asyncio.create_task(MqttClient.start())
+    background_tasks.add(mqtt_task)
+    ice_task = asyncio.create_task(ice_commander.run())
+    background_tasks.add(ice_task)
+    ice_task.add_done_callback(ice_commander.on_keyboard_interrupt)
+    mqtt_task.add_done_callback(MqttClient.on_keyboard_interrupt)
+    try:
+        await asyncio.gather(*background_tasks, return_exceptions=True)
+    except asyncio.CancelledError:
+        ice_commander.stop()
+        await asyncio.sleep(0.5)
+        mqtt_task.cancel()
+        await ice_commander
+        await mqtt_task
 
-    await asyncio.gather(ice_commander.run(), start())
+        # Ensure all tasks are cleaned up before closing loop
+        background_tasks.clear()
 
 if __name__ == "__main__":
-    parser: argparse.ArgumentParser = argparse.ArgumentParser(description='Raspberry Pi CAN node for automatic ICE runner')
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+                                    description='Raspberry Pi CAN node for automatic ICE runner')
     parser.add_argument("--id",
                         default='None',
                         type=int,
@@ -56,6 +74,10 @@ if __name__ == "__main__":
     if args.id is None:
         print("RP\t-\tNo ID provided, exiting")
         sys.exit(-1)
-    configuration = IceRunnerConfiguration(args.__dict__)
-    RaspberryMqttClient.configuration = configuration
-    asyncio.run(main(args.id))
+    config = IceRunnerConfiguration(args.__dict__)
+    MqttClient.configuration = config
+    try:
+        asyncio.run(main(args.id, config))
+    except KeyboardInterrupt:
+        print("Received KeyboardInterrupt")
+        sys.exit(0)

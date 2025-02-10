@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
@@ -51,6 +50,7 @@ class ICEState:
         self.engaged_time: float = 0
         self.mode: Mode = Mode.MODE_OPERATIONAL
         self.health: Health = Health.HEALTH_OK
+        self.rec_imu: bool = False
 
     def update_with_resiprocating_status(self, msg) -> None:
         logging.getLogger(__name__).info(f"UPD STATE: {msg.message.state}")
@@ -66,6 +66,7 @@ class ICEState:
 
     def update_with_raw_imu(self, msg) -> None:
         self.vibration = msg.message.integration_interval
+        self.rec_imu = True
 
     def update_with_node_status(self, msg) -> None:
         if msg.message.mode > self.mode:
