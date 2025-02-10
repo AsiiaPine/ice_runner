@@ -25,20 +25,6 @@ logger = logging_configurator.getLogger(__file__)
 
 last_sync_time = time.time()
 
-# Setup GPIO pin for CAN terminator for Raspberry Pi
-if os.path.exists("/proc/device-tree/model"):
-    # GPIO setup
-    from RPi import GPIO # Import Raspberry Pi GPIO library
-    GPIO.setwarnings(True) # Ignore warning for now
-    GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-    START_STOP_PIN = 24
-    # Setup CAN terminator
-    RESISTOR_PIN = 23
-    GPIO.setup(RESISTOR_PIN, GPIO.OUT)
-    GPIO.output(RESISTOR_PIN, GPIO.HIGH)
-
-    # GPIO.setup(START_STOP_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Start/Stop button
-
 async def main(run_id: int, configuration: IceRunnerConfiguration) -> None:
     """The function starts the ICE runner"""
     print(f"RP\t-\tStarting raspberry {run_id}")

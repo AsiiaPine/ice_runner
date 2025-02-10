@@ -25,7 +25,7 @@ def getLogger(filepath):
     # Get full path of the script
     folder, name = path.split(filepath)
     folder = path.split(folder)[-1]
-    log_directory = path.join('logs', folder)
+    log_directory = path.join('..', 'logs', folder)
     log_filename = datetime.datetime.now().strftime(f"{name}_%Y_%m_%d-%H_%M_%S.log")
     dir = path.join(path.split(__file__)[0], log_directory)
     if not os.path.exists(dir):
