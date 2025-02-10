@@ -1,13 +1,14 @@
-#!/usr/bin/env python3
+'''The script is used to test the ICE node'''
+
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import time
 import secrets
+from enum import IntEnum
 import numpy as np
 import dronecan
-import time
-from enum import IntEnum
 
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 
@@ -23,14 +24,16 @@ class ICENodeStatus(IntEnum):
 
 class Mode(IntEnum):
     MODE_OPERATIONAL      = 0         # Normal operating mode.
-    MODE_INITIALIZATION   = 1         # Initialization is in progress; this mode is entered immediately after startup.
+    MODE_INITIALIZATION   = 1         # Initialization is in progress;
+                                      # this mode is entered immediately after startup.
     MODE_MAINTENANCE      = 2         # E.g. calibration, the bootloader is running, etc.
     MODE_SOFTWARE_UPDATE  = 3         # New software/firmware is being loaded.
     MODE_OFFLINE          = 7         # The node is no longer available.
 
 class Health(IntEnum):
     HEALTH_OK         = 0     # The node is functioning properly.
-    HEALTH_WARNING    = 1     # A critical parameter went out of range or the node encountered a minor failure.
+    HEALTH_WARNING    = 1     # A critical parameter went out of range or the node encountered
+                              # a minor failure.
     HEALTH_ERROR      = 2     # The node encountered a major failure.
     HEALTH_CRITICAL   = 3     # The node suffered a fatal malfunction.
 
@@ -89,23 +92,17 @@ class Starter:
         if self.t1_ms == 0:
             cycle_time_ms = max_cycle_time_ms
         else:
-            cycle_time_ms = max(min_cycle_time_ms, min(time.time_ns() / 1000000 - self.t1_ms, max_cycle_time_ms))
+            cycle_time_ms = max(min_cycle_time_ms, 
+                                min(time.time_ns() / 1000000 - self.t1_ms, max_cycle_time_ms))
         return cycle_time_ms
 
 class Engine:
     def __init__(self) -> None:
-        self.preformance = 4.1 / 8500 # 4.1 HP / 8500 RPM or 3057.37 W / 8500 RPM
-
         self.rpm = 0
-        self.temp = 0
-        self.torque = 0
         self.state = ICENodeStatus.STOPPED
         self.starter = Starter(running_period_ms=3000, waiting_period_ms=500)
         self.last_upd = time.time()
         self.ice_acceleration = 0
-
-    def get_power(self) -> float:
-        return self.preformance * self.rpm
 
     def update(self, cmd: int, air_cmd: int) -> None:
         dt = time.time() - self.last_upd
@@ -115,7 +112,6 @@ class Engine:
             self.rpm = 0
             return
         self.ice_acceleration += self.random_d_rpm_change() 
-        # ice_acceleration = self.random_d_rpm_change()
         if air_cmd < 100:
             self.ice_acceleration -= air_cmd / 1000
         if air_cmd > 3000:
@@ -126,7 +122,8 @@ class Engine:
         if self.state == ICENodeStatus.STOPPED:
             starter_enabled = True
         else:
-            starter_enabled = self.starter.update(is_cmd_engage=cmd > 0, is_status_rotating=self.rpm > 100)
+            starter_enabled = self.starter.update(is_cmd_engage=cmd > 0,
+                                                  is_status_rotating=self.rpm > 100)
         if starter_enabled:
             if self.state == ICENodeStatus.STOPPED:
                 self.state = ICENodeStatus.RUNNING
@@ -137,8 +134,8 @@ class Engine:
                 self.state = ICENodeStatus.WAITING
                 self.rpm = 0
                 return
-        # print(self.rpm, self.ice_acceleration * dt, cmd, (cmd - self.rpm) * 0.4, self.rpm + self.ice_acceleration * dt + (cmd - self.rpm) * 0.1)
-        self.rpm = int(max(0, self.rpm + self.ice_acceleration * dt + (cmd - self.rpm) * 0.2))
+        self.rpm = int(max(0,
+                           self.rpm + self.ice_acceleration * dt + (cmd - self.rpm) * 0.2))
 
     def random_rpm_change(self) -> float:
         rmp = secrets.randbelow(100)
@@ -146,7 +143,6 @@ class Engine:
         self.rpm = max(0, min(self.rpm + i*rmp, 8500))
 
     def random_d_rpm_change(self) -> int:
-        # d_rpm = secrets.randbelow(100)
         d_rpm = np.sin((time.time() % 100) / (2*3))
         return d_rpm
 
@@ -162,18 +158,10 @@ class ICENODE:
         self.dt = 0.05
         self.node = DronecanNode(node_id= 11)
         self.rpm = 0
-        self.status = ICENodeStatus.STOPPED
-        self.temp: float = 0
-        self.int_temp: float = 0
-
         self.current: float = 40
-
         self.voltage_in: float = 40
         self.voltage_out: float = 5
 
-        self.vibration: float = 0
-        self.spark_ignition_time: float = 0
-        self.engaged_time: float = 0
         self.node.node.mode = Mode.MODE_OPERATIONAL
         self.node.node.health = Health.HEALTH_OK
         self.prev_broadcast_time = 0
@@ -187,15 +175,16 @@ class ICENODE:
             atmospheric_pressure_kpa=int(self.engine.rpm),
             engine_load_percent=self.gas_throttle,
             throttle_position_percent=self.air_throttle,
-            oil_temperature=self.temp,  
-            coolant_temperature=self.int_temp,
             spark_plug_usage=0,
-            estimated_consumed_fuel_volume_cm3=self.spark_ignition_time,
+            estimated_consumed_fuel_volume_cm3=self.engine.starter.t2_ms,
             intake_manifold_temperature=self.current,
             intake_manifold_pressure_kpa=5,
-            oil_pressure=self.voltage_in)
+            oil_pressure=self.voltage_in,
+            fuel_pressure=self.voltage_out)
 
-    def send_ice_reciprocating_status(self, msg: dronecan.uavcan.equipment.ice.reciprocating.Status) -> None:
+    def send_ice_reciprocating_status(self,
+                                      msg: dronecan.uavcan.equipment.ice.reciprocating.Status
+                                      ) -> None:
         self.node.publish(msg)
 
     def spin(self) -> None:
@@ -205,20 +194,21 @@ class ICENODE:
         if time.time() - self.prev_broadcast_time > self.status_timeout:
             self.prev_broadcast_time = time.time()
             self.node.publish(self.create_ice_reciprocating_status())
-            self.node.publish(dronecan.uavcan.equipment.ice.FuelTankStatus(available_fuel_volume_percent=100))
+            self.node.publish(
+                    dronecan.uavcan.equipment.ice.FuelTankStatus(available_fuel_volume_percent=100))
             self.node.publish(dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=0))
 
-def get_raw_command(res: dronecan.node.TransferEvent) -> int:
+def get_raw_command(res: dronecan.node.TransferEvent) -> None:
     if res is None:
-        return 0
+        return
     cmd = res.message.cmd[ICE_CMD_CHANNEL]
     print("ICE\t| ", cmd)
     ICENODE.command = cmd
     ICENODE.gas_throttle = int(max(0, min(cmd, 8191)) / 100)
 
-def get_air_cmd(res: dronecan.node.TransferEvent) -> int:
+def get_air_cmd(res: dronecan.node.TransferEvent) -> None:
     if res is None:
-        return 0
+        return
     for command in res.message.commands:
         if command.actuator_id == ICE_AIR_CHANNEL:
             cmd = command.command_value

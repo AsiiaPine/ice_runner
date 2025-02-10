@@ -10,7 +10,7 @@ import time
 import logging
 from dotenv import load_dotenv
 from mqtt.handlers import ServerMqttClient
-import common.logging_configurator as logging_configurator
+from common import logging_configurator
 
 logger = logging_configurator.getLogger(__file__)
 
