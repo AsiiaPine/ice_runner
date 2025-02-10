@@ -4,3 +4,4 @@ __py*
 lats_config.yml
 *.txt
 logs/*
+*.egg-info

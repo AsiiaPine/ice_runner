@@ -14,7 +14,7 @@ import traceback
 from enum import IntEnum
 from typing import Dict
 from mqtt.handlers import MqttClient
-from raspberry.can_control.node import (
+from can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL, ICE_AIR_CHANNEL)
 from common.ICEState import ICEState, RecipState
 from common.RPStates import RunnerState

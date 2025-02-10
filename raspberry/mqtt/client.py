@@ -9,8 +9,6 @@ import sys
 import logging
 from typing import Any, Dict
 from paho.mqtt.client import MQTTv311, Client
-
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 
 class MqttClient:

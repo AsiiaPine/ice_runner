@@ -10,14 +10,22 @@ One can control the ICE runners using the telegram bot. The bot can send command
 - ICE block
 
 ## How to run the project 
-0. Specify telergam bot token, chat_id and mqtt server ip in the file `.env`.
-e.g.
-```
-BOT_TOKEN=***
-SERVER_PORT = 1883
-SERVER_IP=localhost
-CHAT_ID=***
-```
+0. Setup the environment
+    - Specify telergam bot token, chat_id and mqtt server ip in the file `.env`.
+    e.g.
+    ```
+    BOT_TOKEN=***
+    SERVER_PORT = 1883
+    SERVER_IP=localhost
+    CHAT_ID=***
+    ```
+    - Setup the virtual environment
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r ***name_of_project_part***/requirements.txt
+    pip install . # Install the project common part
+    ```
 
 1. Raspberry Pi ICE controller installation
     - Install mqtt broker
@@ -39,7 +47,13 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
 
     - Install required packages
         ```bash
-        pip install -r requirements.txt
+        chmod +x prepare_mqtt_server.sh
+        ./prepare_mqtt_server.sh
+        ```
+        To allow anonymous access to the server and setup the used port, edit the file `/etc/mosquitto/mosquitto.conf`:
+        ```
+        allow_anonymous true
+        listener 1883 0.0.0.0
         ```
     - Run the script
         ```bash

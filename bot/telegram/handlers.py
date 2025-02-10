@@ -29,7 +29,6 @@ import yaml
 
 from mqtt.client import MqttClient
 from bot.telegram.filters import ChatIdFilter
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common.RPStates import RunnerState
 
 with open('ice_configuration.yml', encoding='utf8') as file:
