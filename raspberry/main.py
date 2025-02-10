@@ -15,7 +15,8 @@ import yaml
 from dotenv import load_dotenv
 from mqtt.handlers import MqttClient
 from can_control.ice_commander import ICECommander
-from common import logging_configurator, IceRunnerConfiguration
+from common.IceRunnerConfiguration import IceRunnerConfiguration
+from common import logging_configurator
 
 with open('ice_configuration.yml') as file:
     conf_params_description = yaml.safe_load(file)

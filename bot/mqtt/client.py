@@ -7,7 +7,7 @@
 import logging
 from typing import Any, Dict
 from paho.mqtt.client import MQTTv311, Client
-from common.RPStates import RunnerState
+from common.RunnerState import RunnerState
 
 class MqttClient:
     """The class is used to connect Bot to MQTT broker"""

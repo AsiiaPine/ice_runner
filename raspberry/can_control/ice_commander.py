@@ -17,7 +17,7 @@ from mqtt.handlers import MqttClient
 from can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL, ICE_AIR_CHANNEL)
 from common.ICEState import ICEState, RecipState
-from common.RPStates import RunnerState
+from common.RunnerState import RunnerState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 
 # Setup GPIO pin for CAN terminator for Raspberry Pi

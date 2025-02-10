@@ -11,7 +11,7 @@ from aiogram.types import FSInputFile
 from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from mqtt.client import MqttClient
-from common.RPStates import RunnerState
+from common.RunnerState import RunnerState
 
 
 class Scheduler:
