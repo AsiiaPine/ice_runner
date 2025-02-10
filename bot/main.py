@@ -1,5 +1,6 @@
 """The script is used to start the telegram bot with the specified chat id and its MQTT client"""
 
+#!/usr/bin/env python3
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>

@@ -35,7 +35,7 @@ One can control the ICE runners using the telegram bot. The bot can send command
         ```
     - Install required packages
         ```bash
-        pip install -r requirements.txt
+        pip install -r raspberry/requirements.txt
         ```
     - Run the script with the specified id for the raspberry pi. This id is used for MQTT communication and in telegram bot commands.
         ```bash
@@ -49,6 +49,7 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
         ```bash
         chmod +x prepare_mqtt_server.sh
         ./prepare_mqtt_server.sh
+        pip install -r server/requirements.txt
         ```
         To allow anonymous access to the server and setup the used port, edit the file `/etc/mosquitto/mosquitto.conf`:
         ```
@@ -60,6 +61,10 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
         python server/main.py
         ```
 3. Bot start
+    - Install required packages
+        ```bash
+        pip install -r bot/requirements.txt
+        ```
     - Run the script
 
         ```bash
