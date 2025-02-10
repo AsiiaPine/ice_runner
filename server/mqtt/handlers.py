@@ -4,8 +4,6 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import os
-import sys
 import logging
 import yaml
 from mqtt.client import ServerMqttClient

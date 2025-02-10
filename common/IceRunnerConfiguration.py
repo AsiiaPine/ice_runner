@@ -1,3 +1,5 @@
+"""The script is used to define the configuration of the ICE runner"""
+
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
@@ -21,7 +23,8 @@ class IceRunnerConfiguration:
     def __init__(self, conf: Dict[str, Any]) -> Any:
         self.rpm = conf["rpm"] if conf["rpm"] else 4500
         self.time = conf["time"] if conf["time"] else 0
-        self.max_temperature = conf["max_temperature"] + 273.15 if conf["max_temperature"] else 463.15  # Kelvin
+        self.max_temperature = conf["max_temperature"] + 273.15\
+                                if conf["max_temperature"] else 463.15  # Kelvin
         self.max_gas_throttle = conf["max_gas_throttle"] if conf["max_gas_throttle"] else 0
         self.report_period = conf["report_period"] if conf["report_period"] else 600
         self.chat_id = conf["chat_id"] if conf["chat_id"] else 0

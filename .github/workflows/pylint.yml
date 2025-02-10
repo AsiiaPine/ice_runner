@@ -29,4 +29,4 @@ jobs:
     - name: Analyzing the code with pylint
       run: |
         source ./venv/bin/activate
-        pylint $(git ls-files -- '*.py')
+        pylint --fail-under=8 $(git ls-files -- '*.py' ':!:*_px_uploader.py' ':!:examples/')

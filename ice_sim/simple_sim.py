@@ -1,11 +1,9 @@
-import os
-import sys
+'''The script is used to simulate the ICE node'''
+
 import time
 import dronecan
 import numpy as np
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from common.ICEState import Health, Mode, RecipState
 from ice_sim.test_commander import ICE_AIR_CHANNEL, ICE_CMD_CHANNEL
 
@@ -17,6 +15,7 @@ class Engine:
         self.prev_time = 0
 
     def update(self, cmd: int, air_cmd: int) -> None:
+        del air_cmd
         if cmd == 0:
             self.state = RecipState.STOPPED
             self.rpm = 0
@@ -84,7 +83,9 @@ class ICENODE:
             intake_manifold_pressure_kpa=5,
             oil_pressure=self.voltage_in)
 
-    def send_ice_reciprocating_status(self, msg: dronecan.uavcan.equipment.ice.reciprocating.Status) -> None:
+    def send_ice_reciprocating_status(self,
+                                      msg: dronecan.uavcan.equipment.ice.reciprocating.Status
+                                      ) -> None:
         self.node.publish(msg)
 
     def spin(self) -> None:
@@ -94,19 +95,20 @@ class ICENODE:
         if time.time() - self.prev_broadcast_time > self.status_timeout:
             self.prev_broadcast_time = time.time()
             self.node.publish(self.create_ice_reciprocating_status())
-            self.node.publish(dronecan.uavcan.equipment.ice.FuelTankStatus(available_fuel_volume_percent=100))
+            self.node.publish(
+                dronecan.uavcan.equipment.ice.FuelTankStatus(available_fuel_volume_percent=100))
             self.node.publish(dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=0))
 
-def get_raw_command(res: dronecan.node.TransferEvent) -> int:
+def get_raw_command(res: dronecan.node.TransferEvent) -> None:
     if len(res.message.cmd) < ICE_CMD_CHANNEL:
-        return 0
+        return
     cmd = res.message.cmd[ICE_CMD_CHANNEL]
     ICENODE.command = cmd
     ICENODE.gas_throttle = int(max(0, min(cmd, 6000)) / 100)
 
-def get_air_cmd(res: dronecan.node.TransferEvent) -> int:
+def get_air_cmd(res: dronecan.node.TransferEvent) -> None:
     if res is None:
-        return 0
+        return
     for command in res.message.commands:
         if command.actuator_id == ICE_AIR_CHANNEL:
             cmd = command.command_value
