@@ -27,7 +27,7 @@ import yaml
 
 from mqtt.client import MqttClient
 from bot.telegram.filters import ChatIdFilter
-from common.RPStates import RunnerState
+from common.RunnerState import RunnerState
 
 with open('ice_configuration.yml', encoding='utf8') as file:
     configuration = yaml.safe_load(file)

@@ -8,7 +8,7 @@ import logging
 import yaml
 from mqtt.client import ServerMqttClient
 from paho.mqtt.client import Client
-from common.RPStates import safe_literal_eval
+from common.RunnerState import safe_literal_eval
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/dronecan/#")
 def handle_raspberry_pi_dronecan_message(client: Client, userdata,  msg):

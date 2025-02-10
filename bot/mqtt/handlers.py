@@ -7,7 +7,7 @@
 import logging
 from mqtt.client import MqttClient
 from telegram.scheduler import Scheduler
-from common.RPStates import safe_literal_eval, RunnerState
+from common.RunnerState import safe_literal_eval, RunnerState
 
 @MqttClient.client.topic_callback("ice_runner/server/bot_commander/rp_states/+/state")
 def handle_commander_state(client, userdata, message):
