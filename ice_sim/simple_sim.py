@@ -75,7 +75,7 @@ class ICENODE:
             atmospheric_pressure_kpa=int(self.engine.rpm),
             engine_load_percent=self.gas_throttle,
             throttle_position_percent=self.air_throttle,
-            oil_temperature=self.temp,  
+            oil_temperature=self.temp,
             coolant_temperature=self.int_temp,
             spark_plug_usage=0,
             estimated_consumed_fuel_volume_cm3=self.spark_ignition_time,

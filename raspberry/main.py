@@ -13,15 +13,11 @@ from pathlib import Path
 
 import asyncio
 import argparse
-import yaml
 from dotenv import load_dotenv
-from mqtt.handlers import MqttClient
+from mqtt.handlers import MqttClient, add_handlers
 from can_control.ice_commander import ICECommander
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from common import logging_configurator
-
-with open('ice_configuration.yml') as file:
-    conf_params_description = yaml.safe_load(file)
 
 logger = logging_configurator.getLogger(__file__)
 
@@ -36,7 +32,7 @@ async def main(run_id: int, configuration: IceRunnerConfiguration) -> None:
     server_ip = os.getenv("SERVER_IP")
     serve_port = int(os.getenv("SERVER_PORT"))
     MqttClient.connect(run_id, server_ip, serve_port)
-
+    add_handlers()
     ice_commander = ICECommander(configuration=configuration)
     background_tasks = set()
     mqtt_task = asyncio.create_task(MqttClient.start())
@@ -64,11 +60,7 @@ if __name__ == "__main__":
                         default='None',
                         type=int,
                         help="Raspberry Pi ID used for MQTT communication")
-    for name, data in conf_params_description.items():
-        parser.add_argument(f"--{name}",
-                            default=data["default"],
-                            type=int,
-                            help=data["help"] + "\n\n По умолчанию: " + str(data["default"]))
+
     args: argparse.Namespace = parser.parse_args()
     if args.id is None:
         print("RP\t-\tNo ID provided, reading from environment variable")
@@ -76,7 +68,7 @@ if __name__ == "__main__":
     if args.id is None:
         print("RP\t-\tNo ID provided, exiting")
         sys.exit(-1)
-    config = IceRunnerConfiguration(args.__dict__)
+    config = IceRunnerConfiguration(file_path="ice_configuration.yml")
     MqttClient.configuration = config
     try:
         asyncio.run(main(args.id, config))

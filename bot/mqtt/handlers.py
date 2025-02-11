@@ -7,14 +7,15 @@
 import logging
 from mqtt.client import MqttClient
 from telegram.scheduler import Scheduler
-from common.RunnerState import safe_literal_eval, RunnerState
+from common.RunnerState import RunnerState
+from common.algorithms import safe_literal_eval
 
 @MqttClient.client.topic_callback("ice_runner/server/bot_commander/rp_states/+/state")
 def handle_commander_state(client, userdata, message):
     """The function handles state messages from Raspberry Pi to Bot mqtt client storage"""
     del client, userdata
     rp_pi_id = int(message.topic.split("/")[-2])
-    if rp_pi_id not in MqttClient.rp_states:
+    if rp_pi_id not in Scheduler.jobs:
         Scheduler.guard_runner(rp_pi_id)
     state = RunnerState(int(message.payload.decode()))
     MqttClient.rp_states[rp_pi_id] = state

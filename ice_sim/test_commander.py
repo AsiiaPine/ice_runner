@@ -61,7 +61,7 @@ class Starter:
             self.t2_ms = 0
             self.t3_ms = 0
             self.state = StarterState.STOPPED
-        elif crnt_time_ms >= self.t2_ms and crnt_time_ms < self.t3_ms:
+        elif  self.t2_ms <= crnt_time_ms < self.t3_ms:
             self.turn_starter_on = False
             self.state = StarterState.WAITING
         elif crnt_time_ms >= self.t3_ms and is_status_rotating:
@@ -92,7 +92,7 @@ class Starter:
         if self.t1_ms == 0:
             cycle_time_ms = max_cycle_time_ms
         else:
-            cycle_time_ms = max(min_cycle_time_ms, 
+            cycle_time_ms = max(min_cycle_time_ms,
                                 min(time.time_ns() / 1000000 - self.t1_ms, max_cycle_time_ms))
         return cycle_time_ms
 
@@ -111,7 +111,7 @@ class Engine:
             self.state = ICENodeStatus.STOPPED
             self.rpm = 0
             return
-        self.ice_acceleration += self.random_d_rpm_change() 
+        self.ice_acceleration += self.random_d_rpm_change()
         if air_cmd < 100:
             self.ice_acceleration -= air_cmd / 1000
         if air_cmd > 3000:
