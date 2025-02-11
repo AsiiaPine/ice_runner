@@ -207,9 +207,10 @@ async def change_config(message: types.Message, state: FSMContext) -> None:
     )
     await state.set_state(BotState.config_change)
 
-@form_router.callback_query(BotState.config_change, ChatIdFilter())
+@form_router.callback_query(BotState.config_change)
 async def choose_param_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
     """The function handles callback query from config param selection buttons"""
+    print("hello")
     param_name = callback_query.data
     await callback_query.message.answer(f"Введите новое значение для {param_name}")
     data = await state.get_data()
@@ -217,7 +218,7 @@ async def choose_param_callback(callback_query: types.CallbackQuery, state: FSMC
     await state.set_data(data)
     await state.set_state(BotState.param_change)
 
-@form_router.message(BotState.param_change, ChatIdFilter())
+@form_router.message(BotState.param_change)
 async def config_change_handler(message: Message, state: FSMContext) -> None:
     """The function handles messages with configuration change"""
     data = await state.get_data()

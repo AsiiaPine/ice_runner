@@ -1,7 +1,7 @@
 __py*
 *.env
 *.log*
-lats_config.yml
 *.txt
 logs/*
 *.egg-info
+*.yml
