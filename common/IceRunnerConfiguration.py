@@ -48,7 +48,7 @@ class IceRunnerConfiguration:
         """The function loads configuration from dictionary"""
         self.rpm = conf["rpm"]["value"]
         self.time = conf["time"]["value"]
-        self.max_temperature = conf["max_temperature"]["value"] + 273.15 # Kelvin
+        self.max_temperature = conf["max_temperature"]["value"]
         self.max_gas_throttle = conf["max_gas_throttle"]["value"]
         self.report_period = conf["report_period"]["value"]
         self.max_vibration = conf["max_vibration"]["value"]

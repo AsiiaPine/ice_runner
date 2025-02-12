@@ -5,6 +5,7 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
 import asyncio
+from copy import copy
 from dataclasses import dataclass
 import logging
 import time
@@ -210,7 +211,6 @@ async def change_config(message: types.Message, state: FSMContext) -> None:
 @form_router.callback_query(BotState.config_change)
 async def choose_param_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
     """The function handles callback query from config param selection buttons"""
-    print("hello")
     param_name = callback_query.data
     await callback_query.message.answer(f"Введите новое значение для {param_name}")
     data = await state.get_data()
@@ -223,13 +223,18 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     """The function handles messages with configuration change"""
     data = await state.get_data()
     param_name = data["param_name"]
-    print(param_name)
     rp_id = data["rp_id"]
     logging.info("Send new param %s value", param_name)
-    MqttClient.client.publish(f"ice_runner/bot/usr_cmd/change_config/{rp_id}/{param_name}",
-                              message.text)
+    print(message.text)
+    text = copy(message.text)
+    if ("@" in text ) or ( "/" in text):
+        text = text.split("@")[0].replace("/", "")
+    if not text.isdigit():
+        await message.answer("Неверное значение")
+        return
+    MqttClient.client.publish(f"ice_runner/bot/usr_cmd/change_config/{rp_id}/{param_name}", text)
     await message.answer(f"Новое значение параметра {param_name} установлено")
-    await state.clear()
+    await state.set_state()
 
 @form_router.message(Command(commands=["run", "запустить"], ignore_case=True), ChatIdFilter())
 async def command_run_handler(message: Message, state: FSMContext) -> None:
