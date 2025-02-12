@@ -13,14 +13,15 @@ import logging
 import traceback
 from enum import IntEnum
 from typing import Dict
-if os.path.exists("/proc/device-tree/model"):
-    from RPi import GPIO # Import Raspberry Pi GPIO library
 from mqtt.handlers import MqttClient
 from can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL, ICE_AIR_CHANNEL)
 from common.ICEState import ICEState, RecipState
 from common.RunnerState import RunnerState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
+
+if os.path.exists("/proc/device-tree/model"):
+    from RPi import GPIO # Import Raspberry Pi GPIO library
 
 START_STOP_PIN = 24
 RESISTOR_PIN = 23

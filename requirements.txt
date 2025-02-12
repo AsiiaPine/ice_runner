@@ -1,5 +1,4 @@
 # common
-dotenv
 netifaces
 paho-mqtt
 pytest
@@ -18,4 +17,4 @@ pydronecan
 raccoonlab-tools
 
 #rpi
-# RPi.GPIO
+RPi.GPIO
