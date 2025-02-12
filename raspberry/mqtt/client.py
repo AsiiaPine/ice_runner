@@ -4,7 +4,6 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import os
 import sys
 import logging
 from typing import Any, Dict
@@ -16,6 +15,7 @@ class MqttClient:
     client: Client = Client(clean_session=True,
                             protocol=MQTTv311,
                             reconnect_on_failure=True)
+    conf_updated = False
     run_id: int = 0
     last_message_receive_time = 0
     setpoint_command: float = 0
@@ -31,7 +31,7 @@ class MqttClient:
         """The function connects client to MQTT server"""
         cls.run_id = runner_id
 
-        logging.info("Connecting to %d: %s", runner_id, server_ip)
+        logging.info("Connecting to %s: %s\n runner id: %d", server_ip, port, runner_id)
         cls.client.connect(server_ip, port, 60)
         cls.client.publish(f"ice_runner/raspberry_pi/{runner_id}/state", cls.state)
         logging.debug("PUBLISH\t-\tstate")
@@ -84,7 +84,6 @@ class MqttClient:
     async def start(cls) -> None:
         """The function subscribe ServerMqttClient to commander topics
             and starts new thread to process network traffic"""
-        MqttClient.client.subscribe(f"ice_runner/server/rp_commander/{MqttClient.run_id}/#")
         MqttClient.client.subscribe(f"ice_runner/server/rp_commander/#")
         MqttClient.client.loop_start()
 

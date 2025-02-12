@@ -5,6 +5,7 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
 import asyncio
+from copy import copy
 from dataclasses import dataclass
 import logging
 import time
@@ -35,6 +36,8 @@ with open('ice_configuration.yml', encoding='utf8') as file:
 commands_discription : Dict[str, str] = {
     "/cancel":      "Отменить последнее действие/\nCancel any action\n",
     "/choose_rp":   "Выбрать ID обкатчика/\n Choose ID of the ICE runner\n",
+    "/config":      "Изменить настройки блока ДВС/\n\
+Change the configuration of the connected block\n",
     "/log":         "Прислать логи блока ДВС/\nSend logs of the connected block\n",
     "/run":         "Запустить автоматическую обкатку ДВС/\n\
 Start the automatic running using the last configuration\n",
@@ -130,6 +133,8 @@ class BotState(StatesGroup):
     status_state = State()
     show_all_state = State()
     starting_state = State()
+    config_change = State()
+    param_change = State()
 
 @form_router.message(Command(commands=["choose_rp", "выбрать_ДВС"]), ChatIdFilter())
 async def choose_rp_id(message: types.Message) -> None:
@@ -161,6 +166,75 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
         "Отменено.",
         reply_markup=ReplyKeyboardRemove(),
     )
+
+@form_router.message(Command(commands=["config", "изменить_настройки"]), ChatIdFilter())
+async def change_config(message: types.Message, state: FSMContext) -> None:
+    """The function handles the command to change the configuration"""
+    if "rp_id" not in (await state.get_data()):
+        await show_options(message)
+        return
+    rp_id = (await state.get_data())["rp_id"]
+    logging.debug("Send conf command to rpi %d", rp_id)
+    MqttClient.client.publish(f"ice_runner/bot/usr_cmd/config", str(rp_id))
+    await asyncio.sleep(0.5)
+    rp_state = MqttClient.rp_states[rp_id].name
+    await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
+    await message.answer("Настройки обкатки:" + get_configuration_str(rp_id))
+    rp_config = MqttClient.rp_configuration[rp_id]
+    if len(rp_config) == 0:
+        await message.answer("Ошибка, нет настроек обкатки")
+        logging.error("No configuration for %d", rp_id)
+        return
+    builder = InlineKeyboardBuilder()
+    params = list(rp_config.keys())
+    n_buttons = len(rp_config.keys())
+    n_rows = n_buttons // 3
+    if n_buttons % 3 != 0:
+        n_rows += 1
+    for i in range(n_rows):
+        inline_buttons = []
+        for j in range(3):
+            if i * 3 + j >= n_buttons:
+                break
+            param = params[i * 3 + j]
+            inline_buttons.append(types.InlineKeyboardButton(
+                text= f"{param}",
+                callback_data=param)
+            )
+        builder.row(*inline_buttons)
+    await message.answer(
+        "Выберите параметр для его изменения",
+        reply_markup=builder.as_markup()
+    )
+    await state.set_state(BotState.config_change)
+
+@form_router.callback_query(BotState.config_change)
+async def choose_param_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    """The function handles callback query from config param selection buttons"""
+    param_name = callback_query.data
+    await callback_query.message.answer(f"Введите новое значение для {param_name}")
+    data = await state.get_data()
+    data["param_name"] = param_name
+    await state.set_data(data)
+    await state.set_state(BotState.param_change)
+
+@form_router.message(BotState.param_change)
+async def config_change_handler(message: Message, state: FSMContext) -> None:
+    """The function handles messages with configuration change"""
+    data = await state.get_data()
+    param_name = data["param_name"]
+    rp_id = data["rp_id"]
+    logging.info("Send new param %s value", param_name)
+    print(message.text)
+    text = copy(message.text)
+    if ("@" in text ) or ( "/" in text):
+        text = text.split("@")[0].replace("/", "")
+    if not text.isdigit():
+        await message.answer("Неверное значение")
+        return
+    MqttClient.client.publish(f"ice_runner/bot/usr_cmd/change_config/{rp_id}/{param_name}", text)
+    await message.answer(f"Новое значение параметра {param_name} установлено")
+    await state.set_state()
 
 @form_router.message(Command(commands=["run", "запустить"], ignore_case=True), ChatIdFilter())
 async def command_run_handler(message: Message, state: FSMContext) -> None:
@@ -240,9 +314,9 @@ async def command_show_all_handler(message: Message, state: FSMContext) -> None:
         await asyncio.sleep(0.5)
         header_str = html.bold(f"ID обкатчика: {rp_id}\n\tСтатус:\n" )
         data = await state.get_data()
-
-        MqttClient.client.publish(f"ice_runner/bot/usr_cmd/config", str(rp_id))
-        await asyncio.sleep(0.5)
+        logging.info("Send conf command to rpi %d", rp_id)
+        MqttClient.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
+        await asyncio.sleep(1)
 
         logging.info("Config %s", MqttClient.rp_configuration)
         if MqttClient.rp_configuration[int(rp_id)] is None:
@@ -325,9 +399,11 @@ async def command_log_handler(message: Message, state: FSMContext) -> None:
     rp_id = (await state.get_data())["rp_id"]
     logging.info("Getting logs for %d", rp_id)
     MqttClient.client.publish("ice_runner/bot/usr_cmd/log", str(rp_id))
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(1)
     if rp_id in MqttClient.rp_logs:
-        log_files = MqttClient.rp_logs[rp_id]
+        log_files: Dict[str, str] = MqttClient.rp_logs[rp_id]
+        if len(log_files) == 0:
+            await message.answer("Логов не пришло")
         for name, log_file in log_files.items():
             logging.info("Sending log %s", name)
             try:

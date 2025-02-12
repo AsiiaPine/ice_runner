@@ -8,7 +8,7 @@ import logging
 import yaml
 from mqtt.client import ServerMqttClient
 from paho.mqtt.client import Client
-from common.RunnerState import safe_literal_eval
+from common.algorithms import safe_literal_eval
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/dronecan/#")
 def handle_raspberry_pi_dronecan_message(client: Client, userdata,  msg):
@@ -116,26 +116,29 @@ def handle_bot_who_alive(client: Client, userdata,  msg):
         so when a Raspberry Pi is connected, it will send state message to Bot"""
     del userdata, msg
     logging.debug("Recieved\t| Bot send command who_alive")
-    client.publish(f"ice_runner/server/rp_commander/who_alive", "who_alive")
+    client.publish("ice_runner/server/rp_commander/who_alive", "who_alive")
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/config")
 def handle_bot_config(client: Client, userdata,  msg):
     """The function transmit bot command /config to Raspberry Pi"""
     del userdata
     rp_id = int(msg.payload.decode())
-    logging.debug("Recieved\t| Bot ask configuration for %d", rp_id)
-    if rp_id not in ServerMqttClient.rp_configuration:
-        ServerMqttClient.rp_configuration[rp_id] = {}
-        client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "config")
-        return
-    client.publish(f"ice_runner/bot_commander/rp_states/{rp_id}/config",
-                   str(ServerMqttClient.rp_configuration[rp_id]))
-    ServerMqttClient.rp_configuration[rp_id] = None
-    logging.debug("Published\t| Bot waiting for configuration of Raspberry Pi %d", rp_id)
+    logging.info("Recieved\t| Bot ask configuration for %d", rp_id)
+    client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "config")
+    logging.info("Published\t| Bot waiting for configuration of Raspberry Pi %d", rp_id)
+
+@ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/change_config/+/+")
+def handle_bot_change_config(client: Client, userdata,  msg):
+    """The function handles bot command /config"""
+    del userdata
+    rp_id, param_name = msg.topic.split("/")[-2:]
+    client.publish(f"ice_runner/server/rp_commander/{rp_id}/change_config/{param_name}",
+                   msg.payload.decode())
+    logging.info("Published\t| New config %s value", param_name)
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/server")
 def handle_bot_server(client: Client, userdata,  msg):
     """The function handles bot command /server"""
     del userdata, msg
     logging.info("Recieved\t| Bot send command server")
-    client.publish(f"ice_runner/server/bot_commander/server", "server")
+    client.publish("ice_runner/server/bot_commander/server", "server")

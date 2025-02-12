@@ -13,12 +13,25 @@ import logging
 import traceback
 from enum import IntEnum
 from typing import Dict
+if os.path.exists("/proc/device-tree/model"):
+    from RPi import GPIO # Import Raspberry Pi GPIO library
 from mqtt.handlers import MqttClient
 from can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL, ICE_AIR_CHANNEL)
 from common.ICEState import ICEState, RecipState
 from common.RunnerState import RunnerState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
+
+START_STOP_PIN = 24
+RESISTOR_PIN = 23
+
+if os.path.exists("/proc/device-tree/model"):
+    # GPIO setup
+    GPIO.setwarnings(True) # Ignore warning for now
+    GPIO.setmode(GPIO.BCM) # Use physical pin numbering
+    # Setup CAN terminator
+    GPIO.setup(RESISTOR_PIN, GPIO.OUT)
+    GPIO.output(RESISTOR_PIN, GPIO.HIGH)
 
 class ExceedanceTracker:
     """The class is used to track the excedance of the conditions"""
@@ -298,6 +311,11 @@ class ICECommander:
                 self.start_time = time.time()
             logging.info("MQTT\t-\tCOMMAND\t run, state: %s", {self.run_state.name})
             MqttClient.to_run = 0
+        if MqttClient.conf_updated:
+            self.configuration = MqttClient.configuration
+            self.configuration.to_file()
+            MqttClient.conf_updated = False
+            logging.info("MQTT\t-\tCOMMAND\t configuration updated")
 
     def send_log(self) -> None:
         """The function starts new log files and sends logs to MQTT broker"""
@@ -310,6 +328,8 @@ class ICECommander:
         """The function starts the ICE runner"""
         CanNode.connect()
         CanNode.change_file()
+        MqttClient.run_logs["candump"] = CanNode.candump_filename
+        MqttClient.run_logs["output"] = CanNode.output_filename
         start_dronecan_handlers()
 
         while True:

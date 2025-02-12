@@ -6,13 +6,12 @@
 
 import time
 import logging
-
 from mqtt.client import MqttClient
 
-@MqttClient.client.topic_callback("ice_runner/server/rp_commander/#")
 def handle_command(client, userdata, message):
     """The function handles the command from the server"""
     del userdata, client
+    logging.debug("RECEIVED\t-\t%s", message.topic)
     mes_text = message.payload.decode()
     if mes_text == "start":
         logging.info("RECEIVED\t-\tstart")
@@ -40,9 +39,31 @@ def handle_command(client, userdata, message):
         logging.info("RECEIVED\t-\tLog request")
         MqttClient.publish_log()
 
-@MqttClient.client.topic_callback("ice_runner/server/rp_commander/who_alive")
+def handle_change_config(client, userdata, message):
+    """The function handles the change_config command from the server"""
+    del userdata, client
+    MqttClient.conf_updated = True
+    param_name = message.topic.split("/")[-1]
+    param_value = message.payload.decode()
+    print(param_name, param_value)
+    logging.info("RECEIVED\t-\tparam value %s\t%s", param_name, param_value)
+    try:
+        type_of_param = type(getattr(MqttClient.configuration, param_name))
+        setattr(MqttClient.configuration, param_name, type_of_param(param_value))
+    except AttributeError:
+        logging.error("RECEIVED\t-\t%s\t%s\tERROR\tAttribute not found", param_name, param_value)
+
 def handle_who_alive(client, userdata, message):
     """Handler of message used to check all connected ICE Runners. All RPi should reply"""
     del userdata, message, client
     logging.debug("RECEIVED\t-\tWHO ALIVE")
     MqttClient.publish_state(MqttClient.state)
+
+def add_handlers() -> None:
+    """The function adds handlers to the MQTT client"""
+    MqttClient.client.message_callback_add(
+        f"ice_runner/server/rp_commander/{MqttClient.run_id}/command", handle_command)
+    MqttClient.client.message_callback_add(
+        "ice_runner/server/rp_commander/who_alive", handle_who_alive)
+    MqttClient.client.message_callback_add(
+        f"ice_runner/server/rp_commander/{MqttClient.run_id}/change_config/#", handle_change_config)

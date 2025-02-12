@@ -10,9 +10,9 @@ from os import path
 import os
 import yaml
 
-for _, logger in logging.root.manager.loggerDict.items():
-    logger.disabled=True
-    logger.propagate=False
+for _, parent_logger in logging.root.manager.loggerDict.items():
+    parent_logger.disabled=True
+    parent_logger.propagate=False
 
 # open the file in read mode
 log_conf_file = None
