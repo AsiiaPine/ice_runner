@@ -27,10 +27,10 @@ def getLogger(filepath):
     folder = path.split(folder)[-1]
     log_directory = path.join('..', 'logs', folder)
     log_filename = datetime.datetime.now().strftime(f"{name}_%Y_%m_%d-%H_%M_%S.log")
-    dir = path.join(path.split(__file__)[0], log_directory)
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-    full_log_path = path.join(dir, log_filename)
+    directory = path.join(path.split(__file__)[0], log_directory)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    full_log_path = path.join(directory, log_filename)
 
     # Update the filename in the logging configuration
     log_conf_file['handlers']['fileHandler']['filename'] = full_log_path

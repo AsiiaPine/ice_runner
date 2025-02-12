@@ -17,4 +17,4 @@ pydronecan
 raccoonlab-tools
 
 #rpi
-# RPi.GPIO
+RPi.GPIO

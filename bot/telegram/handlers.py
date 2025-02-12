@@ -27,7 +27,7 @@ from aiogram.types import (
 import yaml
 
 from mqtt.client import MqttClient
-from bot.telegram.filters import ChatIdFilter
+from telegram.filters import ChatIdFilter
 from common.RunnerState import RunnerState
 
 with open('ice_configuration.yml', encoding='utf8') as file:
