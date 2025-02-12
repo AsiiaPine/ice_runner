@@ -1,4 +1,5 @@
 # common
+dotenv
 netifaces
 paho-mqtt
 pytest
