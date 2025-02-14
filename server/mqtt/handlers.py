@@ -6,10 +6,13 @@
 
 import json
 import logging
+
+from line_profiler import profile
 from mqtt.client import ServerMqttClient
 from paho.mqtt.client import Client
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/dronecan/#")
+@profile
 def handle_raspberry_pi_dronecan_message(client: Client, userdata,  msg):
     """The function handles dronecan messages from Raspberry Pi and stores them in dictionary"""
     del userdata, client
@@ -21,6 +24,7 @@ def handle_raspberry_pi_dronecan_message(client: Client, userdata,  msg):
     ServerMqttClient.rp_messages[rp_id][message_type] = json.loads(msg.payload.decode())
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/status")
+@profile
 def handle_raspberry_pi_status(client: Client, userdata,  msg):
     """The function transmit status messages from Raspberry Pi to Bot"""
     del userdata
@@ -31,6 +35,7 @@ def handle_raspberry_pi_status(client: Client, userdata,  msg):
                    json.dumps(ServerMqttClient.rp_status[rp_id]))
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/state")
+@profile
 def handle_raspberry_pi_state(client: Client, userdata,  msg):
     """The function transmit state messages from Raspberry Pi to Bot"""
     del userdata
@@ -39,6 +44,7 @@ def handle_raspberry_pi_state(client: Client, userdata,  msg):
     client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/state", msg.payload.decode())
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/config")
+@profile
 def handle_raspberry_pi_configuration(client: Client, userdata,  msg):
     """The function transmit configuration messages from Raspberry Pi to Bot"""
     del userdata
@@ -50,6 +56,7 @@ def handle_raspberry_pi_configuration(client: Client, userdata,  msg):
                    msg.payload.decode())
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/full_config")
+@profile
 def handle_raspberry_pi_full_config(client: Client, userdata,  msg):
     """The function transmit full configuration messages from Raspberry Pi to Bot"""
     del userdata
@@ -60,6 +67,7 @@ def handle_raspberry_pi_full_config(client: Client, userdata,  msg):
                    msg.payload.decode())
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/log")
+@profile
 def handle_raspberry_pi_log(client: Client, userdata,  msg):
     """The function handles log messages with log filename from Raspberry Pi to Bot.
         Can be used if bot is running on same machine. Otherwise, send the whole log file to Bot"""
@@ -71,6 +79,7 @@ def handle_raspberry_pi_log(client: Client, userdata,  msg):
                    msg.payload.decode())
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/stop_reason")
+@profile
 def handle_raspberry_pi_stop_reason(client: Client, userdata,  msg):
     """The function transmit stop reason messages from Raspberry Pi to Bot"""
     del userdata
@@ -80,7 +89,12 @@ def handle_raspberry_pi_stop_reason(client: Client, userdata,  msg):
     client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/stop_reason",
                    msg.payload.decode())
 
+
+
+
+
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/log")
+@profile
 def handle_bot_usr_cmd_log(client: Client, userdata,  msg):
     """The function transmit log command from Bot, so the Raspberry Pi log file name will be sent"""
     del userdata
@@ -89,6 +103,7 @@ def handle_bot_usr_cmd_log(client: Client, userdata,  msg):
     client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "log")
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/state")
+@profile
 def handle_bot_usr_cmd_state(client: Client, userdata,  msg):
     """The function transmit state messages from Bot to Raspberry Pi specified by id in message"""
     del userdata
@@ -97,6 +112,7 @@ def handle_bot_usr_cmd_state(client: Client, userdata,  msg):
     client.publish("ice_runner/server/rp_commander/state", str(rp_id))
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/stop")
+@profile
 def handle_bot_usr_cmd_stop(client: Client, userdata,  msg):
     """The function transmit stop messages from Bot to Raspberry Pi specified by id in message"""
     del userdata
@@ -105,6 +121,7 @@ def handle_bot_usr_cmd_stop(client: Client, userdata,  msg):
     client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "stop")
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/start")
+@profile
 def handle_bot_usr_cmd_start(client: Client, userdata,  msg):
     """The function transmit start messages from Bot to Raspberry Pi specified by id in message"""
     del userdata
@@ -113,6 +130,7 @@ def handle_bot_usr_cmd_start(client: Client, userdata,  msg):
     client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "start")
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/status")
+@profile
 def handle_bot_usr_cmd_status(client: Client, userdata,  msg):
     """The function transmit status messages from Bot to Raspberry Pi specified by id in message"""
     del userdata
@@ -121,6 +139,7 @@ def handle_bot_usr_cmd_status(client: Client, userdata,  msg):
     client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "status")
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/who_alive")
+@profile
 def handle_bot_who_alive(client: Client, userdata,  msg):
     """The function sends who_alive message to all Raspberry Pis,
         so when a Raspberry Pi is connected, it will send state message to Bot"""
@@ -129,6 +148,7 @@ def handle_bot_who_alive(client: Client, userdata,  msg):
     client.publish("ice_runner/server/rp_commander/who_alive", "who_alive")
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/config")
+@profile
 def handle_bot_config(client: Client, userdata,  msg):
     """The function transmit bot command /config to Raspberry Pi"""
     del userdata
@@ -137,6 +157,7 @@ def handle_bot_config(client: Client, userdata,  msg):
     client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "config")
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/+/change_config/#")
+@profile
 def handle_bot_change_config(client: Client, userdata,  msg):
     """The function handles bot command /config"""
     del userdata
@@ -147,6 +168,7 @@ def handle_bot_change_config(client: Client, userdata,  msg):
                    msg.payload.decode())
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/full_config")
+@profile
 def handle_bot_full_config(client: Client, userdata,  msg):
     """The function handles bot command /config"""
     del userdata
@@ -156,6 +178,7 @@ def handle_bot_full_config(client: Client, userdata,  msg):
     logging.info("Received\t| Full config cmd for Raspberry Pi %d", rp_id)
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/server")
+@profile
 def handle_bot_server(client: Client, userdata,  msg):
     """The function handles bot command /server"""
     del userdata, msg

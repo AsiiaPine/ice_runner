@@ -66,7 +66,7 @@ def handle_change_config(client, userdata, message):
 def handle_who_alive(client, userdata, message):
     """Handler of message used to check all connected ICE Runners. All RPi should reply"""
     del userdata, message, client
-    logging.debug("RECEIVED\t-\tWHO ALIVE")
+    logging.info("RECEIVED\t-\tWHO ALIVE")
     MqttClient.publish_state(MqttClient.state)
 
 def add_handlers() -> None:

@@ -10,11 +10,15 @@ import sys
 import time
 import logging
 from dotenv import load_dotenv
+from line_profiler import profile
 from mqtt.handlers import ServerMqttClient
 from common import logging_configurator
+from pycallgraph2 import PyCallGraph
+from pycallgraph2.output import GraphvizOutput
 
 logger = logging_configurator.getLogger(__file__)
 
+@profile
 def main() -> None:
     """The function starts the server"""
     os.environ.clear()
@@ -29,7 +33,7 @@ def main() -> None:
 
         last_keep_alive = 0
         while ServerMqttClient.client.is_connected: #wait in loop
-            if time.time() - last_keep_alive > 1:
+            if time.time() - last_keep_alive > 0.5:
                 for i in ServerMqttClient.rp_status:
                     ServerMqttClient.client.publish(
                                         f"ice_runner/server/rp_commander/{i}/command", "keep alive")
