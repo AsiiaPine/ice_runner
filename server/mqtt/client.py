@@ -72,8 +72,9 @@ class ServerMqttClient:
     @classmethod
     def publish_full_configuration(cls, rp_id: int) -> None:
         """The function publishes full configuration of the Raspberry Pi to the bot"""
-        if rp_id not in cls.rp_full_configuration:
+        if rp_id not in cls.rp_states:
             logging.debug("Published\t| Raspberry Pi %d is not connected", rp_id)
+            cls.rp_full_configuration[rp_id] = None
             return
         cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/full_config",
                            str(cls.rp_full_configuration[rp_id]))

@@ -34,6 +34,7 @@ def main() -> None:
                     ServerMqttClient.client.publish(
                                         f"ice_runner/server/rp_commander/{i}/command", "keep alive")
                 last_keep_alive = time.time()
+                ServerMqttClient.rp_states.clear()
         logger.error("STATUS\t| Disconnected")
         ServerMqttClient.client.disconnect() # disconnect
         ServerMqttClient.client.loop_stop()

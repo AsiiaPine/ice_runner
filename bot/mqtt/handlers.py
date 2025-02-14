@@ -4,6 +4,7 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import json
 import logging
 from mqtt.client import MqttClient
 from telegram.scheduler import Scheduler
@@ -27,7 +28,7 @@ def handle_commander_status(client, userdata, message):
     """The function stores status from Raspberry Pi to Bot mqtt client storage"""
     del client, userdata
     rp_pi_id = int(message.topic.split("/")[-2])
-    status = safe_literal_eval(message.payload.decode())
+    status = json.loads(message.payload.decode())
     if status is not None:
         MqttClient.rp_status[rp_pi_id] = status
         logging.debug("received RP status from Raspberry Pi %d", rp_pi_id)
@@ -37,7 +38,7 @@ def handle_commander_config(client, userdata, message):
     """The function stores configuration from Raspberry Pi to Bot mqtt client storage"""
     del client, userdata
     rp_pi_id = int(message.topic.split("/")[-2])
-    MqttClient.rp_configuration[rp_pi_id] = safe_literal_eval(message.payload.decode())
+    MqttClient.rp_configuration[rp_pi_id] = json.loads(message.payload.decode())
     logging.debug("received RP configuration from Raspberry Pi %d", rp_pi_id)
 
 @MqttClient.client.topic_callback("ice_runner/server/bot_commander/server")
@@ -52,7 +53,7 @@ def handle_commander_log(client, userdata, message):
     """The function stores logs from Raspberry Pi to Bot mqtt client storage"""
     del client, userdata
     rp_pi_id = int(message.topic.split("/")[-2])
-    MqttClient.rp_logs[rp_pi_id] = safe_literal_eval(message.payload.decode())
+    MqttClient.rp_logs[rp_pi_id] = json.loads(message.payload.decode())
     logging.info("received LOG from Raspberry Pi %d", rp_pi_id)
 
 @MqttClient.client.topic_callback("ice_runner/server/bot_commander/rp_states/+/stop_reason")
@@ -68,5 +69,5 @@ def handle_commander_full_config(client, userdata, message):
     """The function stores full configuration from Raspberry Pi to Bot mqtt client storage"""
     del client, userdata
     rp_pi_id = int(message.topic.split("/")[-2])
-    logging.info("received FULL_CONFIG from Raspberry Pi %d %s", rp_pi_id, message.payload.decode())
-    MqttClient.runner_full_configuration[rp_pi_id] = safe_literal_eval(message.payload.decode())
+    logging.info("received FULL_CONFIG from Raspberry Pi %d", rp_pi_id)
+    MqttClient.runner_full_configuration[rp_pi_id] = json.loads(message.payload.decode())

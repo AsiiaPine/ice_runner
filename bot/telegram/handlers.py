@@ -26,7 +26,7 @@ from aiogram.types import (
 )
 import yaml
 
-from common.algorithms import is_float, safe_literal_eval
+from common.algorithms import get_type_from_str, is_float, safe_literal_eval
 from mqtt.client import MqttClient
 from telegram.filters import ChatIdFilter
 from common.RunnerState import RunnerState
@@ -67,6 +67,19 @@ def get_configuration_str(rp_id: int) -> str:
         for name, value in conf.items():
             conf_str += f"\t{name}: {value}\n"
     return conf_str
+
+async def get_full_configuration_str(runner_id: int) -> Dict[str, Any]:
+    """The function returns the full configuration dictionary for the specified RPi
+        stored in MQTT client"""
+    i = 0
+    while runner_id not in MqttClient.runner_full_configuration:
+        MqttClient.publish_full_config_request(runner_id)
+        await asyncio.sleep(2)
+        i += 1
+        if i > 5:
+            logging.error("No configuration for %d", runner_id)
+            return None
+        return MqttClient.runner_full_configuration[runner_id]
 
 async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], bool]:
     """The function sets the status of the Raspberry Pi,
@@ -179,17 +192,25 @@ async def change_config(message: types.Message, state: FSMContext) -> None:
     await asyncio.sleep(0.5)
     rp_state = MqttClient.rp_states[rp_id].name
     await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
-    await message.answer("Настройки обкатки:" + get_configuration_str(rp_id))
+    await message.answer("Настройки обкатки:\n" + get_configuration_str(rp_id))
     rp_config = MqttClient.rp_configuration[rp_id]
     if len(rp_config) == 0:
         await message.answer("Ошибка, нет настроек обкатки")
         logging.error("No configuration for %d", rp_id)
         return
-    print("hi")
 
     await message.answer("Отправьте новые настройки в формате имя: значение. Начните сообщение с '/'. Например:")
     await message.answer("/rpm: 4000\ntime: 100\ngas_throttle: 0")
+    await message.answer("Чтобы получить подсказку по командам, напишите /tip")
     await state.set_state(BotState.config_change)
+
+@form_router.message(Command(commands=["/tip"]), ChatIdFilter(), BotState.config_change)
+async def config_tip_handler(message: Message, state: FSMContext) -> None:
+    """The function handles tip message with configuration change"""
+    data = await state.get_data()
+    runner_id = data["rp_id"]
+    full_conf = await get_full_configuration_str(runner_id)
+
 
 @form_router.message(BotState.config_change)
 async def config_change_handler(message: Message, state: FSMContext) -> None:
@@ -210,21 +231,51 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
         if not is_float(param_value):
             await message.answer(f"Неверное значение параметра {param_name}")
             return
+    full_conf = await get_full_configuration_str(runner_id)
 
-    for param_name, param_value in params_dict.items():
+
+    for param_name, param_value_str in params_dict.items():
+        type_of_param = get_type_from_str(full_conf[param_name]["type"])
+        param_value = type_of_param(param_value_str)
+        params_dict[param_name] = param_value
+
+    res: Dict[str, bool] = check_parameters_borders(params_dict, full_conf)
+    for param_name, param_flag in res.items():
+        if not param_flag:
+            await message.answer(f"Неверное значение параметра {param_name}")
+            return
+
+    for param_name, param_value_str in params_dict.items():
         MqttClient.client.publish(f"ice_runner/bot/usr_cmd/{runner_id}/change_config/{param_name}",
                                                                                         param_value)
         await message.answer(f"Новое значение параметра {param_name} отправлено")
     await asyncio.sleep(0.5)
     MqttClient.publish_config_request(runner_id)
     await asyncio.sleep(2)
+    if full_conf is None:
+        await message.answer("Ошибка, нет настроек обкатки")
+        return
     for param_name, param_value in params_dict.items():
-        type_of_param = type((MqttClient.runner_full_configuration[runner_id][param_name]["type"]))
-        if MqttClient.rp_configuration[runner_id][param_name] == param_value:
+        type_of_param = get_type_from_str(full_conf[param_name]["type"])
+        if MqttClient.rp_configuration[runner_id][param_name] == type_of_param(param_value):
             await message.answer(f"Параметр {param_name} установлен в нужное значение")
         else:
             await message.answer(f"Параметр {param_name} не установлен")
+    await message.answer("Конфигурация успешно изменена\n" + get_configuration_str(runner_id))
     await state.set_state()
+
+def check_parameters_borders(params: Dict[str, Any],
+                                   full_conf: Dict[str, Any]) -> Dict[str, bool]:
+    """The function checks if all parameters are set correctly"""
+    check_dict = {}
+    for param_name, param_value in params.items():
+        min_value = full_conf[param_name]["min"]
+        max_value = full_conf[param_name]["max"]
+        if min_value < param_value < max_value:
+            check_dict[param_name] = True
+        else:
+            check_dict[param_name] = False
+    return check_dict
 
 @form_router.message(Command(commands=["run", "запустить"], ignore_case=True), ChatIdFilter())
 async def command_run_handler(message: Message, state: FSMContext) -> None:

@@ -16,28 +16,40 @@ def handle_command(client, userdata, message):
     if mes_text == "start":
         logging.info("RECEIVED\t-\tstart")
         MqttClient.to_run = 1
+        return
 
     if mes_text == "stop":
         logging.info("RECEIVED\t-\tstop")
         MqttClient.to_stop = 1
+        return
 
     if mes_text == "keep alive":
         logging.debug("RECEIVED\t-\tkeep alive")
         MqttClient.last_message_receive_time = time.time()
+        return
 
     if mes_text == "status":
         logging.info("RECEIVED\t-\tStatus request")
         MqttClient.publish_status(MqttClient.status)
         MqttClient.publish_state(MqttClient.state)
         MqttClient.publish_configuration()
+        return
 
     if mes_text == "config":
         logging.info("RECEIVED\t-\tConfiguration request")
         MqttClient.publish_configuration()
+        return
+
+    if mes_text == "full_config":
+        logging.info("RECEIVED\t-\tFull Configuration request")
+        MqttClient.publish_full_configuration(MqttClient.configuration.original_dict)
+        return
 
     if mes_text == "log":
         logging.info("RECEIVED\t-\tLog request")
         MqttClient.publish_log()
+        return
+    logging.error("Unknown command %s", mes_text)
 
 def handle_change_config(client, userdata, message):
     """The function handles the change_config command from the server"""

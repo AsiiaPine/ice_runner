@@ -42,7 +42,7 @@ class MqttClient:
         """The function publishes dronecan messages to appropriate MQTT topic"""
         for dronecan_type in messages.keys():
             cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/dronecan/{dronecan_type}",
-                                str(messages[dronecan_type]))
+                                json.dumps(messages[dronecan_type]))
         logging.debug("PUBLISH\t-\tdronecan messages")
 
     @classmethod
@@ -65,7 +65,7 @@ class MqttClient:
         logging.debug("PUBLISH\t-\tlog")
         logging.debug("PUBLISH\t-\tlogs: %s", cls.run_logs)
         MqttClient.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/log",
-                                  str(MqttClient.run_logs))
+                                  json.dumps(MqttClient.run_logs))
 
     @classmethod
     def publish_configuration(cls) -> None:
@@ -73,7 +73,7 @@ class MqttClient:
             The configuration should be defined before start function is called"""
         logging.info("PUBLISH\t-\tconfiguration")
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/config",
-                           str(cls.configuration.to_dict()))
+                           json.dumps(cls.configuration.to_dict()))
 
     @classmethod
     def publish_stop_reason(cls, reason: str) -> None:
@@ -86,7 +86,7 @@ class MqttClient:
         """The function should be called at the start of the script"""
         logging.info("PUBLISH\t-\tfull configuration")
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/full_config",
-                           str(full_configuration))
+                           json.dumps(full_configuration))
 
     @classmethod
     def publish_flags(cls, flags: Dict[str, bool]) -> None:

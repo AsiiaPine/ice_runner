@@ -47,8 +47,6 @@ class IceRunnerConfiguration:
         dictionary = deepcopy(vars(self))
         dictionary.pop("original_dict")
         dictionary.pop("last_file_path")
-        dictionary.pop("attribute_names")
-        dictionary.pop("components")
         return dictionary
 
     def from_dict(self, conf: Dict[str, Any]) -> None:
