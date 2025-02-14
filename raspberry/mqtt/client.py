@@ -9,6 +9,7 @@ import sys
 import logging
 from typing import Any, Dict
 from paho.mqtt.client import MQTTv311, Client
+import yaml
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 
 class MqttClient:
@@ -42,7 +43,7 @@ class MqttClient:
         """The function publishes dronecan messages to appropriate MQTT topic"""
         for dronecan_type in messages.keys():
             cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/dronecan/{dronecan_type}",
-                                json.dumps(messages[dronecan_type]))
+                                json.dumps(messages[dronecan_type]).replace("'", '"'))
         logging.debug("PUBLISH\t-\tdronecan messages")
 
     @classmethod
