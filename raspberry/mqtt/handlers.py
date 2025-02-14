@@ -32,7 +32,6 @@ def handle_command(client, userdata, message):
         logging.info("RECEIVED\t-\tStatus request")
         MqttClient.publish_status(MqttClient.status)
         MqttClient.publish_state(MqttClient.state)
-        MqttClient.publish_configuration()
         return
 
     if mes_text == "config":

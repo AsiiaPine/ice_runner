@@ -38,8 +38,8 @@ def handle_commander_config(client, userdata, message):
     """The function stores configuration from Raspberry Pi to Bot mqtt client storage"""
     del client, userdata
     rp_pi_id = int(message.topic.split("/")[-2])
-    MqttClient.rp_configuration[rp_pi_id] = json.loads(message.payload.decode())
     logging.debug("received RP configuration from Raspberry Pi %d", rp_pi_id)
+    MqttClient.rp_configuration[rp_pi_id] = json.loads(message.payload.decode())
 
 @MqttClient.client.topic_callback("ice_runner/server/bot_commander/server")
 def handle_commander_server(client, userdata, message):
@@ -70,4 +70,6 @@ def handle_commander_full_config(client, userdata, message):
     del client, userdata
     rp_pi_id = int(message.topic.split("/")[-2])
     logging.info("received FULL_CONFIG from Raspberry Pi %d", rp_pi_id)
+    print(message.payload.decode())
+    print(json.loads(message.payload.decode()))
     MqttClient.runner_full_configuration[rp_pi_id] = json.loads(message.payload.decode())

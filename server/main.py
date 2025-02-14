@@ -29,7 +29,7 @@ def main() -> None:
 
         last_keep_alive = 0
         while ServerMqttClient.client.is_connected: #wait in loop
-            if time.time() - last_keep_alive > 0.5:
+            if time.time() - last_keep_alive > 1:
                 for i in ServerMqttClient.rp_status:
                     ServerMqttClient.client.publish(
                                         f"ice_runner/server/rp_commander/{i}/command", "keep alive")

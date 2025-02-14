@@ -68,7 +68,7 @@ def get_configuration_str(rp_id: int) -> str:
             conf_str += f"\t{name}: {value}\n"
     return conf_str
 
-async def get_full_configuration_str(runner_id: int) -> Dict[str, Any]:
+async def get_full_configuration(runner_id: int) -> Dict[str, Any]:
     """The function returns the full configuration dictionary for the specified RPi
         stored in MQTT client"""
     i = 0
@@ -79,7 +79,8 @@ async def get_full_configuration_str(runner_id: int) -> Dict[str, Any]:
         if i > 5:
             logging.error("No configuration for %d", runner_id)
             return None
-        return MqttClient.runner_full_configuration[runner_id]
+    print(MqttClient.runner_full_configuration[runner_id])
+    return MqttClient.runner_full_configuration[runner_id]
 
 async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], bool]:
     """The function sets the status of the Raspberry Pi,
@@ -188,7 +189,7 @@ async def change_config(message: types.Message, state: FSMContext) -> None:
         return
     rp_id = (await state.get_data())["rp_id"]
     logging.debug("Send conf command to rpi %d", rp_id)
-    MqttClient.client.publish(f"ice_runner/bot/usr_cmd/config", str(rp_id))
+    MqttClient.publish_config_request(rp_id)
     await asyncio.sleep(0.5)
     rp_state = MqttClient.rp_states[rp_id].name
     await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
@@ -204,13 +205,20 @@ async def change_config(message: types.Message, state: FSMContext) -> None:
     await message.answer("Чтобы получить подсказку по командам, напишите /tip")
     await state.set_state(BotState.config_change)
 
-@form_router.message(Command(commands=["/tip"]), ChatIdFilter(), BotState.config_change)
+@form_router.message(Command(commands=["tip"]), ChatIdFilter(), BotState.config_change)
 async def config_tip_handler(message: Message, state: FSMContext) -> None:
     """The function handles tip message with configuration change"""
     data = await state.get_data()
     runner_id = data["rp_id"]
-    full_conf = await get_full_configuration_str(runner_id)
-
+    print(runner_id)
+    full_conf = await get_full_configuration(runner_id)
+    string = ""
+    print(full_conf)
+    for param_name, param_data in full_conf.items():
+        string += f"{param_name}:\n"
+        for name, value in param_data.items():
+            string += f"\t{name}: {value}\n"
+    await message.answer(string)
 
 @form_router.message(BotState.config_change)
 async def config_change_handler(message: Message, state: FSMContext) -> None:
@@ -224,6 +232,9 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     for params in text.split("\n"):
         if not params:
             continue
+        if ":" not in params:
+            await message.answer("Неверный формат команды")
+            return
         param_name, param_value = params.split(":")
         params_dict[param_name] = param_value
 
@@ -231,7 +242,7 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
         if not is_float(param_value):
             await message.answer(f"Неверное значение параметра {param_name}")
             return
-    full_conf = await get_full_configuration_str(runner_id)
+    full_conf = await get_full_configuration(runner_id)
 
 
     for param_name, param_value_str in params_dict.items():
