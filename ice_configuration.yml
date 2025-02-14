@@ -1,47 +1,139 @@
-command:
-  default: 0
-  help: Команда на N оборотов (RPMCommand) без ПИД-регулятора
-  value: 0
-
-max_gas_throttle:
-  default: 100
-  help: Максимальное допустимый уровень газовой заслонки в процентах. Значение 100
-    означает, что нет ограничений.
-  value: 100
-
-max_temperature:
-  default: 190
-  help: Максимальная допустимая температура ДВС, после которой скрипт завершит выполнение
-  value: 190
-
-max_vibration:
-  default: 1000
-  help: Максимальный допустимый уровень вибрации
-  value: 1000
-
-min_fuel_volume:
-  default: 0
-  help: Минимальный уровень топлива (процент или cm3), после которого прекращаем обкатку/выдаем
-    предупреждение.
-  value: 0
-
 mode:
-  default: 0
-  help: 'Есть 3 варианта работы: 0 - просто сразу же выставляем команду, 1 - ПИД-регулятор
-    на стороне скрипта, 2 - ПИД-регулятор на стороне платы'
-  value: 0
-
-report_period:
-  default: 10
-  help: 'Период публикации статус сообщения в секундах '
-  value: 10
+  default: 1
+  help: "1 - CONST, просто сразу же выставляем команду,\n\t2 - ПИД-регулятор,\n\t\
+    3 - RPMCommand, контроль занчений оборотов осуществяется на самой плате ice_node,\n\
+    \t4 - Проверка стартера, двигатель запускается на 8 секунд\n\t5 - Запуск двигателя\
+    \ с закрытой воздушной заслонкой на 60 секунд"
+  value: 1
+  min: 1
+  max: 5
+  unit: ''
+  type: int
 
 rpm:
   default: 4500
   help: Целевые обороты ДВС
-  value: 4500
+  value: 4000
+  min: 0
+  max: 12000
+  unit: 1/min
+  type: int
 
 time:
-  default: 600
+  default: 10
   help: Время в секундах, через которое скрипт автоматически закончит свое выполнение
-  value: 600
+  value: 100
+  min: 0
+  max: 3600
+  unit: sec
+  type: int
+
+gas_throttle:
+  default: 0
+  help: Положение дроссельной заслонки
+  value: 0
+  min: 0
+  max: 0
+  unit: '%'
+  type: int
+
+air_throttle:
+  default: 0
+  help: Положение воздушной заслонки
+  value: 0
+  min: 0
+  max: 0
+  unit: '%'
+  type: int
+
+min_gas_throttle:
+  default: 0
+  help: Минимальное значение дроссельной заслонки, которое будет отправляться, используется
+    для mode 1
+  value: 0
+  min: 0
+  max: 100
+  unit: '%'
+  type: int
+
+max_gas_throttle:
+  default: 0
+  help: Максимальное значение дроссельной заслонки, которое будет отправляться, используется
+    для mode 1
+  value: 75
+  min: 0
+  max: 100
+  unit: '%'
+  type: int
+
+report_period:
+  help: Период отправки dronecan, status, state сообщений на сервер
+  value: 0
+  min: 0
+  max: 60
+  unit: sec
+  type: int
+
+control_pid_p:
+  help: Коэффициент p для ПИД регулятора
+  value: 0.0
+  min: 0
+  max: 999
+  unit: ''
+  type: float
+
+control_pid_i:
+  help: Коэффициент i для ПИД регулятора
+  value: 0.0
+  min: 0
+  max: 999
+  unit: ''
+  type: float
+
+control_pid_d:
+  help: Коэффициент d для ПИД регулятора
+  value: 0.0
+  min: 0
+  max: 999
+  unit: ''
+  type: float
+
+max_temperature:
+  help: Граничная температура двигателя, при достижении обкатка обрывается
+  value: 190
+  min: 0
+  max: 210
+  unit: sec
+  type: int
+
+min_fuel_volume:
+  help: Граничный уровень топлива, при достижении обкатка обрывается
+  value: 0
+  min: 0
+  max: 100
+  unit: '%'
+  type: int
+
+min_vin_voltage:
+  help: Граничнное входное напряжение, при достижении обкатка обрывается
+  value: 20.0
+  min: 0
+  max: 60.0
+  unit: Volts
+  type: float
+
+start_attemts:
+  help: Количество попыток запуска двигателя на всю обкатку
+  value: 3
+  min: 1
+  max: 5
+  unit: ''
+  type: int
+
+max_vibration:
+  help: Максимальный уровень вибраций
+  value: 1000
+  min: 0
+  max: 2000
+  unit: ''
+  type: int

@@ -26,6 +26,7 @@ from aiogram.types import (
 )
 import yaml
 
+from common.algorithms import is_float, safe_literal_eval
 from mqtt.client import MqttClient
 from telegram.filters import ChatIdFilter
 from common.RunnerState import RunnerState
@@ -109,7 +110,7 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
 
 async def show_options(message: types.Message) -> None:
     """The function creates set of buttons of available RPis"""
-    MqttClient.client.publish("ice_runner/bot/usr_cmd/who_alive")
+    MqttClient.publish_who_alive()
     await asyncio.sleep(0.5)
     available_rps = list(MqttClient.rp_states.keys())
     if len(available_rps) == 0:
@@ -148,7 +149,6 @@ async def choose_rp_id_callback(callback_query: types.CallbackQuery, state: FSMC
     await callback_query.message.answer(f"ID выбранного обкатчика: {rp_id_num}")
     await state.set_data({"rp_id": rp_id_num})
 
-
 @form_router.message(Command(commands=["cancel", "отмена"]), ChatIdFilter())
 async def cancel_handler(message: Message, state: FSMContext) -> None:
     """
@@ -185,55 +185,45 @@ async def change_config(message: types.Message, state: FSMContext) -> None:
         await message.answer("Ошибка, нет настроек обкатки")
         logging.error("No configuration for %d", rp_id)
         return
-    builder = InlineKeyboardBuilder()
-    params = list(rp_config.keys())
-    n_buttons = len(rp_config.keys())
-    n_rows = n_buttons // 3
-    if n_buttons % 3 != 0:
-        n_rows += 1
-    for i in range(n_rows):
-        inline_buttons = []
-        for j in range(3):
-            if i * 3 + j >= n_buttons:
-                break
-            param = params[i * 3 + j]
-            inline_buttons.append(types.InlineKeyboardButton(
-                text= f"{param}",
-                callback_data=param)
-            )
-        builder.row(*inline_buttons)
-    await message.answer(
-        "Выберите параметр для его изменения",
-        reply_markup=builder.as_markup()
-    )
+    print("hi")
+
+    await message.answer("Отправьте новые настройки в формате имя: значение. Начните сообщение с '/'. Например:")
+    await message.answer("/rpm: 4000\ntime: 100\ngas_throttle: 0")
     await state.set_state(BotState.config_change)
 
-@form_router.callback_query(BotState.config_change)
-async def choose_param_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
-    """The function handles callback query from config param selection buttons"""
-    param_name = callback_query.data
-    await callback_query.message.answer(f"Введите новое значение для {param_name}")
-    data = await state.get_data()
-    data["param_name"] = param_name
-    await state.set_data(data)
-    await state.set_state(BotState.param_change)
-
-@form_router.message(BotState.param_change)
+@form_router.message(BotState.config_change)
 async def config_change_handler(message: Message, state: FSMContext) -> None:
     """The function handles messages with configuration change"""
     data = await state.get_data()
-    param_name = data["param_name"]
-    rp_id = data["rp_id"]
-    logging.info("Send new param %s value", param_name)
-    print(message.text)
+    runner_id = data["rp_id"]
     text = copy(message.text)
     if ("@" in text ) or ( "/" in text):
         text = text.split("@")[0].replace("/", "")
-    if not text.isdigit():
-        await message.answer("Неверное значение")
-        return
-    MqttClient.client.publish(f"ice_runner/bot/usr_cmd/change_config/{rp_id}/{param_name}", text)
-    await message.answer(f"Новое значение параметра {param_name} установлено")
+    params_dict ={}
+    for params in text.split("\n"):
+        if not params:
+            continue
+        param_name, param_value = params.split(":")
+        params_dict[param_name] = param_value
+
+    for param_name, param_value in params_dict.items():
+        if not is_float(param_value):
+            await message.answer(f"Неверное значение параметра {param_name}")
+            return
+
+    for param_name, param_value in params_dict.items():
+        MqttClient.client.publish(f"ice_runner/bot/usr_cmd/{runner_id}/change_config/{param_name}",
+                                                                                        param_value)
+        await message.answer(f"Новое значение параметра {param_name} отправлено")
+    await asyncio.sleep(0.5)
+    MqttClient.publish_config_request(runner_id)
+    await asyncio.sleep(2)
+    for param_name, param_value in params_dict.items():
+        type_of_param = type((MqttClient.runner_full_configuration[runner_id][param_name]["type"]))
+        if MqttClient.rp_configuration[runner_id][param_name] == param_value:
+            await message.answer(f"Параметр {param_name} установлен в нужное значение")
+        else:
+            await message.answer(f"Параметр {param_name} не установлен")
     await state.set_state()
 
 @form_router.message(Command(commands=["run", "запустить"], ignore_case=True), ChatIdFilter())
@@ -296,7 +286,7 @@ async def command_show_all_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/show_all` command
     """
-    MqttClient.client.publish("ice_runner/bot/usr_cmd/who_alive")
+    MqttClient.publish_who_alive()
     await state.set_state(BotState.show_all_state)
     await asyncio.sleep(1)
     messages: List[Dict[str, Any]] = []

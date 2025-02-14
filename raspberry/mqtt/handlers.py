@@ -42,12 +42,11 @@ def handle_command(client, userdata, message):
 def handle_change_config(client, userdata, message):
     """The function handles the change_config command from the server"""
     del userdata, client
-    MqttClient.conf_updated = True
     param_name = message.topic.split("/")[-1]
     param_value = message.payload.decode()
-    print(param_name, param_value)
     logging.info("RECEIVED\t-\tparam value %s\t%s", param_name, param_value)
     try:
+        MqttClient.conf_updated = True
         type_of_param = type(getattr(MqttClient.configuration, param_name))
         setattr(MqttClient.configuration, param_name, type_of_param(param_value))
     except AttributeError:

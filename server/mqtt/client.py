@@ -28,6 +28,7 @@ class ServerMqttClient:
     rp_stop_reason: Dict[int, str] = {}
     rp_configuration: Dict[int, IceRunnerConfiguration] = {}
     client.disconnect_callback = on_disconnect
+    rp_full_configuration: Dict[int, Dict[str, Any]] = {}
 
     @classmethod
     def connect(cls, server_ip: str = "localhost", port: int = 1883) -> None:
@@ -67,6 +68,15 @@ class ServerMqttClient:
         for rp_id in cls.rp_status:
             cls.publish_rp_state(rp_id)
             cls.publish_rp_status(rp_id)
+
+    @classmethod
+    def publish_full_configuration(cls, rp_id: int) -> None:
+        """The function publishes full configuration of the Raspberry Pi to the bot"""
+        if rp_id not in cls.rp_full_configuration:
+            logging.debug("Published\t| Raspberry Pi %d is not connected", rp_id)
+            return
+        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/full_config",
+                           str(cls.rp_full_configuration[rp_id]))
 
     @classmethod
     def start(cls) -> None:

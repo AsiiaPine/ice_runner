@@ -4,6 +4,7 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import json
 import logging
 import yaml
 from mqtt.client import ServerMqttClient
@@ -27,9 +28,10 @@ def handle_raspberry_pi_status(client: Client, userdata,  msg):
     del userdata
     rp_id = int(msg.topic.split("/")[2])
     logging.debug("Recieved\t| Raspberry Pi %d send status", rp_id)
-    ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())
+    print(msg.payload.decode())
+    ServerMqttClient.rp_status[rp_id] = json.loads(msg.payload.decode())
     client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status",
-                   str(ServerMqttClient.rp_status[rp_id]))
+                   json.dumps(ServerMqttClient.rp_status[rp_id]))
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/state")
 def handle_raspberry_pi_state(client: Client, userdata,  msg):
@@ -127,14 +129,25 @@ def handle_bot_config(client: Client, userdata,  msg):
     client.publish(f"ice_runner/server/rp_commander/{rp_id}/command", "config")
     logging.info("Published\t| Bot waiting for configuration of Raspberry Pi %d", rp_id)
 
-@ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/change_config/+/+")
+@ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/+/change_config/#")
 def handle_bot_change_config(client: Client, userdata,  msg):
     """The function handles bot command /config"""
     del userdata
-    rp_id, param_name = msg.topic.split("/")[-2:]
+    rp_id = msg.topic.split("/")[-3]
+    param_name = msg.topic.split("/")[-1]
+    print(msg.payload.decode())
+    logging.info("Received\t| New config %s value cmd for Raspberry Pi %s", param_name, rp_id)
     client.publish(f"ice_runner/server/rp_commander/{rp_id}/change_config/{param_name}",
                    msg.payload.decode())
-    logging.info("Published\t| New config %s value", param_name)
+
+@ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/+/full_config")
+def handle_full_config(client: Client, userdata,  msg):
+    """The function handles bot command /config"""
+    del userdata
+    rp_id = msg.topic.split("/")[-3]
+    client.publish(f"ice_runner/server/rp_commander/{rp_id}/full_config",
+                   msg.payload.decode())
+    logging.info("Received\t| Full config cmd for Raspberry Pi %d", rp_id)
 
 @ServerMqttClient.client.topic_callback("ice_runner/bot/usr_cmd/server")
 def handle_bot_server(client: Client, userdata,  msg):

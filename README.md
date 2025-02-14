@@ -33,6 +33,7 @@ One can control the ICE runners using the telegram bot. The bot can send command
         sudo apt-get update
         sudo apt-get install mosquitto mosquitto-clients
         ```
+    - Change ice runner configuration in `ice_configuration.yml` (you can change the configuration using telegram bot's command `/config`)
     - Run the script with the specified id for the raspberry pi. This id is used for MQTT communication and in telegram bot commands.
         ```bash
         python raspberry/main.py --id 1
@@ -62,7 +63,7 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
         python bot/main.py
         ```
 
-To start a simulator of the ICE create slcan, run the following script:
+To start a simulator of the ICE start can interface (e.g. slcan/vcan), run the following script:
 ```bash
 python ice_sim/test_commander.py
 ```

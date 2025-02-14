@@ -33,7 +33,6 @@ class ICEState:
     def __init__(self) -> None:
         self.ice_state: RecipState = RecipState.NOT_CONNECTED
         self.rpm: int = 0
-        self.throttle: int = 0
         self.temp: int = 0
         self.fuel_level: int = 0
         self.fuel_level_percent: int = 0
@@ -51,12 +50,12 @@ class ICEState:
         self.mode: Mode = Mode.MODE_OPERATIONAL
         self.health: Health = Health.HEALTH_OK
         self.rec_imu: bool = False
+        self.start_attempts: int = 0
 
     def update_with_resiprocating_status(self, msg) -> None:
         logging.getLogger(__name__).info(f"UPD STATE: {msg.message.state}")
         self.ice_state = RecipState(msg.message.state)
         self.rpm = msg.message.engine_speed_rpm
-        self.throttle = msg.message.throttle_position_percent
         self.temp = msg.message.oil_temperature
         self.gas_throttle = msg.message.engine_load_percent
         self.air_throttle = msg.message.throttle_position_percent
