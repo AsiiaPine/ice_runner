@@ -20,7 +20,7 @@ def handle_raspberry_pi_dronecan_message(client: Client, userdata,  msg):
     logging.debug("Published\t| Raspberry Pi %d send %s", rp_id, message_type)
     if rp_id not in ServerMqttClient.rp_messages:
         ServerMqttClient.rp_messages[rp_id] = {}
-    ServerMqttClient.rp_messages[rp_id][message_type] = yaml.safe_load(msg.payload.decode())
+    ServerMqttClient.rp_messages[rp_id][message_type] = json.dumps(msg.payload.decode())
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/status")
 def handle_raspberry_pi_status(client: Client, userdata,  msg):
