@@ -4,6 +4,7 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import json
 import logging
 import yaml
 from mqtt.client import ServerMqttClient
@@ -27,9 +28,9 @@ def handle_raspberry_pi_status(client: Client, userdata,  msg):
     del userdata
     rp_id = int(msg.topic.split("/")[2])
     logging.debug("Recieved\t| Raspberry Pi %d send status", rp_id)
-    ServerMqttClient.rp_status[rp_id] = safe_literal_eval(msg.payload.decode())
+    ServerMqttClient.rp_status[rp_id] = json.loads(msg.payload.decode())
     client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status",
-                   str(ServerMqttClient.rp_status[rp_id]))
+                   json.dumps(ServerMqttClient.rp_status[rp_id]))
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/state")
 def handle_raspberry_pi_state(client: Client, userdata,  msg):

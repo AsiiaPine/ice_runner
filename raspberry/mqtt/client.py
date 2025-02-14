@@ -4,6 +4,7 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import json
 import sys
 import logging
 from typing import Any, Dict
@@ -49,7 +50,7 @@ class MqttClient:
         """The function publishes status to MQTT broker"""
         logging.debug("PUBLISH\t-\tstatus")
         MqttClient.status = status
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/status", str(status))
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/status", json.dumps(status))
 
     @classmethod
     def publish_state(cls, state: int) -> None:
