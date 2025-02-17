@@ -80,7 +80,7 @@ class ServerMqttClient:
                            str(cls.rp_full_configuration[rp_id]))
 
     @classmethod
-    def start(cls) -> None:
+    async def start(cls) -> None:
         """The function starts the server mqtt client and subscribes to the topics"""
         logging.info("Started")
         cls.client.subscribe("ice_runner/raspberry_pi/#")

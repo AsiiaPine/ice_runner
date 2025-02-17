@@ -81,7 +81,6 @@ async def get_full_configuration(runner_id: int) -> Dict[str, Any]:
         if i > 5:
             logging.error("No configuration for %d", runner_id)
             return None
-    print(MqttClient.runner_full_configuration[runner_id])
     return MqttClient.runner_full_configuration[runner_id]
 
 async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], bool]:
@@ -242,10 +241,10 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
 
     for param_name, param_value in params_dict.items():
         if not is_float(param_value):
-            await message.answer(f"Неверное значение параметра {param_name}")
+            await message.answer(
+                f"Неверное значение параметра {param_name}: {param_value} не является числом")
             return
     full_conf = await get_full_configuration(runner_id)
-
 
     for param_name, param_value_str in params_dict.items():
         type_of_param = get_type_from_str(full_conf[param_name]["type"])
@@ -255,7 +254,7 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     res: Dict[str, bool] = check_parameters_borders(params_dict, full_conf)
     for param_name, param_flag in res.items():
         if not param_flag:
-            await message.answer(f"Неверное значение параметра {param_name}")
+            await message.answer(f"Неверное значение параметра {param_name}: min {full_conf[param_name]['min']}, max {full_conf[param_name]['max']}")
             return
 
     for param_name, param_value_str in params_dict.items():
@@ -285,7 +284,7 @@ def check_parameters_borders(params: Dict[str, Any],
     for param_name, param_value in params.items():
         min_value = full_conf[param_name]["min"]
         max_value = full_conf[param_name]["max"]
-        if min_value < param_value < max_value:
+        if min_value <= param_value <= max_value:
             check_dict[param_name] = True
         else:
             check_dict[param_name] = False

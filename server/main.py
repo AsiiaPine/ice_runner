@@ -19,31 +19,31 @@ from pycallgraph2.output import GraphvizOutput
 
 logger = logging_configurator.getLogger(__file__)
 
-def ping_rpis() -> None:
+last_keep_alive = 0
+async def ping_rpis() -> None:
     """The function sends ping messages to all Raspberry Pis"""
-    last_keep_alive = 0
-    while ServerMqttClient.client.is_connected: #wait in loop
-        if time.time() - last_keep_alive > 0.5:
-            for i in ServerMqttClient.rp_status:
-                ServerMqttClient.client.publish(
-                                    f"ice_runner/server/rp_commander/{i}/command", "keep alive")
-            last_keep_alive = time.time()
-            ServerMqttClient.rp_states.clear()
-    logger.error("STATUS\t| Disconnected")
-    ServerMqttClient.client.disconnect() # disconnect
-    ServerMqttClient.client.loop_stop()
+    global last_keep_alive
+    if time.time() - last_keep_alive > 0.5:
+        for i in ServerMqttClient.rp_status:
+            ServerMqttClient.client.publish(
+                                f"ice_runner/server/rp_commander/{i}/command", "keep alive")
+        last_keep_alive = time.time()
 
-def main() -> None:
+@profile
+async def main() -> None:
     """The function starts the server"""
     os.environ.clear()
     load_dotenv()
     server_ip = os.getenv("SERVER_IP")
     server_port = int(os.getenv("SERVER_PORT"))
-
     ServerMqttClient.connect(server_ip, server_port)
+    await ServerMqttClient.start()
     logger.info("Started")
-    asyncio.gather(ServerMqttClient.start(), ping_rpis())
+
+    while True:
+        await ping_rpis()
+        await asyncio.sleep(1)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    main()
+    asyncio.run(main())
