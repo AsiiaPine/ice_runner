@@ -5,6 +5,7 @@
 
 """The script is used to start the server"""
 
+import asyncio
 import os
 import sys
 import time
@@ -18,7 +19,20 @@ from pycallgraph2.output import GraphvizOutput
 
 logger = logging_configurator.getLogger(__file__)
 
-@profile
+def ping_rpis() -> None:
+    """The function sends ping messages to all Raspberry Pis"""
+    last_keep_alive = 0
+    while ServerMqttClient.client.is_connected: #wait in loop
+        if time.time() - last_keep_alive > 0.5:
+            for i in ServerMqttClient.rp_status:
+                ServerMqttClient.client.publish(
+                                    f"ice_runner/server/rp_commander/{i}/command", "keep alive")
+            last_keep_alive = time.time()
+            ServerMqttClient.rp_states.clear()
+    logger.error("STATUS\t| Disconnected")
+    ServerMqttClient.client.disconnect() # disconnect
+    ServerMqttClient.client.loop_stop()
+
 def main() -> None:
     """The function starts the server"""
     os.environ.clear()
@@ -26,22 +40,9 @@ def main() -> None:
     server_ip = os.getenv("SERVER_IP")
     server_port = int(os.getenv("SERVER_PORT"))
 
-    while True:
-        ServerMqttClient.connect(server_ip, server_port)
-        logger.info("Started")
-        ServerMqttClient.start()
-
-        last_keep_alive = 0
-        while ServerMqttClient.client.is_connected: #wait in loop
-            if time.time() - last_keep_alive > 0.5:
-                for i in ServerMqttClient.rp_status:
-                    ServerMqttClient.client.publish(
-                                        f"ice_runner/server/rp_commander/{i}/command", "keep alive")
-                last_keep_alive = time.time()
-                ServerMqttClient.rp_states.clear()
-        logger.error("STATUS\t| Disconnected")
-        ServerMqttClient.client.disconnect() # disconnect
-        ServerMqttClient.client.loop_stop()
+    ServerMqttClient.connect(server_ip, server_port)
+    logger.info("Started")
+    asyncio.gather(ServerMqttClient.start(), ping_rpis())
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)

@@ -56,9 +56,11 @@ dp.include_router(form_router)
 configuration: Dict[int, Dict[str, Any]] = {}
 configuration_file_path: str = None
 
-def get_configuration_str(rp_id: int) -> str:
+async def get_configuration_str(rp_id: int) -> str:
     """The function returns the configuration string for the specified RP id
         stored in MQTT client"""
+    MqttClient.publish_config_request(rp_id)
+    await asyncio.sleep(0.5)
     if rp_id not in MqttClient.rp_configuration:
         return "Нет настроек обкатки для обкатчика " + str(rp_id)
     conf = MqttClient.rp_configuration[int(rp_id)]
@@ -193,7 +195,7 @@ async def change_config(message: types.Message, state: FSMContext) -> None:
     await asyncio.sleep(0.5)
     rp_state = MqttClient.rp_states[rp_id].name
     await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
-    await message.answer("Настройки обкатки:\n" + get_configuration_str(rp_id))
+    await message.answer("Настройки обкатки:\n" + (await get_configuration_str(rp_id)))
     rp_config = MqttClient.rp_configuration[rp_id]
     if len(rp_config) == 0:
         await message.answer("Ошибка, нет настроек обкатки")
@@ -272,7 +274,8 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
             await message.answer(f"Параметр {param_name} установлен в нужное значение")
         else:
             await message.answer(f"Параметр {param_name} не установлен")
-    await message.answer("Конфигурация успешно изменена\n" + get_configuration_str(runner_id))
+    await message.answer("Конфигурация успешно изменена\n" +
+                                (await get_configuration_str(runner_id)))
     await state.set_state()
 
 def check_parameters_borders(params: Dict[str, Any],
@@ -299,7 +302,7 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     rp_id = (await state.get_data())["rp_id"]
     rp_state = MqttClient.rp_states[rp_id].name
     await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
-    await message.answer("Настройки обкатки:" + get_configuration_str(rp_id))
+    await message.answer("Настройки обкатки:" + (await get_configuration_str(rp_id)))
     await state.set_state(BotState.starting_state)
     if rp_state in ('RUNNING', 'STARTING'):
         await message.answer("Ошибка\nОбкатка уже запущена")
@@ -375,7 +378,7 @@ async def command_show_all_handler(message: Message, state: FSMContext) -> None:
             conf_str = html.bold("\tНет настроек обкатки\n")
         else:
             report_period = int(MqttClient.rp_configuration[int(rp_id)]["report_period"])
-            conf_str = html.bold("\tНастройки обкатки:\n") + get_configuration_str(rp_id)
+            conf_str = html.bold("\tНастройки обкатки:\n") + (await get_configuration_str(rp_id))
         data["rp_id"] = rp_id
         data["report_period"] = report_period
         await state.set_data(data)
@@ -414,7 +417,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     if rp_id not in MqttClient.rp_configuration:
         conf_str = html.bold("\tНет настроек обкатки")
     else:
-        conf_result = get_configuration_str(int(rp_id))
+        conf_result = (await get_configuration_str(int(rp_id)))
         if conf_result:
             conf_str = html.bold("\tНастройки обкатки\n") + conf_result
         if "report_period" not in data:

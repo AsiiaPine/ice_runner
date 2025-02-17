@@ -46,7 +46,7 @@ class ExceedanceTracker:
         self.fuel_level: bool = False
         self.start_attempts: bool = False
 
-    def check_not_started(self, state: ICEState, configuration: IceRunnerConfiguration) -> bool:
+    def check_not_started(self, state: ICEState) -> bool:
         """The function checks conditions when the ICE is not started"""
         eng_time_ex = False
         if state.engaged_time is not None:
@@ -106,10 +106,11 @@ class ExceedanceTracker:
         return self.time
 
     def check_running(self, state: ICEState, configuration: IceRunnerConfiguration,
-                        start_time: float, runner_state: RunnerState) -> bool:
+                        start_time: float, runner_state: RunnerState,
+                        prev_state: RunnerState) -> bool:
         """The function checks conditions when the ICE is running"""
         # the ICE is running, so check dynamic conditions
-        if runner_state == RunnerState.STARTING:
+        if runner_state == RunnerState.STARTING and prev_state != RunnerState.STARTING:
             state.start_attempts += 1
             if state.start_attempts > configuration.start_attemts:
                 logging.warning(f"STATUS\t-\tStart attempts exceeded")
@@ -124,19 +125,14 @@ class ExceedanceTracker:
         self.vibration = state.rec_imu and\
                                     configuration.max_vibration < state.vibration
         flags_attr = vars(self)
-        if sum(flags_attr[name] for name in flags_attr.keys() if flags_attr[name]):
-            logging.warning(f"STATUS\t-\tFlags exceeded:\n\
-                            vibration {self.vibration}\n\
-                            time {self.time}\n\
-                            gas throttle {self.gas_throttle}\
-                                         {configuration.gas_throttle, state.gas_throttle}\n\
-                            temp {self.temp}\n\
-                            fuel level {self.fuel_level}")
+        if sum(flags_attr[name] for name in flags_attr.keys() if flags_attr[name]) > 0:
+            logging.warning(f"STATUS\t-\tFlags exceeded:\n{vars(self)}")
 
         return sum(flags_attr[name] for name in flags_attr.keys() if flags_attr[name])
 
     def check(self, state: ICEState, configuration: IceRunnerConfiguration,
-                                runner_state: RunnerState, start_time: float) -> bool:
+                                runner_state: RunnerState, start_time: float,
+                                prev_state: RunnerState) -> bool:
         """The function analyzes the conditions of the ICE runner and returns
         if any Configuration parameters were exceeded. Returns 0 if no conditions were exceeded,
         1 if conditions were exceeded."""
@@ -144,9 +140,9 @@ class ExceedanceTracker:
         self.temp = configuration.max_temperature < state.temp
         self.fuel_level = configuration.min_fuel_volume > state.fuel_level
         if start_time <= 0 or state.ice_state > RunnerState.STARTING:
-            return self.check_not_started(state, configuration)
+            return self.check_not_started(state)
 
-        return self.check_running(state, configuration, start_time, runner_state)
+        return self.check_running(state, configuration, start_time, runner_state, prev_state)
 
 class ICERunnerMode(IntEnum):
     """The class is used to define the mode of the ICE runner"""
@@ -201,13 +197,14 @@ class ICECommander:
         self.prev_waiting_state_time: float = 0
         self.prev_report_time: float = 0
         self.last_button_cmd = 1
+        self.prev_state = self.run_state
 
     def check_conditions(self) -> int:
         """The function analyzes the conditions of the ICE runner
             and returns if any Configuration parameters were exceeded.
             Returns 0 if no conditions were exceeded, 1 if conditions were exceeded."""
         return self.ex_tracker.check(CanNode.state, self.configuration,
-                                     self.run_state, self.start_time)
+                                     self.run_state, self.start_time, self.prev_state)
 
     def set_command(self) -> None:
         """The function sets the command to the ICE node according to the current mode"""
@@ -246,8 +243,24 @@ class ICECommander:
         """Analyzes engine state send with Reciprocating status and sets the runner state
             accordingly."""
         ice_state = CanNode.state.ice_state
-        rpm = CanNode.state.rpm
         run_state = self.run_state
+
+        if ice_state == RecipState.NOT_CONNECTED:
+            logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
+            self.run_state = RunnerState.NOT_CONNECTED
+            CanNode.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
+            CanNode.spin()
+            return
+
+        if self.run_state == RunnerState.NOT_CONNECTED:
+            self.run_state = RunnerState.STOPPED
+            logging.info("STOP\t-\tRunner stopped")
+            return
+
+        if ice_state == RecipState.STOPPED:
+            if self.run_state == RunnerState.STOPPING:
+                self.run_state = RunnerState.STOPPED
+                logging.info("STOP\t-\tRunner stopped")
 
         if cond_exceeded and run_state in (RunnerState.STARTING, RunnerState.RUNNING):
             logging.info("STOP\t-\tconditions exceeded")
@@ -268,8 +281,8 @@ class ICECommander:
                 logging.error("STARTING\t-\tstart time exceeded")
                 self.stop()
                 return
+
             if ice_state == RecipState.RUNNING\
-                    and rpm > 1500\
                     and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
                 logging.info("STARTING\t-\tstarted successfully")
                 self.run_state = RunnerState.RUNNING
@@ -289,22 +302,18 @@ class ICECommander:
         self.check_mqtt_cmd()
         cond_exceeded = self.check_conditions()
         self.set_state(cond_exceeded)
+
+        # self.check_buttons()
         if ice_state == RecipState.NOT_CONNECTED:
             logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
-            self.run_state = RunnerState.NOT_CONNECTED
-            CanNode.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
-            CanNode.spin()
             await asyncio.sleep(1)
             return
 
-        if ice_state == RecipState.STOPPED:
-            if self.run_state != RunnerState.STARTING:
-                self.run_state = RunnerState.STOPPED
-        # self.check_buttons()
         self.set_command()
         logging.debug(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
         CanNode.spin()
         self.report_state()
+        self.prev_state = self.run_state
         await asyncio.sleep(0.05)
 
     def report_state(self) -> None:
