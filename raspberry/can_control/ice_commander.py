@@ -37,19 +37,18 @@ if os.path.exists("/proc/device-tree/model"):
 class ExceedanceTracker:
     """The class is used to track the excedance of the conditions"""
     def __init__(self) -> None:
-        self.throttle: bool = False
         self.temp: bool = False
-        self.rpm: bool = False
         self.vin: bool = False
+        self.gas_throttle: bool = False
+        self.air_throttle: bool = False
         self.vibration: bool = False
         self.time: bool = False
-        self.rpm_min: bool = False
         self.fuel_level: bool = False
+        self.start_attempts: bool = False
+        self.rpm: bool = False
 
-    def check_not_started(self, state: ICEState, configuration: IceRunnerConfiguration) -> bool:
+    def check_not_started(self, state: ICEState) -> bool:
         """The function checks conditions when the ICE is not started"""
-        self.vin = configuration.min_vin_voltage > state.voltage_in
-        self.temp = configuration.max_temperature < state.temp
         eng_time_ex = False
         if state.engaged_time is not None:
             eng_time_ex = state.engaged_time > 40 * 60 * 60 # 40 hours
@@ -59,66 +58,116 @@ class ExceedanceTracker:
             logging.warning(f"STATUS\t-\tFlags exceeded:\n\
                             vin {self.vin}\n\
                             temp {self.temp}\n\
-                            engaged time {eng_time_ex}")
-        return sum([self.vin, self.temp,eng_time_ex])
+                            engaged time {eng_time_ex}\n\
+                            fuel level {self.fuel_level}")
+        return sum([self.vin, self.temp, eng_time_ex, self.fuel_level])
+
+    def cleanup(self):
+        """The function cleans up the ICE state"""
+        dictionary = vars(self)
+        for key in dictionary:
+            dictionary[key] = False
+
+    def check_mode_specialized(self, state: ICEState, configuration: IceRunnerConfiguration,
+                               start_time: float, runner_state: RunnerState) -> None:
+        """The function checks conditions when the ICE is in specialized mode"""
+        if configuration.mode < ICERunnerMode.RPM:
+            self.time = start_time > 0 and time.time() - start_time > configuration.time
+            air_in_bound = configuration.air_throttle - 15 < state.air_throttle\
+                                                        < configuration.air_throttle + 15
+            self.air_throttle = not air_in_bound
+
+
+        if configuration.mode == ICERunnerMode.CHECK:
+            #   last 8 seconds
+            self.time = start_time > 0 and\
+                                    8 < time.time() - start_time
+            return
+
+        if configuration.mode == ICERunnerMode.FUEL_PUMPTING:
+            #   last 60 seconds
+            self.time = start_time > 0 and\
+                                    60 < time.time() - start_time
+            return
+
+        if runner_state == RunnerState.STARTING:
+            return
+
+        if configuration.mode == ICERunnerMode.SIMPLE:
+            gas_in_bound = configuration.gas_throttle - 15 < state.gas_throttle\
+                                                        < configuration.gas_throttle + 15
+            self.gas_throttle = not gas_in_bound
+            air_in_bound = configuration.air_throttle - 15 < state.air_throttle\
+                                                        < configuration.air_throttle + 15
+            self.air_throttle = not air_in_bound
+            self.rpm = False
+            return sum([self.gas_throttle, self.air_throttle, self.time])
+
+        if configuration.mode == ICERunnerMode.PID:
+            self.rpm = configuration.rpm - 1000 < state.rpm < configuration.rpm + 1000
+            return sum([self.rpm, self.time])
+
+        if configuration.mode == ICERunnerMode.RPM:
+            print("HELLO3")
+            # the mode is not supported yet
+            return True
+
 
     def check_running(self, state: ICEState, configuration: IceRunnerConfiguration,
-                        start_time: float, runner_state: RunnerState) -> bool:
+                        start_time: float, runner_state: RunnerState,
+                        prev_state: RunnerState) -> bool:
         """The function checks conditions when the ICE is running"""
-
         # the ICE is running, so check dynamic conditions
-        if runner_state == RunnerState.RUNNING:
-            self.rpm_min = 100 > state.rpm
-        else:
-            self.rpm_min = False
-        if configuration.min_fuel_volume < 100:
-            self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
-        else:
-            self.fuel_level = configuration.min_fuel_volume > state.fuel_level
-
-        self.throttle = configuration.max_gas_throttle < state.throttle
+        if runner_state == RunnerState.STARTING and prev_state != RunnerState.STARTING:
+            state.start_attempts += 1
+            if state.start_attempts > configuration.start_attemts:
+                logging.warning(f"STATUS\t-\tStart attempts exceeded")
+                self.start_attempts = True
+                return True
+        self.check_mode_specialized(state, configuration, start_time, runner_state)
+        self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
         self.temp = configuration.max_temperature < state.temp
-        self.rpm = configuration.rpm  + 1000 < state.rpm
+
         self.time = start_time > 0 and\
                                     configuration.time < time.time() - start_time
         self.vibration = state.rec_imu and\
                                     configuration.max_vibration < state.vibration
         flags_attr = vars(self)
-        if sum(flags_attr[name] for name in flags_attr.keys() if flags_attr[name]):
-            logging.warning(f"STATUS\t-\tFlags exceeded:\n\
-                                vibration {self.vibration}\n\
-                                time {self.time}\n\
-                                rpm {self.rpm}: {configuration.rpm, state.rpm}\n\
-                                throttle {self.throttle}\n\
-                                temp {self.temp}\n\
-                                fuel level {self.fuel_level}\n\
-                                rpm min {self.rpm_min}")
+        if sum(flags_attr[name] for name in flags_attr.keys() if flags_attr[name]) > 0:
+            logging.warning(f"STATUS\t-\tFlags exceeded:\n{vars(self)}")
+            logging.warning(f"STATUS\t-\tRPM: {state.rpm}, {configuration.rpm}, {self.rpm}")
         return sum(flags_attr[name] for name in flags_attr.keys() if flags_attr[name])
 
     def check(self, state: ICEState, configuration: IceRunnerConfiguration,
-                                runner_state: RunnerState, start_time: float) -> bool:
+                                runner_state: RunnerState, start_time: float,
+                                prev_state: RunnerState) -> bool:
         """The function analyzes the conditions of the ICE runner and returns
         if any Configuration parameters were exceeded. Returns 0 if no conditions were exceeded,
         1 if conditions were exceeded."""
+        self.vin = configuration.min_vin_voltage > state.voltage_in
+        self.temp = configuration.max_temperature < state.temp
+        self.fuel_level = configuration.min_fuel_volume > state.fuel_level
         if start_time <= 0 or state.ice_state > RunnerState.STARTING:
-            return self.check_not_started(state, configuration)
+            return self.check_not_started(state)
 
-        return self.check_running(state, configuration, start_time, runner_state)
+        return self.check_running(state, configuration, start_time, runner_state, prev_state)
 
 class ICERunnerMode(IntEnum):
     """The class is used to define the mode of the ICE runner"""
-    SIMPLE = 0 # Юзер задает 30-50% тяги, и просто сразу же ее выставляем, без ПИД-регулятора.
+    SIMPLE = 1 # Юзер задает 30-50% тяги, и просто сразу же ее выставляем, без ПИД-регулятора.
                 # Без проверки оборотов, но с проверкой температуры.
-    PID = 1 # Юзер задает обороты, и мы их поддерживаем ПИД-регулятором на стороне скрипта.
-    RPM = 2 # Команда на 4500 оборотов (RPMCommand) без ПИД-регулятора
+    PID = 2 # Юзер задает обороты, и мы их поддерживаем ПИД-регулятором на стороне скрипта.
+    RPM = 3 # Команда на 4500 оборотов (RPMCommand) без ПИД-регулятора
                 # на стороне скрипта - все на стороне платы.
+    CHECK = 4 # Запуск на 8 секунд, проверка сартера
+    FUEL_PUMPTING = 5 # Запуск на 60 секунд
 
 class PIDController:
     """Basic PID controller"""
 
     def __init__(self, seeked_value: int) -> None:
         self.seeked_value = seeked_value
-        self.coeffs: Dict[str, float] = {"kp": 0.2, "ki": 0.0, "kd": 0.2}
+        self.coeffs: Dict[str, float] = {"kp": 0.0, "ki": 0.0, "kd": 0.0}
         self.prev_time = 0
         self.prev_error = 0
         self.integral = 0
@@ -156,28 +205,39 @@ class ICECommander:
         self.prev_waiting_state_time: float = 0
         self.prev_report_time: float = 0
         self.last_button_cmd = 1
+        self.prev_state = self.run_state
 
     def check_conditions(self) -> int:
         """The function analyzes the conditions of the ICE runner
             and returns if any Configuration parameters were exceeded.
             Returns 0 if no conditions were exceeded, 1 if conditions were exceeded."""
         return self.ex_tracker.check(CanNode.state, self.configuration,
-                                     self.run_state, self.start_time)
+                                     self.run_state, self.start_time, self.prev_state)
 
     def set_command(self) -> None:
         """The function sets the command to the ICE node according to the current mode"""
-        if self.run_state == RunnerState.NOT_CONNECTED or self.run_state > RunnerState.STARTING:
-            CanNode.cmd.cmd = [0]* (ICE_AIR_CHANNEL + 1)
-            CanNode.air_cmd.command_value = 0
+        if self.run_state not in (RunnerState.RUNNING, RunnerState.STARTING):
+            CanNode.cmd.cmd = [0]* (ICE_THR_CHANNEL + 1)
+            CanNode.air_cmd.command_value = -1
+            return
+
+        if self.mode == ICERunnerMode.FUEL_PUMPTING:
+            CanNode.cmd.cmd[ICE_THR_CHANNEL] = int(self.configuration.gas_throttle * 8191 / 100)
+            CanNode.air_cmd.command_value = -1
+            return
+
+        if self.mode == ICERunnerMode.CHECK:
+            CanNode.cmd.cmd[ICE_THR_CHANNEL] = int(0.2 * 8191)
+            CanNode.air_cmd.command_value = -1
             return
 
         if self.run_state == RunnerState.STARTING:
             CanNode.cmd.cmd[ICE_THR_CHANNEL] = 3500
-            CanNode.air_cmd.command_value = 2000
+            CanNode.air_cmd.command_value = (self.configuration.air_throttle / 50) - 1.0
             return
 
         if self.mode == ICERunnerMode.SIMPLE:
-            CanNode.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
+            CanNode.cmd.cmd[ICE_THR_CHANNEL] = int(self.configuration.gas_throttle * 8191 / 100)
             # self.dronecan_commander.cmd.cmd[ICE_AIR_CHANNEL] = MAX_AIR_OPEN
         elif self.mode == ICERunnerMode.PID:
             CanNode.cmd.cmd[ICE_THR_CHANNEL] = int(self.pid_controller.get_pid_command(
@@ -195,15 +255,32 @@ class ICECommander:
         self.send_log()
         CanNode.change_file()
         self.start_time = 0
+        self.ex_tracker.cleanup()
 
     def set_state(self, cond_exceeded: bool) -> None:
         """Analyzes engine state send with Reciprocating status and sets the runner state
             accordingly."""
         ice_state = CanNode.state.ice_state
-        rpm = CanNode.state.rpm
         run_state = self.run_state
 
-        if cond_exceeded and run_state != RunnerState.STOPPED:
+        if ice_state == RecipState.NOT_CONNECTED:
+            logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
+            self.run_state = RunnerState.NOT_CONNECTED
+            CanNode.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
+            CanNode.spin()
+            return
+
+        if self.run_state == RunnerState.NOT_CONNECTED:
+            self.run_state = RunnerState.STOPPED
+            logging.info("STOP\t-\tRunner stopped")
+            return
+
+        if ice_state == RecipState.STOPPED:
+            if self.run_state == RunnerState.STOPPING:
+                self.run_state = RunnerState.STOPPED
+                logging.info("STOP\t-\tRunner stopped")
+
+        if cond_exceeded and (run_state in (RunnerState.STARTING, RunnerState.RUNNING)):
             logging.info("STOP\t-\tconditions exceeded")
             logging.debug("STOP\t-\tconditions: %s", frozenset(vars(self.ex_tracker).items()))
             self.stop()
@@ -222,8 +299,8 @@ class ICECommander:
                 logging.error("STARTING\t-\tstart time exceeded")
                 self.stop()
                 return
+
             if ice_state == RecipState.RUNNING\
-                    and rpm > 1500\
                     and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
                 logging.info("STARTING\t-\tstarted successfully")
                 self.run_state = RunnerState.RUNNING
@@ -240,26 +317,21 @@ class ICECommander:
         """Main function called in loop"""
         self.report_status()
         ice_state = CanNode.state.ice_state
-        if ice_state == RecipState.NOT_CONNECTED:
-            logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
-            self.run_state = RunnerState.NOT_CONNECTED
-            CanNode.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
-            self.report_status()
-            CanNode.spin()
-            await asyncio.sleep(1)
-            return
-
-        if ice_state == RecipState.STOPPED:
-            if self.run_state != RunnerState.STARTING:
-                self.run_state = RunnerState.STOPPED
-        # self.check_buttons()
         self.check_mqtt_cmd()
         cond_exceeded = self.check_conditions()
         self.set_state(cond_exceeded)
+
+        # self.check_buttons()
+        if ice_state == RecipState.NOT_CONNECTED:
+            logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
+            await asyncio.sleep(1)
+            return
+
         self.set_command()
         logging.debug(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
         CanNode.spin()
         self.report_state()
+        self.prev_state = self.run_state
         await asyncio.sleep(0.05)
 
     def report_state(self) -> None:
@@ -332,7 +404,7 @@ class ICECommander:
         MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.run_logs["output"] = CanNode.output_filename
         start_dronecan_handlers()
-
+        MqttClient.publish_full_configuration(self.configuration.get_original_dict())
         while True:
             try:
                 await self.spin()

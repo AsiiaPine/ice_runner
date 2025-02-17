@@ -5,3 +5,4 @@ __py*
 logs/*
 *.egg-info
 *.yml
+.vscode

@@ -30,35 +30,36 @@ class Scheduler:
         cls.scheduler.start()
 
     @classmethod
-    def guard_runner(cls, rp_id: int):
+    def guard_runner(cls, runner_id: int):
         """The function guards the RP state and waits until it stops"""
-        cls.jobs[rp_id] = cls.scheduler.add_job(cls.check_rp_state, 'interval',
-                                                seconds=1, kwargs={"rp_id": rp_id})
-        logging.info("Waiting for RP %d to stop", rp_id)
+        cls.jobs[runner_id] = cls.scheduler.add_job(cls.check_rp_state, 'interval',
+                                                seconds=1, kwargs={"runner_id": runner_id})
+        logging.info("Waiting for RP %d to stop", runner_id)
 
     @classmethod
-    async def check_rp_state(cls, rp_id: int):
+    async def check_rp_state(cls, runner_id: int):
         """The function checks the RP state and sends logs and stop reason
             if runner stops"""
-        if rp_id not in MqttClient.rp_states:
+        if runner_id not in MqttClient.rp_states:
             return
-        if MqttClient.rp_states[rp_id] == RunnerState.STOPPED:
-            if rp_id not in MqttClient.rp_logs:
+        if MqttClient.rp_states[runner_id] == RunnerState.STOPPED:
+            if runner_id not in MqttClient.rp_logs:
                 return
-            if rp_id not in MqttClient.rp_stop_handlers:
+            if runner_id not in MqttClient.rp_stop_handlers:
                 return
-            await cls.send_log(rp_id=rp_id)
-            await cls.send_stop_reason(rp_id=rp_id)
-            cls.jobs[rp_id].pause()
-            cls.jobs[rp_id].remove()
-            cls.jobs.pop(rp_id)
-            MqttClient.rp_states.pop(rp_id)
-            MqttClient.rp_logs.pop(rp_id)
+            print("Checking\t| logs RP %d", runner_id)
+            await cls.send_log(runner_id=runner_id)
+            await cls.send_stop_reason(runner_id=runner_id)
+            cls.jobs[runner_id].pause()
+            cls.jobs[runner_id].remove()
+            cls.jobs.pop(runner_id)
+            MqttClient.rp_states.pop(runner_id)
+            MqttClient.rp_logs.pop(runner_id)
 
     @classmethod
-    async def send_log(cls, rp_id):
+    async def send_log(cls, runner_id):
         """The function sends logs to the specified RPi"""
-        log_files: Dict = MqttClient.rp_logs[rp_id]
+        log_files: Dict = MqttClient.rp_logs[runner_id]
         if not log_files:
             logging.debug("No logs to send")
             return
@@ -70,14 +71,14 @@ class Scheduler:
             except Exception as e:
                 await cls.bot.send_message(cls.CHAT_ID, f"Ошибка при отправке лога {name}: {e}")
                 logging.error("Error sending log %s: %s", name, e)
-        MqttClient.rp_logs[rp_id] = {}
+        MqttClient.rp_logs[runner_id] = {}
 
     @classmethod
-    async def send_stop_reason(cls, rp_id: int):
+    async def send_stop_reason(cls, runner_id: int):
         """The function sends stop reason to the specified RPi"""
-        if rp_id not in MqttClient.rp_stop_handlers:
+        if runner_id not in MqttClient.rp_stop_handlers:
             logging.debug("No stop reason to send")
             return
-        stop_reason = MqttClient.rp_stop_handlers[rp_id]
+        stop_reason = MqttClient.rp_stop_handlers[runner_id]
         await cls.bot.send_message(cls.CHAT_ID, f"Остановлено по причине: {stop_reason}")
-        MqttClient.rp_stop_handlers[rp_id] = {}
+        MqttClient.rp_stop_handlers[runner_id] = {}

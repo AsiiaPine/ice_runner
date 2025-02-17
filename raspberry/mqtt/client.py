@@ -4,6 +4,7 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import json
 import sys
 import logging
 from typing import Any, Dict
@@ -41,7 +42,7 @@ class MqttClient:
         """The function publishes dronecan messages to appropriate MQTT topic"""
         for dronecan_type in messages.keys():
             cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/dronecan/{dronecan_type}",
-                                str(messages[dronecan_type]))
+                                json.dumps(messages[dronecan_type]))
         logging.debug("PUBLISH\t-\tdronecan messages")
 
     @classmethod
@@ -49,7 +50,7 @@ class MqttClient:
         """The function publishes status to MQTT broker"""
         logging.debug("PUBLISH\t-\tstatus")
         MqttClient.status = status
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/status", str(status))
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/status", json.dumps(status))
 
     @classmethod
     def publish_state(cls, state: int) -> None:
@@ -64,21 +65,34 @@ class MqttClient:
         logging.debug("PUBLISH\t-\tlog")
         logging.debug("PUBLISH\t-\tlogs: %s", cls.run_logs)
         MqttClient.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/log",
-                                  str(MqttClient.run_logs))
+                                  json.dumps(MqttClient.run_logs))
 
     @classmethod
     def publish_configuration(cls) -> None:
         """The function publishes IceRunnerConfiguration to MQTT broker.
             The configuration should be defined before start function is called"""
-        logging.debug("PUBLISH\t-\tconfiguration")
+        logging.info("PUBLISH\t-\tconfiguration")
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/config",
-                           str(cls.configuration.to_dict()))
+                           json.dumps(cls.configuration.to_dict()))
 
     @classmethod
     def publish_stop_reason(cls, reason: str) -> None:
         """The function should be called anytime the runner changes its state to STOPPED"""
         logging.info("PUBLISH\t-\tstop reason: %s", reason)
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/stop_reason", reason)
+
+    @classmethod
+    def publish_full_configuration(cls, full_configuration: Dict[str, Any]) -> None:
+        """The function should be called at the start of the script"""
+        logging.info("PUBLISH\t-\tfull configuration")
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/full_config",
+                           json.dumps(full_configuration))
+
+    @classmethod
+    def publish_flags(cls, flags: Dict[str, bool]) -> None:
+        """The function should be called if any flag is exceeded"""
+        logging.info("PUBLISH\t-\tflags")
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/flags", str(flags))
 
     @classmethod
     async def start(cls) -> None:
