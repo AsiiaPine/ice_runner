@@ -24,7 +24,7 @@ One can control the ICE runners using the telegram bot. The bot can send command
     python3 -m venv venv
     source venv/bin/activate
     pip install -r requirements.txt
-    pip install -e . # Install the project common part
+    pip install -e . # Install the project
     ```
 
 1. Raspberry Pi ICE controller installation
@@ -44,7 +44,7 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
 
     - Install required packages
         ```bash
-        ./prepare_mqtt_server.sh
+        .scripts/prepare_mqtt_server.sh
         ```
         To allow anonymous access to the server and setup the used port, edit the file `/etc/mosquitto/mosquitto.conf`:
         ```

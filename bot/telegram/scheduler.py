@@ -47,7 +47,6 @@ class Scheduler:
                 return
             if runner_id not in MqttClient.rp_stop_handlers:
                 return
-            print("Checking\t| logs RP %d", runner_id)
             await cls.send_log(runner_id=runner_id)
             await cls.send_stop_reason(runner_id=runner_id)
             cls.jobs[runner_id].pause()

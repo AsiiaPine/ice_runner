@@ -13,8 +13,8 @@ import logging
 import traceback
 from enum import IntEnum
 from typing import Dict
-from mqtt.handlers import MqttClient
-from can_control.node import (
+from raspberry.mqtt.handlers import MqttClient
+from raspberry.can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL, ICE_AIR_CHANNEL)
 from common.ICEState import ICEState, RecipState
 from common.RunnerState import RunnerState
@@ -108,7 +108,6 @@ class ExceedanceTracker:
             return sum([self.rpm, self.time])
 
         if configuration.mode == ICERunnerMode.RPM:
-            print("HELLO3")
             # the mode is not supported yet
             return True
 
@@ -344,11 +343,14 @@ class ICECommander:
         """The function reports status to MQTT broker"""
         if self.prev_report_time + self.configuration.report_period < time.time():
             state_dict = CanNode.state.to_dict()
+            time_left = self.configuration.time + self.start_time - time.time()
             if self.start_time > 0:
                 state_dict["start_time"] = datetime.datetime.fromtimestamp(self.start_time)\
                                                             .strftime('%Y-%m-%d %H:%M:%S')
+                state_dict["time_left"] = time_left / 60.0
             else:
                 state_dict["start_time"] = "not started"
+                state_dict["time_left"] = "not started"
             MqttClient.publish_state(self.run_state.value)
             MqttClient.publish_status(state_dict)
             MqttClient.publish_messages(CanNode.messages)

@@ -11,11 +11,8 @@ import sys
 import time
 import logging
 from dotenv import load_dotenv
-from line_profiler import profile
 from mqtt.handlers import ServerMqttClient
 from common import logging_configurator
-from pycallgraph2 import PyCallGraph
-from pycallgraph2.output import GraphvizOutput
 
 logger = logging_configurator.getLogger(__file__)
 
@@ -29,7 +26,6 @@ async def ping_rpis() -> None:
                                 f"ice_runner/server/rp_commander/{i}/command", "keep alive")
         last_keep_alive = time.time()
 
-@profile
 async def main() -> None:
     """The function starts the server"""
     os.environ.clear()

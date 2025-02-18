@@ -6,7 +6,7 @@
 
 import time
 import logging
-from mqtt.client import MqttClient
+from raspberry.mqtt.client import MqttClient
 
 def handle_command(client, userdata, message):
     """The function handles the command from the server"""
@@ -31,7 +31,6 @@ def handle_command(client, userdata, message):
     if mes_text == "status":
         logging.info("RECEIVED\t-\tStatus request")
         MqttClient.publish_status(MqttClient.status)
-        MqttClient.publish_state(MqttClient.state)
         return
 
     if mes_text == "config":

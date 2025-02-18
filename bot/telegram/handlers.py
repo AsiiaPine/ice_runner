@@ -211,10 +211,8 @@ async def config_tip_handler(message: Message, state: FSMContext) -> None:
     """The function handles tip message with configuration change"""
     data = await state.get_data()
     runner_id = data["rp_id"]
-    print(runner_id)
     full_conf = await get_full_configuration(runner_id)
     string = ""
-    print(full_conf)
     for param_name, param_data in full_conf.items():
         string += f"{param_name}:\n"
         for name, value in param_data.items():

@@ -34,8 +34,6 @@ class MqttClient:
 
         logging.info("Connecting to %s: %s\n runner id: %d", server_ip, port, runner_id)
         cls.client.connect(server_ip, port, 60)
-        cls.client.publish(f"ice_runner/raspberry_pi/{runner_id}/state", cls.state)
-        logging.debug("PUBLISH\t-\tstate")
 
     @classmethod
     def publish_messages(cls, messages: Dict[str, Any]) -> None:
