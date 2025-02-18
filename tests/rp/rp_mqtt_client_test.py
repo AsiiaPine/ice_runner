@@ -6,11 +6,11 @@ from typing import Callable
 import pytest
 from functools import partial
 from threading import Event
+from paho.mqtt.enums import CallbackAPIVersion
 from paho.mqtt.client import Client
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from raspberry.mqtt.handlers import MqttClient, add_handlers
 
-pytest_plugins = ('pytest_asyncio',)
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -18,7 +18,7 @@ logger.level = logging.DEBUG
 
 class MQTTClient:
     def __init__(self):
-        self.client = Client("test")
+        self.client = Client(CallbackAPIVersion.VERSION2, client_id="test")
         self.client.connect("localhost", 1883)
         self.client.loop_start()  # Start network loop in a separate thread
         self.client.subscribe("ice_runner/#")
@@ -53,6 +53,14 @@ class BaseTest():
             config[name]["value"] = 1
         self.config_dict = config
 
+    async def wait_for_bool(self, expression: Callable, timeout: float = 3) -> bool:
+        start_time = time.time()
+        while (not expression()) and (time.time() - start_time < timeout):
+            await asyncio.sleep(0.1)
+        if expression():
+            return True
+        return False
+
 class TestZeroConfiguration(BaseTest):
     def setup_method(self, test_method):
         super().setup_method(test_method)
@@ -64,7 +72,7 @@ class TestZeroConfiguration(BaseTest):
         def callback(client, userdata, message, event: Event, expected_value=None):
             del userdata, client
             if expected_value is not None:
-                self.assertEqual(message.payload.decode(), expected_value)
+                assert message.payload.decode() == expected_value
             event.set()
         return callback
 
@@ -75,14 +83,6 @@ class TestZeroConfiguration(BaseTest):
             topic, partial(callback, event=callback_called, expected_value=expected_msg)
         )
         self.mqtt.client.subscribe(topic)
-
-    async def wait_for_bool(self, expression: Callable, timeout: float = 3) -> bool:
-        start_time = time.time()
-        while (not expression()) and (time.time() - start_time < timeout):
-            await asyncio.sleep(0.1)
-        if expression():
-            return True
-        return False
 
     def test_who_alive(self):
         callback_called = Event()

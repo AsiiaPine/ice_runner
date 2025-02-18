@@ -10,10 +10,12 @@ import logging
 from typing import Any, Dict
 from paho.mqtt.client import MQTTv311, Client
 from common.IceRunnerConfiguration import IceRunnerConfiguration
+from paho.mqtt.enums import CallbackAPIVersion
 
 class MqttClient:
     """The class is used to connect Raspberry Pi to MQTT broker"""
-    client: Client = Client(clean_session=True,
+    client: Client = Client(callback_api_version = CallbackAPIVersion.VERSION2,
+                            clean_session=True,
                             protocol=MQTTv311,
                             reconnect_on_failure=True)
     conf_updated = False
