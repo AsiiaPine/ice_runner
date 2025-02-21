@@ -60,7 +60,7 @@ class EngineSimulator:
         self.recip_status_message.fuel_pressure = config.min_fuel_volume
         self.recip_status_message.available_fuel_volume_percent = config.min_fuel_volume
 
-    def run(self, timeout: float=0, cooldown: float=1,tasks: List[Tuple[Callable, float]]=None):
+    def run(self, timeout: float=0, tasks: List[Tuple[Callable, float]]=None, cooldown: float=1):
         start_time = time.time()
 
         if tasks is not None:
@@ -113,35 +113,37 @@ class BaseTest():
             return True
         return False
 
+    async def spin_engine_with_tasks(self, engine_node_tasks: List[Tuple[Callable, float]],
+                              tested_expression: Callable,timeout: float = 3) -> None:
+        self.engine_thread = StoppableThread(target = self.engine_simulator.run,
+                                             args = (0.1, engine_node_tasks))
+        self.engine_thread.start()
+        res: bool = await self.wait_for_bool(
+            tested_expression, timeout=timeout)
+        self.engine_thread.join()
+        self.engine_thread.stop()
+        logging.info(f"res {res}, tested_expression: {tested_expression()}")
+        return res
+
+
 class TestStateUpdate(BaseTest):
     @pytest.mark.asyncio
     async def test_connection(self):
         res = await self.wait_for_bool(lambda: self.commander.run_state > RunnerState.NOT_CONNECTED)
         assert res == False
         timeout = 4
-        engine_thread = StoppableThread(target = self.engine_simulator.run, args = (timeout,))
-        engine_thread.start()
         self.commander.run_state = RunnerState.NOT_CONNECTED
-        res = await self.wait_for_bool(
-            lambda: self.commander.run_state == RunnerState.NOT_CONNECTED, timeout=timeout)
-
-        engine_thread.join()
-        engine_thread.stop()
-
+        res = await self.spin_engine_with_tasks(None,
+                                    lambda: self.commander.run_state == RunnerState.NOT_CONNECTED,
+                                    timeout=timeout)
         assert res
 
         self.commander.run_state = RunnerState.NOT_CONNECTED
         tasks = [(lambda x: x.node.node.broadcast(x.recip_status_message), 0.5)]
-        engine_thread = StoppableThread(target = self.engine_simulator.run, args = (timeout, 0.1,tasks))
-        engine_thread.start()
-        res = await self.wait_for_bool(
-            lambda: self.commander.run_state != RunnerState.NOT_CONNECTED, timeout=timeout)
-        engine_thread.join()
-        engine_thread.stop()
-        engine_thread
-        logger.info(CanNode.state.ice_state)
+        res = await self.spin_engine_with_tasks(tasks,
+                                    lambda: self.commander.run_state != RunnerState.NOT_CONNECTED,
+                                    timeout=timeout)
         assert res
-
 
 def main():
     # cmd = ["pytest", os.path.abspath(__file__), "-v", '-W', 'ignore::DeprecationWarning']

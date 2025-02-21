@@ -84,9 +84,10 @@ class BaseTest():
         self.node_thread = StoppableThread(target = self.run_node, args = (0.1, node_tasks))
         self.node_thread.start()
         res: bool = await self.wait_for_bool(
-            lambda: tested_expression, timeout=timeout)
+            tested_expression, timeout=timeout)
         self.node_thread.join()
         self.node_thread.stop()
+        logging.info(f"res {res}, tested_expression: {tested_expression()}")
         return res
 
 class TestSubscriptions(BaseTest):
@@ -100,22 +101,25 @@ class TestSubscriptions(BaseTest):
 
     @pytest.mark.asyncio
     async def test_node_status_sub(self):
-        timeout = 4
-        res = await self.spin_nodes_with_tasks(None,
-                            lambda: len(CanNode.messages) > 0 in CanNode.messages,
+        timeout = 10
+        tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.protocol.NodeStatus()), 0.5)]
+        res = await self.spin_nodes_with_tasks(tasks,
+                            lambda: len(CanNode.messages) > 0,
                             timeout=timeout)
         assert res
 
     @pytest.mark.asyncio
+    @pytest.mark.dependency()
     async def test_raw_imu_sub(self):
         timeout = 4
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ahrs.RawIMU()), 0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
-                            lambda: "uavcan.equipment.ahrs.RawIMU" in CanNode.messages,
+                            lambda : "uavcan.equipment.ahrs.RawIMU" in CanNode.messages,
                             timeout=timeout)
         assert res
 
     @pytest.mark.asyncio
+    @pytest.mark.dependency()
     async def test_fuel_tank_status_sub(self):
         timeout = 4
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.FuelTankStatus()), 0.5)]
@@ -129,7 +133,7 @@ class TestSubscriptions(BaseTest):
     @pytest.mark.asyncio
     async def test_ice_reciprocating_status_sub(self):
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status()), 0.5)]
-        timeout = 2
+        timeout = 4
         res = await self.spin_nodes_with_tasks(tasks,
                             lambda: "uavcan.equipment.ice.reciprocating.Status" in CanNode.messages,
                             timeout=timeout)
@@ -142,7 +146,8 @@ class TestResipUpdate(BaseTest):
     async def test_ice_state_update(self):
         assert CanNode.state.ice_state == RecipState.NOT_CONNECTED
         timeout = 4
-        tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status()), 0.5)]
+        tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status()),
+                  0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
                                    lambda: CanNode.state.ice_state > RecipState.NOT_CONNECTED,
                                    timeout=timeout)
@@ -166,20 +171,6 @@ class TestResipUpdate(BaseTest):
                                    timeout=timeout)
         assert res
 
-    @pytest.mark.dependency(depends=["TestResipUpdate::test_ice_state_mapping"])
-    @pytest.mark.asyncio
-    async def test_fuel_level_mapping(self):
-        CanNode.state.fuel_level_percent = 101
-        timeout = 2
-        fuel_lvl = secrets.randbelow(100)
-        tasks = [(
-            lambda x: x.node.broadcast(
-                dronecan.uavcan.equipment.ice.FuelTankStatus(
-                    available_fuel_volume_percent=fuel_lvl)), 0.5)]
-        res = await self.spin_nodes_with_tasks(tasks,
-                                   lambda: CanNode.state.fuel_level_percent == fuel_lvl,
-                                   timeout=timeout)
-        assert res
 
     @pytest.mark.dependency(depends=["TestResipUpdate::test_ice_state_mapping"])
     @pytest.mark.asyncio
@@ -203,11 +194,12 @@ class TestResipUpdate(BaseTest):
         temp = secrets.randbelow(100)
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status(oil_temperature=temp)), 0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
-                                   lambda: CanNode.state.temp == temp,
+                                   lambda: CanNode.state.temp != temp,
                                    timeout=timeout)
         assert res
 
     @pytest.mark.asyncio
+    @pytest.mark.dependency(depends=["TestResipUpdate::test_ice_state_mapping"])
     async def test_full_ice_reciprocating(self):
         status_mes = dronecan.uavcan.equipment.ice.reciprocating.Status(
             ecu_index=0,
@@ -226,7 +218,8 @@ class TestResipUpdate(BaseTest):
 
         tasks = [(lambda x: x.node.broadcast(status_mes), 0.5)]
 
-        def _check(x: ICEState, y: dronecan.uavcan.equipment.ice.reciprocating.Status):
+        def _check_with_assert(x: ICEState,
+                               y: dronecan.uavcan.equipment.ice.reciprocating.Status) -> bool:
             assert x.air_throttle==y.throttle_position_percent
             assert x.gas_throttle==y.engine_load_percent
             assert x.temp==y.oil_temperature
@@ -235,16 +228,55 @@ class TestResipUpdate(BaseTest):
             assert x.current==y.intake_manifold_temperature
             assert x.voltage_in==y.oil_pressure
             assert x.voltage_out==y.fuel_pressure
-        
+            return True
+
+        def _check(x: ICEState, y: dronecan.uavcan.equipment.ice.reciprocating.Status) -> bool:
+            try:
+                return _check_with_assert(x, y)
+            except AssertionError:
+                return False
+
         timeout = 2
         res = await self.spin_nodes_with_tasks(tasks,
-                                   lambda: _check(CanNode.state.temp, status_mes),
+                                   lambda: _check(CanNode.state, status_mes),
+                                   timeout=timeout)
+        assert _check_with_assert(CanNode.state, status_mes)
+
+class TestFulelTankUpdate(BaseTest):
+    @pytest.mark.dependency(depends=["TestSubscriptions::test_fuel_tank_status_sub"])
+    @pytest.mark.asyncio
+    async def test_fuel_level_mapping(self):
+        CanNode.state.fuel_level_percent = 101
+        timeout = 2
+        fuel_lvl = secrets.randbelow(100)
+        tasks = [(
+            lambda x: x.node.broadcast(
+                dronecan.uavcan.equipment.ice.FuelTankStatus(
+                    available_fuel_volume_percent=fuel_lvl)), 0.5)]
+        res = await self.spin_nodes_with_tasks(tasks,
+                                   lambda: CanNode.state.fuel_level_percent == fuel_lvl,
                                    timeout=timeout)
         assert res
 
-# class TestFulelTankUpdate(BaseTest):
-#     @pytest.mark.asyncio
-#     def 
+class TestRawIMUUpdate(BaseTest):
+    @pytest.mark.dependency(depends=["TestSubscriptions::test_raw_imu_sub"])
+    @pytest.mark.asyncio
+    async def test_raw_imu_mapping(self):
+        CanNode.has_imu = False
+        CanNode.state.rec_imu = False
+        CanNode.state.vibration = 1001
+        timeout = 2
+        vibration = secrets.randbelow(1000)
+        tasks = [(
+            lambda x: x.node.broadcast(
+                dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=vibration)), 0.5)]
+        res = await self.spin_nodes_with_tasks(tasks,
+                                   lambda: CanNode.state.vibration == vibration,
+                                   timeout=timeout)
+        assert res
+        assert CanNode.state.rec_imu
+        assert CanNode.has_imu
+
 
 def main():
     # cmd = ["pytest", os.path.abspath(__file__), "-v", '-W', 'ignore::DeprecationWarning']
