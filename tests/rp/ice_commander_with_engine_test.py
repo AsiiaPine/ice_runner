@@ -5,7 +5,7 @@ import sys
 import time
 
 import pytest
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, List, Tuple
 import dronecan
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.common.device_manager import DeviceManager
@@ -144,6 +144,8 @@ class TestStateUpdate(BaseTest):
                                     lambda: self.commander.run_state != RunnerState.NOT_CONNECTED,
                                     timeout=timeout)
         assert res
+
+
 
 def main():
     # cmd = ["pytest", os.path.abspath(__file__), "-v", '-W', 'ignore::DeprecationWarning']
