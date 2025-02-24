@@ -11,15 +11,13 @@ import os
 import time
 import logging
 import traceback
-from enum import IntEnum
-from typing import Dict
 from raspberry.mqtt.handlers import MqttClient
 from raspberry.can_control.node import (
-    CanNode, start_dronecan_handlers, ICE_THR_CHANNEL, ICE_AIR_CHANNEL)
+    CanNode, start_dronecan_handlers, ICE_THR_CHANNEL)
 from common.ICEState import ICEState, RecipState
-from common.RunnerState import RunnerState
+from common.RunnerState import RunnerState, RunnerStateController
 from common.IceRunnerConfiguration import IceRunnerConfiguration
-
+from raspberry.can_control.modes import BaseMode, ICERunnerMode
 if os.path.exists("/proc/device-tree/model"):
     from RPi import GPIO # Import Raspberry Pi GPIO library
 
@@ -67,7 +65,7 @@ class ExceedanceTracker:
             dictionary[key] = False
 
     def check_mode_specialized(self, state: ICEState, configuration: IceRunnerConfiguration,
-                               start_time: float, runner_state: RunnerState) -> None:
+                               start_time: float, state_controller: RunnerStateController) -> None:
         """The function checks conditions when the ICE is in specialized mode"""
 
         if configuration.mode == ICERunnerMode.CHECK:
@@ -84,7 +82,7 @@ class ExceedanceTracker:
 
         self.time = start_time > 0 and time.time() - start_time > configuration.time
 
-        if runner_state == RunnerState.STARTING:
+        if state_controller.state == RunnerState.STARTING:
             return
 
         if configuration.mode == ICERunnerMode.CONST:
@@ -101,17 +99,17 @@ class ExceedanceTracker:
 
 
     def check_running(self, state: ICEState, configuration: IceRunnerConfiguration,
-                        start_time: float, runner_state: RunnerState,
-                        prev_state: RunnerState) -> bool:
+                        start_time: float, state_controller: RunnerStateController) -> bool:
         """The function checks conditions when the ICE is running"""
         # the ICE is running, so check dynamic conditions
-        if runner_state == RunnerState.STARTING and prev_state != RunnerState.STARTING:
+        if state_controller.state == RunnerState.STARTING\
+             and state_controller.prev_state != RunnerState.STARTING:
             state.start_attempts += 1
             if state.start_attempts > configuration.start_attemts:
                 logging.warning(f"STATUS\t-\tStart attempts exceeded {state.start_attempts}, {configuration.start_attemts}")
                 self.start_attempts = True
                 return True
-        self.check_mode_specialized(state, configuration, start_time, runner_state)
+        self.check_mode_specialized(state, configuration, start_time, state_controller)
         self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
         self.temp = configuration.max_temperature < state.temp
 
@@ -123,124 +121,47 @@ class ExceedanceTracker:
         return bool(sum(flags_attr[name] for name in flags_attr.keys() if flags_attr[name]))
 
     def check(self, state: ICEState, configuration: IceRunnerConfiguration,
-                                runner_state: RunnerState, start_time: float,
-                                prev_state: RunnerState) -> bool:
+                                state_controller: RunnerStateController, start_time: float) -> bool:
         """The function analyzes the conditions of the ICE runner and returns
         if any Configuration parameters were exceeded. Returns 0 if no conditions were exceeded,
         1 if conditions were exceeded."""
         self.vin = configuration.min_vin_voltage > state.voltage_in
         self.temp = configuration.max_temperature < state.temp
         self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
-        if runner_state > RunnerState.STARTING:
+        if state_controller.state > RunnerState.STARTING:
             return self.check_not_started(state)
 
-        return self.check_running(state, configuration, start_time, runner_state, prev_state)
-
-class ICERunnerMode(IntEnum):
-    """The class is used to define the mode of the ICE runner"""
-    CONST = 1 # Юзер задает 30-50% тяги, и просто сразу же ее выставляем, без ПИД-регулятора.
-                # Без проверки оборотов, но с проверкой температуры.
-    PID = 2 # Юзер задает обороты, и мы их поддерживаем ПИД-регулятором на стороне скрипта.
-    RPM = 3 # Команда на 4500 оборотов (RPMCommand) без ПИД-регулятора
-                # на стороне скрипта - все на стороне платы.
-    CHECK = 4 # Запуск на 8 секунд, проверка сартера
-    FUEL_PUMPTING = 5 # Запуск на 60 секунд
-
-class PIDController:
-    """Basic PID controller"""
-
-    def __init__(self, seeked_value: int) -> None:
-        self.seeked_value = seeked_value
-        self.coeffs: Dict[str, float] = {"kp": 0.0, "ki": 0.0, "kd": 0.0}
-        self.prev_time = 0
-        self.prev_error = 0
-        self.integral = 0
-
-    def get_pid_command(self, val: int) -> int:
-        """The function calculates PID command"""
-        dt = time.time() - self.prev_time
-        error = self.seeked_value - val
-        drpm = (error - self.prev_error) / dt
-        self.integral += self.coeffs["ki"] * error * (dt)
-
-        self.prev_time = time.time()
-        self.prev_error = error
-        diff_part = self.coeffs["kd"] * drpm
-        int_part = self.coeffs["ki"] * self.integral
-        pos_part = self.coeffs["kp"] * error
-        return self.seeked_value + pos_part + diff_part + int_part
-
-    def change_coeffs(self, coeffs: Dict[str, float]) -> None:
-        """The function changes the coefficients of the PID controller"""
-        self.coeffs = coeffs
+        return self.check_running(state, configuration, start_time, state_controller)
 
 class ICECommander:
     """The class is used to control the ICE runner"""
     def __init__(self, configuration: IceRunnerConfiguration = None) -> None:
-        self.run_state: RunnerState = RunnerState.NOT_CONNECTED
         self.configuration: IceRunnerConfiguration = configuration
         self.ex_tracker: ExceedanceTracker = ExceedanceTracker()
-        self.mode: ICERunnerMode = ICERunnerMode(configuration.mode)
-        if self.mode == ICERunnerMode.PID:
-            self.pid_controller: PIDController = PIDController(configuration.rpm)
-
+        mode: ICERunnerMode = ICERunnerMode(configuration.mode)
+        self.mode: BaseMode = mode.get_mode_class(configuration)
         self.start_time: float = 0
         self.prev_state_report_time: float = 0
-        self.prev_waiting_state_time: float = 0
         self.prev_report_time: float = 0
         self.last_button_cmd = 1
-        self.prev_state = self.run_state
+        self.state_controller = RunnerStateController()
 
     def check_conditions(self) -> int:
         """The function analyzes the conditions of the ICE runner
             and returns if any Configuration parameters were exceeded.
             Returns 0 if no conditions were exceeded, 1 if conditions were exceeded."""
         return self.ex_tracker.check(CanNode.state, self.configuration,
-                                     self.run_state, self.start_time, self.prev_state)
+                                     self.state_controller, self.start_time)
 
     def set_command(self) -> None:
         """The function sets the command to the ICE node according to the current mode"""
-        if self.run_state not in (RunnerState.RUNNING, RunnerState.STARTING):
-            CanNode.cmd.cmd = [0]* (ICE_THR_CHANNEL + 1)
-            CanNode.air_cmd.command_value = -1
-            return
-
-        if self.mode == ICERunnerMode.FUEL_PUMPTING:
-            CanNode.cmd.cmd[ICE_THR_CHANNEL] = int(self.configuration.gas_throttle * 8191 / 100)
-            CanNode.air_cmd.command_value = -1
-            return
-
-        if self.mode == ICERunnerMode.CHECK:
-            CanNode.cmd.cmd[ICE_THR_CHANNEL] = int(0.2 * 8191)
-            CanNode.air_cmd.command_value = -1
-            return
-
-        if self.run_state == RunnerState.STARTING:
-            CanNode.cmd.cmd[ICE_THR_CHANNEL] = 3500
-            CanNode.air_cmd.command_value = (self.configuration.air_throttle / 50) - 1.0
-            return
-
-        if self.mode == ICERunnerMode.CONST:
-            CanNode.cmd.cmd[ICE_THR_CHANNEL] = int(self.configuration.gas_throttle * 8191 / 100)
-            CanNode.air_cmd.command_value = (self.configuration.air_throttle / 50) - 1.0
-            return
-
-        if self.mode == ICERunnerMode.PID:
-            command = self.pid_controller.get_pid_command(CanNode.state.rpm)
-            min_command = self.configuration.min_gas_throttle
-            max_command = self.configuration.max_gas_throttle
-            clamped = max(min_command, min(max_command, command))
-            CanNode.cmd.cmd[ICE_THR_CHANNEL] = int(clamped * 8191 / 100)
-            return
-
-        if self.mode == ICERunnerMode.RPM:
-            CanNode.cmd.cmd[ICE_THR_CHANNEL] = self.configuration.rpm
-            CanNode.air_cmd.command_value = (self.configuration.air_throttle / 50) - 1.0
-            return
+        command = self.mode.get_command(self.state_controller, rpm=CanNode.state.rpm)
+        CanNode.cmd.cmd[ICE_THR_CHANNEL] = command[0]
+        CanNode.air_cmd.command_value = command[1]
 
     def stop(self) -> None:
         """The function stops the ICE runner and resets the runner state"""
-        self.run_state = RunnerState.STOPPING
+        self.state_controller.state = RunnerState.STOPPING
         MqttClient.to_stop = 0
         CanNode.save_file()
         self.send_log()
@@ -250,53 +171,14 @@ class ICECommander:
     def set_state(self, cond_exceeded: bool) -> None:
         """Analyzes engine state send with Reciprocating status and sets the runner state
             accordingly."""
-        ice_state = CanNode.state.ice_state
-        run_state = self.run_state
-
-        if ice_state == RecipState.NOT_CONNECTED:
-            logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
-            self.run_state = RunnerState.NOT_CONNECTED
-            CanNode.cmd.cmd = [0] * (ICE_THR_CHANNEL + 1)
-            return
-
-        if ice_state == RecipState.STOPPED:
-            if self.run_state in (RunnerState.STOPPING, RunnerState.NOT_CONNECTED):
-                self.run_state = RunnerState.STOPPED
-                logging.info("STOP\t-\tRunner stopped")
-                self.ex_tracker.cleanup()
-                return
-            if self.run_state == RunnerState.RUNNING:
-                self.run_state = RunnerState.STARTING
-                logging.info("STARTING\t-\ICE stopped, trying to start again")
-
-        if ice_state == RecipState.WAITING and \
-                        self.prev_waiting_state_time + 3*10**9 < time.time_ns():
-            self.prev_waiting_state_time = time.time_ns()
-            self.run_state = RunnerState.STARTING
-            logging.info("WAITING\t-\twaiting state")
-            return
-
-        if cond_exceeded and (run_state in (RunnerState.STARTING, RunnerState.RUNNING)):
-            logging.info("STOP\t-\tconditions exceeded")
-            logging.debug("STOP\t-\tconditions: %s", frozenset(vars(self.ex_tracker).items()))
-            self.stop()
+        if cond_exceeded and (self.state_controller.state in
+                                (RunnerState.STARTING, RunnerState.RUNNING)):
             MqttClient.publish_stop_reason(f"Conditions exceeded: {vars(self.ex_tracker)}")
+            logging.info("STOP\t-\tconditions exceeded")
             self.ex_tracker.cleanup()
+            self.stop()
             return
-
-        if run_state > RunnerState.STARTING or ice_state == RecipState["FAULT"]:
-            self.start_time = 0
-            logging.debug("STATE\t-\t stopped, rp state %s ice state %s",
-                          run_state.name, ice_state.name)
-            return
-
-        if run_state == RunnerState.STARTING:
-            if ice_state == RecipState.RUNNING\
-                    and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
-                logging.info("STARTING\t-\tstarted successfully")
-                self.run_state = RunnerState.RUNNING
-                self.prev_waiting_state_time = 0
-                return
+        self.state_controller.update(CanNode.state.ice_state)
 
     async def spin(self) -> None:
         """Main function called in loop"""
@@ -315,13 +197,13 @@ class ICECommander:
         self.set_command()
         logging.debug(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
         self.report_state()
-        self.prev_state = self.run_state
+        self.prev_state = self.state_controller
         await asyncio.sleep(0.05)
 
     def report_state(self) -> None:
         """The function reports state to MQTT broker"""
         if time.time() - self.prev_state_report_time > 0.5:
-            MqttClient.publish_state(self.run_state.value)
+            MqttClient.publish_state(self.state_controller.value)
             self.prev_state_report_time = time.time()
 
     def report_status(self) -> None:
@@ -336,7 +218,7 @@ class ICECommander:
             else:
                 state_dict["start_time"] = "not started"
                 state_dict["time_left"] = "not started"
-            MqttClient.publish_state(self.run_state.value)
+            MqttClient.publish_state(self.state_controller.value)
             MqttClient.publish_status(state_dict)
             MqttClient.publish_messages(CanNode.messages)
             self.prev_report_time = time.time()
@@ -347,29 +229,29 @@ class ICECommander:
         if self.last_button_cmd == stop_switch:
             return
         if stop_switch:
-            if self.run_state in (RunnerState.STARTING, RunnerState.RUNNING):
-                self.run_state = RunnerState.STOPPING
-            logging.info("BUTTON\t  Button released, state: %s", {self.run_state.name})
+            if self.state_controller in (RunnerState.STARTING, RunnerState.RUNNING):
+                self.state_controller = RunnerState.STOPPING
+            logging.info("BUTTON\t  Button released, state: %s", {self.state_controller.name})
         else:
-            if self.run_state > RunnerState.STARTING:
-                self.run_state = RunnerState.STARTING
+            if self.state_controller > RunnerState.STARTING:
+                self.state_controller = RunnerState.STARTING
                 self.start_time = time.time()
-            logging.info("BUTTON\t  Button pressed, state: %s", {self.run_state.name})
+            logging.info("BUTTON\t  Button pressed, state: %s", {self.state_controller.name})
         self.last_button_cmd = stop_switch
 
     def check_mqtt_cmd(self):
         """The function checks if MQTT command is received"""
         if MqttClient.to_stop:
-            self.run_state = RunnerState.STOPPING
+            self.state_controller = RunnerState.STOPPING
             MqttClient.to_stop = 0
             self.stop()
             MqttClient.publish_stop_reason("Got stop command from MQTT")
-            logging.info("MQTT\t-\tCOMMAND\t stop, state: %s", {self.run_state.name})
+            logging.info("MQTT\t-\tCOMMAND\t stop, state: %s", {self.state_controller.name})
         if MqttClient.to_run:
-            if self.run_state > RunnerState.STARTING:
-                self.run_state = RunnerState.STARTING
+            if self.state_controller > RunnerState.STARTING:
+                self.state_controller = RunnerState.STARTING
                 self.start_time = time.time()
-            logging.info("MQTT\t-\tCOMMAND\t run, state: %s", {self.run_state.name})
+            logging.info("MQTT\t-\tCOMMAND\t run, state: %s", {self.state_controller.name})
             MqttClient.to_run = 0
         if MqttClient.conf_updated:
             self.configuration = MqttClient.configuration
