@@ -26,7 +26,7 @@ class IceRunnerConfiguration:
                        "control_pid_i", "control_pid_d", "max_temperature",
                        "min_fuel_volume", "min_vin_voltage", "start_attemts",
                        "max_vibration"]
-    components = {"  default, help, type, value, min, max, unit"}
+    components = ["default", "help", "type", "value", "min", "max", "unit"]
 
     def __init__(self, file_path: str = None, dict_conf: Dict[str, Any] = None) -> None:
         """The function loads configuration from file or dictionary"""
@@ -55,20 +55,12 @@ class IceRunnerConfiguration:
             attr_type = conf[attr]["type"]  # Get the type specified in the YAML
             attr_value = conf[attr]["value"]
             setattr(self, attr, get_type_from_str(attr_type)(attr_value))
-            # # Attempt to cast to the specified type
-            # if attr_type == "int":
-            #     setattr(self, attr, int(attr_value))
-            # elif attr_type == "float":
-            #     setattr(self, attr, float(attr_value))
-            # elif attr_type == "str":
-            #     setattr(self, attr, str(attr_value))
-            # else:
-            #     setattr(self, attr, attr_value)
 
         for attr in self.attribute_names:
             if attr not in conf.keys():
                 raise ValueError(
-                    f"No configuration for {attr}. Needed attributes: {self.attribute_names}\n with components: ")
+                    f"No configuration for {attr}. Needed attributes: {self.attribute_names}\n with components: {self.components}")
+        self.original_dict: Dict[str, Dict[str, Any]] = conf
 
     def from_file(self, file_path: str) -> None:
         """The function loads configuration from file"""
@@ -77,7 +69,6 @@ class IceRunnerConfiguration:
         with open(file_path, "r", encoding="utf-8") as file:
             conf = yaml.safe_load(file)
         self.from_dict(conf)
-        self.original_dict: Dict[str, Dict[str, Any]] = conf
         self.last_file_path = file_path
 
     def to_file(self, file_path: str|None = None) -> None:

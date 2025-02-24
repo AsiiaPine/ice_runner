@@ -104,7 +104,7 @@ class CanNode:
         crnt_time = datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')
         cls.temp_output_filename = f"logs/raspberry/temp_messages_{crnt_time}.log"
         cls.output_filename = f"logs/raspberry/messages_{crnt_time}.log"
-        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a", encoding="utf8")
+        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "w+", encoding="utf8")
 
         cls.__stop_candump__()
         cls.candump_filename = f"logs/raspberry/candump_{crnt_time}.log"
@@ -133,7 +133,7 @@ def dump_msg(msg: dronecan.node.TransferEvent) -> None:
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles dronecan.uavcan.equipment.ice.FuelTankStatus"""
-    CanNode.messages['dronecan.uavcan.equipment.ice.FuelTankStatus'] = yaml.load(
+    CanNode.messages['uavcan.equipment.ice.FuelTankStatus'] = yaml.load(
                                                 dronecan.to_yaml(msg.message), yaml.BaseLoader)
     CanNode.state.update_with_fuel_tank_status(msg)
     dump_msg(msg)
@@ -155,13 +155,13 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles uavcan.protocol.NodeStatus"""
+    logging.debug("MES\t-\tReceived node status")
     if msg.transfer.source_node_id == CanNode.node.node_id:
         return
     CanNode.state.update_with_node_status(msg)
     CanNode.messages['uavcan.protocol.NodeStatus'] = yaml.load(dronecan.to_yaml(msg.message),
                                                                yaml.BaseLoader)
     dump_msg(msg)
-    logging.debug("MES\t-\tReceived node status")
 
 def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles uavcan.equipment.ice.reciprocating.Status"""
@@ -178,3 +178,10 @@ def start_dronecan_handlers() -> None:
     CanNode.node.add_handler(dronecan.uavcan.equipment.ahrs.RawIMU, raw_imu_handler)
     CanNode.node.add_handler(dronecan.uavcan.protocol.NodeStatus, node_status_handler)
     CanNode.node.add_handler(dronecan.uavcan.equipment.ice.FuelTankStatus, fuel_tank_status_handler)
+
+def stop_dronecan_handlers() -> None:
+    """The function stops all handlers for dronecan messages"""
+    CanNode.node.remove_handlers(dronecan.uavcan.protocol.NodeStatus)
+    CanNode.node.remove_handlers(dronecan.uavcan.equipment.ahrs.RawIMU)
+    CanNode.node.remove_handlers(dronecan.uavcan.equipment.ice.reciprocating.Status)
+    CanNode.node.remove_handlers(dronecan.uavcan.equipment.ice.FuelTankStatus)
