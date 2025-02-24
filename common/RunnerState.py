@@ -9,8 +9,6 @@ import logging
 import time
 
 from common.ICEState import RecipState
-from raspberry.can_control.node import ICE_THR_CHANNEL, CanNode
-from raspberry.mqtt.client import MqttClient
 
 class RunnerState(IntEnum):
     NOT_CONNECTED=-1
@@ -31,7 +29,7 @@ class RunnerStateController:
     def __init__(self) -> None:
         self.state = RunnerState.NOT_CONNECTED
         self.prev_state = RunnerState.NOT_CONNECTED
-        self.prev_waiting_state_time = 0
+        self.prev_waiting_state_time = time.time_ns()
 
     def update(self, ice_state: RecipState) -> None:
         """The function updates the state of the Runner"""
@@ -50,7 +48,7 @@ class RunnerStateController:
             if self.state == RunnerState.RUNNING:
                 self.state = RunnerState.STARTING
                 logging.info("STARTING\t-\ICE stopped, trying to start again")
-
+ 
         if ice_state == RecipState.WAITING and \
                         self.prev_waiting_state_time + 3*10**9 < time.time_ns():
             self.prev_waiting_state_time = time.time_ns()
@@ -65,8 +63,10 @@ class RunnerStateController:
             return
 
         if self.state == RunnerState.STARTING:
+            prev_waiting = self.prev_waiting_state_time
             if ice_state == RecipState.RUNNING\
-                    and time.time_ns() - self.prev_waiting_state_time > 3*10**9:
+                    and time.time_ns() - prev_waiting > 3*10**9:
+                print( time.time_ns() - prev_waiting, prev_waiting, time.time_ns())
                 logging.info("STARTING\t-\tstarted successfully")
                 self.state = RunnerState.RUNNING
                 self.prev_waiting_state_time = 0

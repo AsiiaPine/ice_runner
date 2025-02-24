@@ -37,7 +37,7 @@ class BaseMode:
 
     def get_command(self, run_state: RunnerState, **kwargs) -> List[int]:
         if run_state == RunnerState.RUNNING:
-            return self.get_running_command(kwargs)
+            return self.get_running_command(**kwargs)
         if run_state == RunnerState.STARTING:
             return self.get_starting_command()
         return self.get_zero_command()
@@ -58,7 +58,7 @@ class ConstMode(BaseMode):
 
     def get_running_command(self, **kwargs) -> List[int]:
         command = [0, 0]
-        command[0] = self.gas_throttle
+        command[0] = int(self.gas_throttle)
         command[1] = self.air_throttle
         return command
 
