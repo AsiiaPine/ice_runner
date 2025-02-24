@@ -252,12 +252,14 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     res: Dict[str, bool] = check_parameters_borders(params_dict, full_conf)
     for param_name, param_flag in res.items():
         if not param_flag:
-            await message.answer(f"Неверное значение параметра {param_name}: min {full_conf[param_name]['min']}, max {full_conf[param_name]['max']}")
+            await message.answer(
+                f"Неверное значение параметра {param_name}:\
+min {full_conf[param_name]['min']}, max {full_conf[param_name]['max']}")
             return
 
     for param_name, param_value_str in params_dict.items():
-        MqttClient.client.publish(f"ice_runner/bot/usr_cmd/{runner_id}/change_config/{param_name}",
-                                                                                        param_value)
+        MqttClient.client.publish(
+            f"ice_runner/bot/usr_cmd/{runner_id}/change_config/{param_name}",param_value)
         await message.answer(f"Новое значение параметра {param_name} отправлено")
     await asyncio.sleep(0.5)
     MqttClient.publish_config_request(runner_id)
