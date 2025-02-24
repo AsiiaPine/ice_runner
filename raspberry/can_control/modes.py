@@ -7,13 +7,13 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 
 class ICERunnerMode(IntEnum):
     """The class is used to define the mode of the ICE runner"""
-    CONST = 1 # Юзер задает 30-50% тяги, и просто сразу же ее выставляем, без ПИД-регулятора.
+    CONST = 0 # Юзер задает 30-50% тяги, и просто сразу же ее выставляем, без ПИД-регулятора.
                 # Без проверки оборотов, но с проверкой температуры.
-    PID = 2 # Юзер задает обороты, и мы их поддерживаем ПИД-регулятором на стороне скрипта.
-    RPM = 3 # Команда на 4500 оборотов (RPMCommand) без ПИД-регулятора
+    PID = 1 # Юзер задает обороты, и мы их поддерживаем ПИД-регулятором на стороне скрипта.
+    RPM = 2 # Команда на 4500 оборотов (RPMCommand) без ПИД-регулятора
                 # на стороне скрипта - все на стороне платы.
-    CHECK = 4 # Запуск на 8 секунд, проверка сартера
-    FUEL_PUMPTING = 5 # Запуск на 60 секунд
+    CHECK = 3 # Запуск на 8 секунд, проверка сартера
+    FUEL_PUMPTING = 4 # Запуск на 60 секунд
 
     def get_mode_class(self, configuration: IceRunnerConfiguration) -> Type["BaseMode"]:
         if self == ICERunnerMode.CONST:
