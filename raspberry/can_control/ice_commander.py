@@ -14,10 +14,10 @@ import traceback
 from raspberry.mqtt.handlers import MqttClient
 from raspberry.can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL)
+from raspberry.can_control.modes import BaseMode, ICERunnerMode
 from common.ICEState import ICEState, RecipState
 from common.RunnerState import RunnerState, RunnerStateController
 from common.IceRunnerConfiguration import IceRunnerConfiguration
-from raspberry.can_control.modes import BaseMode, ICERunnerMode
 if os.path.exists("/proc/device-tree/model"):
     from RPi import GPIO # Import Raspberry Pi GPIO library
 
@@ -155,7 +155,7 @@ class ICECommander:
 
     def set_command(self) -> None:
         """The function sets the command to the ICE node according to the current mode"""
-        command = self.mode.get_command(self.state_controller, rpm=CanNode.state.rpm)
+        command = self.mode.get_command(self.state_controller.state, rpm=CanNode.state.rpm)
         CanNode.cmd.cmd[ICE_THR_CHANNEL] = command[0]
         CanNode.air_cmd.command_value = command[1]
 
@@ -203,7 +203,7 @@ class ICECommander:
     def report_state(self) -> None:
         """The function reports state to MQTT broker"""
         if time.time() - self.prev_state_report_time > 0.5:
-            MqttClient.publish_state(self.state_controller.value)
+            MqttClient.publish_state(self.state_controller.state.value)
             self.prev_state_report_time = time.time()
 
     def report_status(self) -> None:
@@ -218,7 +218,7 @@ class ICECommander:
             else:
                 state_dict["start_time"] = "not started"
                 state_dict["time_left"] = "not started"
-            MqttClient.publish_state(self.state_controller.value)
+            MqttClient.publish_state(self.state_controller.state.value)
             MqttClient.publish_status(state_dict)
             MqttClient.publish_messages(CanNode.messages)
             self.prev_report_time = time.time()
@@ -229,29 +229,29 @@ class ICECommander:
         if self.last_button_cmd == stop_switch:
             return
         if stop_switch:
-            if self.state_controller in (RunnerState.STARTING, RunnerState.RUNNING):
-                self.state_controller = RunnerState.STOPPING
-            logging.info("BUTTON\t  Button released, state: %s", {self.state_controller.name})
+            if self.state_controller.state in (RunnerState.STARTING, RunnerState.RUNNING):
+                self.state_controller.state = RunnerState.STOPPING
+            logging.info("BUTTON\t  Button released, state: %s", {self.state_controller.state.name})
         else:
-            if self.state_controller > RunnerState.STARTING:
-                self.state_controller = RunnerState.STARTING
+            if self.state_controller.state > RunnerState.STARTING:
+                self.state_controller.state = RunnerState.STARTING
                 self.start_time = time.time()
-            logging.info("BUTTON\t  Button pressed, state: %s", {self.state_controller.name})
+            logging.info("BUTTON\t  Button pressed, state: %s", {self.state_controller.state.name})
         self.last_button_cmd = stop_switch
 
     def check_mqtt_cmd(self):
         """The function checks if MQTT command is received"""
         if MqttClient.to_stop:
-            self.state_controller = RunnerState.STOPPING
+            self.state_controller.state = RunnerState.STOPPING
             MqttClient.to_stop = 0
             self.stop()
             MqttClient.publish_stop_reason("Got stop command from MQTT")
-            logging.info("MQTT\t-\tCOMMAND\t stop, state: %s", {self.state_controller.name})
+            logging.info("MQTT\t-\tCOMMAND\t stop, state: %s", {self.state_controller.state.name})
         if MqttClient.to_run:
-            if self.state_controller > RunnerState.STARTING:
-                self.state_controller = RunnerState.STARTING
+            if self.state_controller.state > RunnerState.STARTING:
+                self.state_controller.state = RunnerState.STARTING
                 self.start_time = time.time()
-            logging.info("MQTT\t-\tCOMMAND\t run, state: %s", {self.state_controller.name})
+            logging.info("MQTT\t-\tCOMMAND\t run, state: %s", {self.state_controller.state.name})
             MqttClient.to_run = 0
         if MqttClient.conf_updated:
             self.configuration = MqttClient.configuration

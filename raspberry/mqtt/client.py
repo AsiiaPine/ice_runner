@@ -8,9 +8,10 @@ import json
 import sys
 import logging
 from typing import Any, Dict
-from paho.mqtt.client import MQTTv311, Client
-from common.IceRunnerConfiguration import IceRunnerConfiguration
+from paho.mqtt.client import MQTTv311, Client, MQTTMessageInfo
 from paho.mqtt.enums import CallbackAPIVersion
+from common.IceRunnerConfiguration import IceRunnerConfiguration
+from common.RunnerState import RunnerState
 
 class MqttClient:
     """The class is used to connect Raspberry Pi to MQTT broker"""
@@ -79,7 +80,11 @@ class MqttClient:
     def publish_stop_reason(cls, reason: str) -> None:
         """The function should be called anytime the runner changes its state to STOPPED"""
         logging.info("PUBLISH\t-\tstop reason: %s", reason)
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/stop_reason", reason)
+        mes_info:MQTTMessageInfo = cls.client.publish(
+                                f"ice_runner/raspberry_pi/{cls.run_id}/stop_reason", reason)
+        mes_info.wait_for_publish(timeout=5)
+        mes_info = cls.publish_state(RunnerState.STOPPED.value)
+        mes_info.wait_for_publish(timeout=5)
 
     @classmethod
     def publish_full_configuration(cls, full_configuration: Dict[str, Any]) -> None:

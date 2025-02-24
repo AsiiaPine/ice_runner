@@ -44,8 +44,10 @@ class Scheduler:
             return
         if MqttClient.rp_states[runner_id] == RunnerState.STOPPED:
             if runner_id not in MqttClient.rp_logs:
+                print("not in logs(")
                 return
             if runner_id not in MqttClient.rp_stop_handlers:
+                print("not in rp_stop_handlers")
                 return
             await cls.send_log(runner_id=runner_id)
             await cls.send_stop_reason(runner_id=runner_id)
