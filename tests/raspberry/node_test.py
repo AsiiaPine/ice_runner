@@ -10,8 +10,9 @@ from typing import Callable, List, Tuple
 import dronecan
 from raccoonlab_tools.common.device_manager import DeviceManager
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-from common.ICEState import ICEState, RecipState
-from raspberry.can_control.node import CanNode, start_dronecan_handlers, stop_dronecan_handlers
+from ice_runner.common.ICEState import ICEState, RecipState
+from ice_runner.raspberry.can_control.node import (CanNode,
+                                                   start_dronecan_handlers, stop_dronecan_handlers)
 from StoppableThread import StoppableThread
 
 logger = logging.getLogger()
@@ -92,9 +93,9 @@ class BaseTest():
 
 class TestSubscriptions(BaseTest):
     def test_candump(self, mocker):
-        candump_task = mocker.patch('raspberry.can_control.node.CanNode.__run_candump__')
+        candump_task = mocker.patch('ice_runner.raspberry.can_control.node.CanNode.__run_candump__')
         candump_task.return_value = 42
-        mocker.patch('raspberry.can_control.node.CanNode.__stop_candump__')
+        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.__stop_candump__')
         CanNode.change_file()
         CanNode.__run_candump__.assert_called()
         CanNode.__stop_candump__.assert_called_once()

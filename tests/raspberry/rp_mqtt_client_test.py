@@ -8,8 +8,8 @@ from functools import partial
 from threading import Event
 from paho.mqtt.enums import CallbackAPIVersion
 from paho.mqtt.client import Client
-from common.IceRunnerConfiguration import IceRunnerConfiguration
-from raspberry.mqtt.handlers import MqttClient, add_handlers
+from ice_runner.common.IceRunnerConfiguration import IceRunnerConfiguration
+from ice_runner.raspberry.mqtt.handlers import MqttClient, add_handlers
 
 
 logger = logging.getLogger()

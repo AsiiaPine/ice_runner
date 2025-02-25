@@ -1,15 +1,27 @@
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ice_runner"
 license = { text = "MIT" }
 requires-python = "~= 3.10"
-version = "0.0.1"
+version = "0.2.0"
+readme = "README.md"
 
 authors = [
   { name="Anastasiia Stepanova", email="asiiapine@gmail.com" },
 ]
+
 description = "The project is created for Internal Combustion Engine runner for distributed DroneCAN Internal Combustion Engine Nodes connected to Raspberry Pis. The ICE runner connects to a telegram bot wia common MQTT server, which is used to communicate with all connected ICE runners. The ICE runner is responsible for controlling the ICE engine and sending status messages to the server."
-[tool.setuptools]
-py-modules = ['common', 'raspberry', 'server', 'bot']
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.scripts]
+start = "ice_runner.main:main"
+
 [project.urls]
 "Homepage" = "https://github.com/AsiiaPine/ice_runner"
 "Bug Tracker" = "https://github.com/AsiiaPine/ice_runner/issues"

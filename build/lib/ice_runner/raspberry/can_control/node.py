@@ -14,7 +14,7 @@ import dronecan
 from dronecan.node import Node
 from raccoonlab_tools.dronecan.utils import ParametersInterface
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-from raccoonlab_tools.common.device_manager import DeviceManager
+from raccoonlab_tools.ice_runner.common.device_manager import DeviceManager
 import yaml
 
 from ice_runner.common.ICEState import Health, ICEState, Mode
@@ -36,7 +36,7 @@ def safely_write_to_file(filename: str) -> float:
 class CanNode:
     """The class is used to connect to dronecan node and send/receive messages"""
     node = None
-    log_dir: str = None
+
     @classmethod
     def connect(cls) -> None:
         """The function establishes dronecan node and starts candump"""
@@ -82,10 +82,14 @@ class CanNode:
     def change_file(cls) -> None:
         """The function changes candump and human-readable files, called after stop of a run,
             so the new run will have separated logs"""
+        if hasattr(cls, "temp_output_file"):
+            os.remove(cls.temp_output_filename)
         crnt_time = datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')
         log_base = os.path.join(cls.log_dir, "logs", "raspberry")
         os.makedirs(log_base, exist_ok=True)
+        cls.temp_output_filename = os.path.join(log_base, f"temp_messages_{crnt_time}.log")
         cls.output_filename = os.path.join(log_base, f"messages_{crnt_time}.log")
+        cls.temp_output_file: TextIO = open(cls.temp_output_filename, "w+", encoding="utf8")
 
         cls.__stop_candump__()
         cls.candump_filename = os.path.join(log_base, f"candump_{crnt_time}.log")

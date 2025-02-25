@@ -9,17 +9,17 @@ parser.add_argument('--log_dir', default=script_dir)
 command, rem = parser.parse_known_args()
 
 if command.command == 'bot':
-    from ice_runner.bot.main import start
+    from bot.main import start
     start(command.log_dir, rem)
 
 elif command.command == 'sim':
-    from ice_runner.ice_sim.test_commander import start
+    from ice_sim.test_commander import start
     start(rem)
 
 elif command.command == 'client':
-    from ice_runner.raspberry.main import start
+    from raspberry.main import start
     start(command.log_dir, rem)
 
 elif command.command == 'srv':
-    from ice_runner.server.main import start
+    from server.main import start
     start(command.log_dir, rem)

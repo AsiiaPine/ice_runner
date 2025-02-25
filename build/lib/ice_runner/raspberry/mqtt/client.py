@@ -58,9 +58,7 @@ class MqttClient:
         """The function publishes state to MQTT broker"""
         logging.debug("PUBLISH\t-\tstate %d", state)
         MqttClient.state = state
-        mes_info: MQTTMessageInfo = cls.client.publish(
-            f"ice_runner/raspberry_pi/{cls.run_id}/state", state)
-        mes_info.wait_for_publish(timeout=1)
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/state", state)
 
     @classmethod
     def publish_log(cls) -> None:
@@ -85,7 +83,8 @@ class MqttClient:
         mes_info:MQTTMessageInfo = cls.client.publish(
                                 f"ice_runner/raspberry_pi/{cls.run_id}/stop_reason", reason)
         mes_info.wait_for_publish(timeout=5)
-        cls.publish_state(RunnerState.STOPPED.value)
+        mes_info = cls.publish_state(RunnerState.STOPPED.value)
+        mes_info.wait_for_publish(timeout=5)
 
     @classmethod
     def publish_full_configuration(cls, full_configuration: Dict[str, Any]) -> None:

@@ -17,8 +17,7 @@ from dotenv import load_dotenv
 from ice_runner.raspberry.mqtt.handlers import MqttClient, add_handlers
 from ice_runner.raspberry.can_control.ice_commander import ICECommander
 from ice_runner.common.IceRunnerConfiguration import IceRunnerConfiguration
-from ice_runner.raspberry.can_control.node import CanNode
-from ice_runner.common import logging_configurator
+from common import logging_configurator
 
 last_sync_time = time.time()
 
@@ -63,6 +62,7 @@ def start(log_dir: str, args: list['str'] = None) -> None:
                         help="Path to ICE runner configuration file")
 
     # This is disgusting
+    from .can_control.node import CanNode
     CanNode.log_dir = log_dir
 
     args: argparse.Namespace = parser.parse_args(args)

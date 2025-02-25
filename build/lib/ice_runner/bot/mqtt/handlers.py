@@ -6,8 +6,8 @@
 
 import json
 import logging
-from ice_runner.bot.mqtt.client import MqttClient
-from ice_runner.bot.telegram.scheduler import Scheduler
+from bot.mqtt.client import MqttClient
+from bot.telegram.scheduler import Scheduler
 from ice_runner.common.RunnerState import RunnerState
 from ice_runner.common.algorithms import safe_literal_eval
 

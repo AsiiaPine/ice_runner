@@ -4,10 +4,10 @@ import secrets
 import time
 
 import pytest
-from common.ICEState import ICEState, RecipState
-from common.IceRunnerConfiguration import IceRunnerConfiguration
-from common.RunnerState import RunnerState, RunnerStateController
-from raspberry.can_control.ice_commander import ExceedanceTracker, ICERunnerMode
+from ice_runner.common.ICEState import ICEState, RecipState
+from ice_runner.common.IceRunnerConfiguration import IceRunnerConfiguration
+from ice_runner.common.RunnerState import RunnerState, RunnerStateController
+from ice_runner.raspberry.can_control.ice_commander import ExceedanceTracker, ICERunnerMode
 
 logger = logging.getLogger()
 logger.level = logging.INFO
@@ -74,7 +74,7 @@ class TestNotStarted(BaseTest):
     def test_not_started_call(self, mocker):
 
         candump_task = mocker.patch(
-            'raspberry.can_control.ice_commander.ExceedanceTracker.check_not_started')
+            'ice_runner.raspberry.can_control.ice_commander.ExceedanceTracker.check_not_started')
         self.ex_tracker.check(self.state, self.config, self.runner_state, self.start_time)
         candump_task.assert_called_once()
 
@@ -118,7 +118,7 @@ class TestStarting(BaseTest):
     def test_running_call(self, mocker):
         """ExceedanceTracker should use check_running method if the state is STARTING"""
         candump_task = mocker.patch(
-            'raspberry.can_control.ice_commander.ExceedanceTracker.check_running')
+            'ice_runner.raspberry.can_control.ice_commander.ExceedanceTracker.check_running')
         self.ex_tracker.check(self.state, self.config, self.runner_state, self.start_time)
         candump_task.assert_called_once()
 

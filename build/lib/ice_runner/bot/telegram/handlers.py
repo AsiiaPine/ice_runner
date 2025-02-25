@@ -26,8 +26,8 @@ from aiogram.types import (
 )
 import yaml
 
-from ice_runner.bot.mqtt.client import MqttClient
-from ice_runner.bot.telegram.filters import ChatIdFilter
+from bot.mqtt.client import MqttClient
+from bot.telegram.filters import ChatIdFilter
 from ice_runner.common.algorithms import get_type_from_str, is_float, safe_literal_eval
 from ice_runner.common.RunnerState import RunnerState
 
