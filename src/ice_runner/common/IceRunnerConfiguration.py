@@ -8,20 +8,25 @@ from copy import deepcopy
 from typing import Any, Dict
 import yaml
 
+from common.algorithms import get_type_from_str
+
+class MyDumper(yaml.SafeDumper):
+    # HACK: insert blank lines between top-level objects
+    # inspired by https://stackoverflow.com/a/44284819/3786245
+    def write_line_break(self, data=None):
+        super().write_line_break(data)
+
+        if len(self.indents) == 1:
+            super().write_line_break()
+
 class IceRunnerConfiguration:
-    rpm: int = 4500
-    max_temperature: int = 190 + 273.15 # Kelvin
-    max_gas_throttle: int = 0
-    max_vibration: float = 100
-    min_fuel_volume: int = 0
-    min_vin_voltage: int = 40
-    time: int = 0
-    report_period: int = 10
-    chat_id: int = 0
-    num_cells: int = 3
-    setpoint_ch: int = 7
-    mode: int = 0
-    command: int = 0
+    """The class is used to define the configuration of the ICE runner"""
+    attribute_names = ["mode", "rpm", "time", "gas_throttle", "air_throttle",
+                       "min_gas_throttle", "max_gas_throttle", "report_period", "control_pid_p",
+                       "control_pid_i", "control_pid_d", "max_temperature",
+                       "min_fuel_volume", "min_vin_voltage", "start_attemts",
+                       "max_vibration"]
+    components = ["default", "help", "type", "value", "min", "max", "unit"]
 
     def __init__(self, file_path: str = None, dict_conf: Dict[str, Any] = None) -> None:
         """The function loads configuration from file or dictionary"""
@@ -46,30 +51,24 @@ class IceRunnerConfiguration:
 
     def from_dict(self, conf: Dict[str, Any]) -> None:
         """The function loads configuration from dictionary"""
-        self.rpm = conf["rpm"]["value"]
-        self.time = conf["time"]["value"]
-        self.max_temperature = conf["max_temperature"]["value"]
-        self.max_gas_throttle = conf["max_gas_throttle"]["value"]
-        self.report_period = conf["report_period"]["value"]
-        self.max_vibration = conf["max_vibration"]["value"]
-        self.min_fuel_volume = conf["min_fuel_volume"]["value"]
-        self.min_vin_voltage = 0
-        if "min_vin_voltage" in conf.keys():
-            self.min_vin_voltage = conf["min_vin_voltage"]["value"]
-        else:
-            if "num_cells" in conf.keys():
-                self.min_vin_voltage = conf["num_cells"]["value"] * 3.2
-        self.mode = conf["mode"]["value"]
-        self.command = conf["command"]["value"]
+        for attr in conf.keys():
+            attr_type = conf[attr]["type"]  # Get the type specified in the YAML
+            attr_value = conf[attr]["value"]
+            setattr(self, attr, get_type_from_str(attr_type)(attr_value))
+
+        for attr in self.attribute_names:
+            if attr not in conf.keys():
+                raise ValueError(
+                    f"No configuration for {attr}. Needed attributes: {self.attribute_names}\n with components: {self.components}")
+        self.original_dict: Dict[str, Dict[str, Any]] = conf
 
     def from_file(self, file_path: str) -> None:
         """The function loads configuration from file"""
         if file_path.split(".")[-1] not in ("yml", "yaml"):
             raise ValueError("Unsupported file format")
-        with open(file_path) as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             conf = yaml.safe_load(file)
         self.from_dict(conf)
-        self.original_dict: Dict[str, Dict[str, Any]] = conf
         self.last_file_path = file_path
 
     def to_file(self, file_path: str|None = None) -> None:
@@ -79,8 +78,9 @@ class IceRunnerConfiguration:
         if file_path is None:
             raise ValueError("No file path provided")
         self.sync_before_save()
-        with open(file_path, "w", encoding="utf8") as file:
-            yaml.dump(self.original_dict, file, allow_unicode=True)
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(yaml.dump(self.original_dict,
+                                 allow_unicode=True, sort_keys=False, Dumper=MyDumper))
 
     def sync_before_save(self) -> None:
         """The function is called before saving the configuration to a file"""
@@ -88,3 +88,9 @@ class IceRunnerConfiguration:
             return
         for name in self.original_dict:
             self.original_dict[name]["value"] = vars(self)[name]
+
+    def get_original_dict(self) -> None:
+        """The function sends the original configuration to the file"""
+        if self.original_dict is None:
+            return
+        return self.original_dict

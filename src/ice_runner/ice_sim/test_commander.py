@@ -1,8 +1,9 @@
-'''The script is used to test the ICE node'''
-
+#!/usr/bin/env python3
 # This software is distributed under the terms of the MIT License.
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
+
+'''The script is used to test the ICE node'''
 
 import time
 import secrets
@@ -156,49 +157,53 @@ class ICENODE:
     gas_throttle: int = 0
     air_throttle: int = 0
 
-    def __init__(self) -> None:
-        self.dt = 0.05
-        self.node = DronecanNode(node_id= 11)
-        self.rpm = 0
-        self.current: float = 40
-        self.voltage_in: float = 40
-        self.voltage_out: float = 5
+    @classmethod
+    def init(cls) -> None:
+        cls.dt = 0.05
+        cls.node = DronecanNode(node_id= 11)
+        cls.rpm = 0
+        cls.current: float = 1
+        cls.voltage_in: float = 40
+        cls.voltage_out: float = 5
 
-        self.node.node.mode = Mode.MODE_OPERATIONAL
-        self.node.node.health = Health.HEALTH_OK
-        self.prev_broadcast_time = 0
-        self.engine = Engine()
+        cls.node.node.mode = Mode.MODE_OPERATIONAL
+        cls.node.node.health = Health.HEALTH_OK
+        cls.prev_broadcast_time = 0
+        cls.engine = Engine()
 
-    def create_ice_reciprocating_status(self) -> dronecan.uavcan.equipment.ice.reciprocating.Status:
+    @classmethod
+    def create_ice_reciprocating_status(cls) -> dronecan.uavcan.equipment.ice.reciprocating.Status:
         return dronecan.uavcan.equipment.ice.reciprocating.Status(
             ecu_index=0,
-            state=self.engine.state.value,
-            engine_speed_rpm=int(self.engine.rpm),
-            atmospheric_pressure_kpa=int(self.engine.rpm),
-            engine_load_percent=self.gas_throttle,
-            throttle_position_percent=self.air_throttle,
+            state=cls.engine.state.value,
+            engine_speed_rpm=int(cls.engine.rpm),
+            atmospheric_pressure_kpa=int(cls.engine.rpm),
+            engine_load_percent=int(cls.gas_throttle),
+            throttle_position_percent=int(cls.air_throttle),
             spark_plug_usage=0,
-            estimated_consumed_fuel_volume_cm3=self.engine.starter.t2_ms,
-            intake_manifold_temperature=self.current,
+            estimated_consumed_fuel_volume_cm3=cls.engine.starter.t2_ms,
+            intake_manifold_temperature=cls.current,
             intake_manifold_pressure_kpa=5,
-            oil_pressure=self.voltage_in,
-            fuel_pressure=self.voltage_out)
+            oil_pressure=cls.voltage_in,
+            fuel_pressure=cls.voltage_out)
 
-    def send_ice_reciprocating_status(self,
+    @classmethod
+    def send_ice_reciprocating_status(cls,
                                       msg: dronecan.uavcan.equipment.ice.reciprocating.Status
                                       ) -> None:
-        self.node.publish(msg)
+        cls.node.publish(msg)
 
-    def spin(self) -> None:
-        self.node.node.spin(0)
+    @classmethod
+    def spin(cls) -> None:
+        cls.node.node.spin(0)
 
-        self.engine.update(cmd=self.command, air_cmd=self.air_cmd)
-        if time.time() - self.prev_broadcast_time > self.status_timeout:
-            self.prev_broadcast_time = time.time()
-            self.node.publish(self.create_ice_reciprocating_status())
-            self.node.publish(
+        cls.engine.update(cmd=cls.command, air_cmd=cls.air_cmd)
+        if time.time() - cls.prev_broadcast_time > cls.status_timeout:
+            cls.prev_broadcast_time = time.time()
+            cls.node.publish(cls.create_ice_reciprocating_status())
+            cls.node.publish(
                     dronecan.uavcan.equipment.ice.FuelTankStatus(available_fuel_volume_percent=100))
-            self.node.publish(dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=0))
+            cls.node.publish(dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=0))
 
 def get_raw_command(res: dronecan.node.TransferEvent) -> None:
     if res is None:
@@ -206,7 +211,7 @@ def get_raw_command(res: dronecan.node.TransferEvent) -> None:
     cmd = res.message.cmd[ICE_CMD_CHANNEL]
     print("ICE\t| ", cmd)
     ICENODE.command = cmd
-    ICENODE.gas_throttle = int(max(0, min(cmd, 8191)) / 100)
+    ICENODE.gas_throttle = int(max(0, min(cmd, 8191)) / 8191 * 100)
 
 def get_air_cmd(res: dronecan.node.TransferEvent) -> None:
     if res is None:
@@ -215,7 +220,7 @@ def get_air_cmd(res: dronecan.node.TransferEvent) -> None:
         if command.actuator_id == ICE_AIR_CHANNEL:
             cmd = command.command_value
             print("AIR\t| ", cmd)
-            ICENODE.air_throttle = int(max(1000, min(cmd, 2000)) / 100)
+            ICENODE.air_throttle = (cmd + 1) * 50 # make it 0-100%
             ICENODE.air_cmd = cmd
 
 def start(args: list['str'] = None) -> None:
@@ -223,11 +228,11 @@ def start(args: list['str'] = None) -> None:
     # Should just trip on non-empty arg and do nothing otherwise
     parser.parse_args(args)
 
-    node = ICENODE()
-    node.node.node.add_handler(dronecan.uavcan.equipment.esc.RawCommand, get_raw_command)
-    node.node.node.add_handler(dronecan.uavcan.equipment.actuator.ArrayCommand, get_air_cmd)
+    ICENODE.init()
+    ICENODE.node.node.add_handler(dronecan.uavcan.equipment.esc.RawCommand, get_raw_command)
+    ICENODE.node.node.add_handler(dronecan.uavcan.equipment.actuator.ArrayCommand, get_air_cmd)
     while True:
-        node.spin()
+        ICENODE.spin()
 
 if __name__ == "__main__":
     start()

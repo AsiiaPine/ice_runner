@@ -4,15 +4,19 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import json
 import sys
 import logging
 from typing import Any, Dict
-from paho.mqtt.client import MQTTv311, Client
+from paho.mqtt.client import MQTTv311, Client, MQTTMessageInfo
+from paho.mqtt.enums import CallbackAPIVersion
 from common.IceRunnerConfiguration import IceRunnerConfiguration
+from common.RunnerState import RunnerState
 
 class MqttClient:
     """The class is used to connect Raspberry Pi to MQTT broker"""
-    client: Client = Client(clean_session=True,
+    client: Client = Client(callback_api_version = CallbackAPIVersion.VERSION2,
+                            clean_session=True,
                             protocol=MQTTv311,
                             reconnect_on_failure=True)
     conf_updated = False
@@ -33,15 +37,13 @@ class MqttClient:
 
         logging.info("Connecting to %s: %s\n runner id: %d", server_ip, port, runner_id)
         cls.client.connect(server_ip, port, 60)
-        cls.client.publish(f"ice_runner/raspberry_pi/{runner_id}/state", cls.state)
-        logging.debug("PUBLISH\t-\tstate")
 
     @classmethod
     def publish_messages(cls, messages: Dict[str, Any]) -> None:
         """The function publishes dronecan messages to appropriate MQTT topic"""
         for dronecan_type in messages.keys():
             cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/dronecan/{dronecan_type}",
-                                str(messages[dronecan_type]))
+                                json.dumps(messages[dronecan_type]))
         logging.debug("PUBLISH\t-\tdronecan messages")
 
     @classmethod
@@ -49,7 +51,7 @@ class MqttClient:
         """The function publishes status to MQTT broker"""
         logging.debug("PUBLISH\t-\tstatus")
         MqttClient.status = status
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/status", str(status))
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/status", json.dumps(status))
 
     @classmethod
     def publish_state(cls, state: int) -> None:
@@ -64,21 +66,38 @@ class MqttClient:
         logging.debug("PUBLISH\t-\tlog")
         logging.debug("PUBLISH\t-\tlogs: %s", cls.run_logs)
         MqttClient.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/log",
-                                  str(MqttClient.run_logs))
+                                  json.dumps(MqttClient.run_logs))
 
     @classmethod
     def publish_configuration(cls) -> None:
         """The function publishes IceRunnerConfiguration to MQTT broker.
             The configuration should be defined before start function is called"""
-        logging.debug("PUBLISH\t-\tconfiguration")
+        logging.info("PUBLISH\t-\tconfiguration")
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/config",
-                           str(cls.configuration.to_dict()))
+                           json.dumps(cls.configuration.to_dict()))
 
     @classmethod
     def publish_stop_reason(cls, reason: str) -> None:
         """The function should be called anytime the runner changes its state to STOPPED"""
         logging.info("PUBLISH\t-\tstop reason: %s", reason)
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/stop_reason", reason)
+        mes_info:MQTTMessageInfo = cls.client.publish(
+                                f"ice_runner/raspberry_pi/{cls.run_id}/stop_reason", reason)
+        mes_info.wait_for_publish(timeout=5)
+        mes_info = cls.publish_state(RunnerState.STOPPED.value)
+        mes_info.wait_for_publish(timeout=5)
+
+    @classmethod
+    def publish_full_configuration(cls, full_configuration: Dict[str, Any]) -> None:
+        """The function should be called at the start of the script"""
+        logging.info("PUBLISH\t-\tfull configuration")
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/full_config",
+                           json.dumps(full_configuration))
+
+    @classmethod
+    def publish_flags(cls, flags: Dict[str, bool]) -> None:
+        """The function should be called if any flag is exceeded"""
+        logging.info("PUBLISH\t-\tflags")
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/flags", str(flags))
 
     @classmethod
     async def start(cls) -> None:

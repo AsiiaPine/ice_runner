@@ -1,13 +1,10 @@
 # common
 netifaces
 paho-mqtt
-pytest
 python-dotenv
 PyYAML
-pytest-asyncio
 # bot
-pyTelegramBotAPI
-aiogram==3.16
+aiogram>=3.16
 apscheduler
 
 # dronecan related
@@ -16,5 +13,13 @@ python-can == 4.3
 pydronecan
 raccoonlab-tools
 
-#rpi
+# rpi
 RPi.GPIO
+
+# ice_sim
+numpy
+
+# tests
+pytest_mock
+pytest
+pytest-asyncio
