@@ -7,6 +7,8 @@
 import time
 import secrets
 from enum import IntEnum
+
+import argparse
 import numpy as np
 import dronecan
 
@@ -216,10 +218,16 @@ def get_air_cmd(res: dronecan.node.TransferEvent) -> None:
             ICENODE.air_throttle = int(max(1000, min(cmd, 2000)) / 100)
             ICENODE.air_cmd = cmd
 
+def start(args: list['str'] = None) -> None:
+    parser = argparse.ArgumentParser()
+    # Should just trip on non-empty arg and do nothing otherwise
+    parser.parse_args(args)
 
-if __name__ == "__main__":
     node = ICENODE()
     node.node.node.add_handler(dronecan.uavcan.equipment.esc.RawCommand, get_raw_command)
     node.node.node.add_handler(dronecan.uavcan.equipment.actuator.ArrayCommand, get_air_cmd)
     while True:
         node.spin()
+
+if __name__ == "__main__":
+    start()

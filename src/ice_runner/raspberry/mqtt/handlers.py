@@ -6,7 +6,7 @@
 
 import time
 import logging
-from mqtt.client import MqttClient
+from .client import MqttClient
 
 def handle_command(client, userdata, message):
     """The function handles the command from the server"""

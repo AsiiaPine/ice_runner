@@ -26,12 +26,9 @@ from aiogram.types import (
 )
 import yaml
 
-from mqtt.client import MqttClient
-from telegram.filters import ChatIdFilter
+from bot.mqtt.client import MqttClient
+from bot.telegram.filters import ChatIdFilter
 from common.RunnerState import RunnerState
-
-with open('ice_configuration.yml', encoding='utf8') as file:
-    configuration = yaml.safe_load(file)
 
 commands_discription : Dict[str, str] = {
     "/cancel":      "Отменить последнее действие/\nCancel any action\n",
@@ -52,7 +49,6 @@ Get the status of the connected blocks and current configuration\n",
 dp = Dispatcher(storage=MemoryStorage(), fsm_strategy=FSMStrategy.CHAT)
 form_router = Router()
 dp.include_router(form_router)
-configuration: Dict[int, Dict[str, Any]] = {}
 configuration_file_path: str = None
 
 def get_configuration_str(rp_id: int) -> str:

@@ -10,7 +10,7 @@ from aiogram import Bot
 from aiogram.types import FSInputFile
 from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from mqtt.client import MqttClient
+from bot.mqtt.client import MqttClient
 from common.RunnerState import RunnerState
 
 

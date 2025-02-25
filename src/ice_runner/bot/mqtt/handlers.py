@@ -5,8 +5,8 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
 import logging
-from mqtt.client import MqttClient
-from telegram.scheduler import Scheduler
+from bot.mqtt.client import MqttClient
+from bot.telegram.scheduler import Scheduler
 from common.RunnerState import RunnerState
 from common.algorithms import safe_literal_eval
 

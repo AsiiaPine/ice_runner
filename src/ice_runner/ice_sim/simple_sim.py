@@ -4,6 +4,7 @@ import time
 import dronecan
 import numpy as np
 from raccoonlab_tools.dronecan.global_node import DronecanNode
+
 from common.ICEState import Health, Mode, RecipState
 from ice_sim.test_commander import ICE_AIR_CHANNEL, ICE_CMD_CHANNEL
 
@@ -12,7 +13,7 @@ class Engine:
         self.state = RecipState.STOPPED
         self.rpm = 0
         self.n_tries = 0
-        self.prev_time = 0
+        self.prev_time = 0 
 
     def update(self, cmd: int, air_cmd: int) -> None:
         del air_cmd

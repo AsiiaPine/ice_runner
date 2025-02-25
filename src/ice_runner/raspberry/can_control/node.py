@@ -3,15 +3,13 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 """The module is used to control the DroneCAN ICE node by raccoonlab"""
 
-from ast import Dict
 import asyncio
 import datetime
 import logging
 import os
 import subprocess
 import time
-from io import TextIOWrapper
-from typing import Any
+from typing import Any, TextIO, Dict
 import dronecan
 from dronecan.node import Node
 from raccoonlab_tools.dronecan.utils import ParametersInterface
@@ -101,12 +99,14 @@ class CanNode:
         if hasattr(cls, "temp_output_file"):
             os.remove(cls.temp_output_filename)
         crnt_time = datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')
-        cls.temp_output_filename = f"logs/raspberry/temp_messages_{crnt_time}.log"
-        cls.output_filename = f"logs/raspberry/messages_{crnt_time}.log"
-        cls.temp_output_file: TextIOWrapper = open(cls.temp_output_filename, "a", encoding="utf8")
+        log_base = os.path.join(cls.log_dir, "logs", "raspberry")
+        os.makedirs(log_base, exist_ok=True)
+        cls.temp_output_filename = os.path.join(log_base, f"temp_messages_{crnt_time}.log")
+        cls.output_filename = os.path.join(log_base, f"messages_{crnt_time}.log")
+        cls.temp_output_file: TextIO = open(cls.temp_output_filename, "a", encoding="utf8")
 
         cls.__stop_candump__()
-        cls.candump_filename = f"logs/raspberry/candump_{crnt_time}.log"
+        cls.candump_filename = os.path.join(log_base, f"candump_{crnt_time}.log")
         cls.__run_candump__()
         logging.info("SEND\t-\tchanged log files")
 

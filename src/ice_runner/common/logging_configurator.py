@@ -10,22 +10,20 @@ from os import path
 import os
 import yaml
 
-for _, parent_logger in logging.root.manager.loggerDict.items():
-    parent_logger.disabled=True
-    parent_logger.propagate=False
+def get_logger(script_part: str, log_dir: str) -> logging.Logger:
+    for _, parent_logger in logging.root.manager.loggerDict.items():
+        parent_logger.disabled = True
+        parent_logger.propagate = False
 
-# open the file in read mode
-log_conf_file = None
-absolute_path = path.dirname(path.abspath(__file__))
+    # open the file in read mode
+    absolute_path = path.dirname(path.abspath(__file__))
 
-with open(absolute_path + path.normpath('/logg_config.yml'), 'r') as file:
-    log_conf_file = yaml.safe_load(file)
-
-def getLogger(filepath):
+    with open(os.path.join(absolute_path, path.normpath('logg_config.yml')), 'r') as file:
+        log_conf_file = yaml.safe_load(file)
     # Get full path of the script
-    folder, name = path.split(filepath)
-    folder = path.split(folder)[-1]
-    log_directory = path.join('..', 'logs', folder)
+    folder, name = path.split(script_part)
+    module = path.split(folder)[-1]
+    log_directory = path.join(log_dir, 'logs', module)
     log_filename = datetime.datetime.now().strftime(f"{name}_%Y_%m_%d-%H_%M_%S.log")
     directory = path.join(path.split(__file__)[0], log_directory)
     if not os.path.exists(directory):

@@ -6,7 +6,7 @@
 
 import logging
 import yaml
-from mqtt.client import ServerMqttClient
+from server.mqtt.client import ServerMqttClient
 from paho.mqtt.client import Client
 from common.algorithms import safe_literal_eval
 
