@@ -40,19 +40,22 @@ class Scheduler:
     async def check_rp_state(cls, runner_id: int):
         """The function checks the RP state and sends logs and stop reason
             if runner stops"""
-        if runner_id not in MqttClient.rp_logs:
-            print("not in logs(")
+        if runner_id not in MqttClient.rp_states:
             return
-        if runner_id not in MqttClient.rp_stop_handlers:
-            print("not in rp_stop_handlers")
-            return
-        await cls.send_log(runner_id=runner_id)
-        await cls.send_stop_reason(runner_id=runner_id)
-        cls.jobs[runner_id].pause()
-        cls.jobs[runner_id].remove()
-        cls.jobs.pop(runner_id)
-        MqttClient.rp_states.pop(runner_id)
-        MqttClient.rp_logs.pop(runner_id)
+        if MqttClient.rp_states[runner_id] == RunnerState.STOPPED:
+            if runner_id not in MqttClient.rp_logs:
+                print("not in logs(")
+                return
+            if runner_id not in MqttClient.rp_stop_handlers:
+                print("not in rp_stop_handlers")
+                return
+            await cls.send_log(runner_id=runner_id)
+            await cls.send_stop_reason(runner_id=runner_id)
+            cls.jobs[runner_id].pause()
+            cls.jobs[runner_id].remove()
+            cls.jobs.pop(runner_id)
+            MqttClient.rp_states.pop(runner_id)
+            MqttClient.rp_logs.pop(runner_id)
 
     @classmethod
     async def send_log(cls, runner_id):
