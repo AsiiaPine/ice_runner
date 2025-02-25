@@ -34,7 +34,7 @@ async def main() -> None:
     server_port = int(os.getenv("SERVER_PORT"))
     ServerMqttClient.connect(server_ip, server_port)
     await ServerMqttClient.start()
-    logger.info("Started")
+    logging.info("Started")
 
     while True:
         await ping_rpis()
