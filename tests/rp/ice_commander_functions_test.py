@@ -151,6 +151,7 @@ class TestSetState(BaseTest):
     def test_ice_waiting_run_state_starting(self):
         self.commander.state_controller.state = RunnerState.STARTING
         CanNode.state.ice_state = RecipState.WAITING
+        self.commander.state_controller.prev_waiting_state_time = 0
         assert self.commander.state_controller.prev_waiting_state_time == 0
         self.commander.set_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING

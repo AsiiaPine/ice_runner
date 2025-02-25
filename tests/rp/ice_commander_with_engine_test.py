@@ -128,19 +128,20 @@ class BaseTest():
 class TestStateUpdate(BaseTest):
     @pytest.mark.asyncio
     async def test_connection(self):
-        res = await self.wait_for_bool(lambda: self.commander.state_controller > RunnerState.NOT_CONNECTED)
+        res = await self.wait_for_bool(
+            lambda: self.commander.state_controller.state > RunnerState.NOT_CONNECTED)
         assert res == False
         timeout = 4
-        self.commander.state_controller = RunnerState.NOT_CONNECTED
+        self.commander.state_controller.state = RunnerState.NOT_CONNECTED
         res = await self.spin_engine_with_tasks(None,
-                                    lambda: self.commander.state_controller == RunnerState.NOT_CONNECTED,
+                                    lambda: self.commander.state_controller.state == RunnerState.NOT_CONNECTED,
                                     timeout=timeout)
         assert res
 
-        self.commander.state_controller = RunnerState.NOT_CONNECTED
+        self.commander.state_controller.state = RunnerState.NOT_CONNECTED
         tasks = [(lambda x: x.node.node.broadcast(x.recip_status_message), 0.5)]
         res = await self.spin_engine_with_tasks(tasks,
-                                    lambda: self.commander.state_controller != RunnerState.NOT_CONNECTED,
+                                    lambda: self.commander.state_controller.state != RunnerState.NOT_CONNECTED,
                                     timeout=timeout)
         assert res
 
