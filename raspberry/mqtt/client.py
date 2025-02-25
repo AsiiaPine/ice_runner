@@ -58,15 +58,18 @@ class MqttClient:
         """The function publishes state to MQTT broker"""
         logging.debug("PUBLISH\t-\tstate %d", state)
         MqttClient.state = state
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/state", state)
+        mes_info: MQTTMessageInfo = cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/state", state)
+        mes_info.wait_for_publish(1)
 
     @classmethod
     def publish_log(cls) -> None:
         """This function should be called anytime the runner changes its log"""
         logging.debug("PUBLISH\t-\tlog")
-        logging.debug("PUBLISH\t-\tlogs: %s", cls.run_logs)
-        MqttClient.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/log",
+        mes_info: MQTTMessageInfo = MqttClient.client.publish(
+            f"ice_runner/raspberry_pi/{cls.run_id}/log",
                                   json.dumps(MqttClient.run_logs))
+        mes_info.wait_for_publish(timeout=5)
+        logging.debug("PUBLISH\t-\tlogs: %s", cls.run_logs)
 
     @classmethod
     def publish_configuration(cls) -> None:
@@ -79,12 +82,11 @@ class MqttClient:
     @classmethod
     def publish_stop_reason(cls, reason: str) -> None:
         """The function should be called anytime the runner changes its state to STOPPED"""
-        logging.info("PUBLISH\t-\tstop reason: %s", reason)
         mes_info:MQTTMessageInfo = cls.client.publish(
                                 f"ice_runner/raspberry_pi/{cls.run_id}/stop_reason", reason)
         mes_info.wait_for_publish(timeout=5)
-        mes_info = cls.publish_state(RunnerState.STOPPED.value)
-        mes_info.wait_for_publish(timeout=5)
+        cls.publish_state(RunnerState.STOPPED.value)
+        logging.info("PUBLISH\t-\tstop reason: %s", reason)
 
     @classmethod
     def publish_full_configuration(cls, full_configuration: Dict[str, Any]) -> None:
