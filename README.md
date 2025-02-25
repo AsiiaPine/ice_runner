@@ -80,4 +80,5 @@ Raspberry Pi subscribes to its commander topic and sends parsed dronecan message
 
 
 # TODO:
-- [ ] Fix the command sending rate of ice_commander
+- [ ] Fix the filepaths to logs
+- [ ] Fix issue with log files truncation

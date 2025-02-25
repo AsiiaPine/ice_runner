@@ -25,21 +25,6 @@ ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
 MAX_AIR_OPEN = 8191
 
-def file_safely_copy_from_temp(temp_filename: str, original_filename: str) -> float:
-    """The function copies file from temporary file to original file and syncs to disk, 
-        at final step temporary file is truncated"""
-    logger.debug("LOGGER\tSaving data to %s", original_filename)
-    with open(temp_filename, "r+", encoding="utf8") as temp_output_file:
-        fd = os.open(original_filename, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_SYNC)
-        with open(fd, "a") as output:
-            lines = temp_output_file.readlines()
-            output.writelines(lines)
-            output.flush()
-            os.fsync(output.fileno())
-            output.close()
-        # safely truncate the temporary file after successful copying
-        temp_output_file.truncate(0)
-
 def safely_write_to_file(filename: str) -> float:
     """The function writes to file and syncs it with disk"""
     logger.debug("LOGGER\t Saving data to %s", filename)
@@ -88,7 +73,7 @@ class CanNode:
         """The function saves candump and humal-readable files"""
         try:
             if time.time() - cls.last_sync_time > 1:
-                file_safely_copy_from_temp(cls.temp_output_filename, cls.output_filename)
+                safely_write_to_file(cls.output_filename)
                 safely_write_to_file(cls.candump_filename)
         except Exception as e:
             logger.error("An error occurred: %s",e)
@@ -128,7 +113,9 @@ class CanNode:
 
 def dump_msg(msg: dronecan.node.TransferEvent) -> None:
     """The function dumps dronecan message in human-readable format"""
-    CanNode.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
+    with open(CanNode.output_filename, "a") as f:
+        f.write(dronecan.to_yaml(msg) + "\n")
+    # CanNode.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
     CanNode.last_message_receive_time = time.time()
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:

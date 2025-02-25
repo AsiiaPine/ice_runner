@@ -67,9 +67,9 @@ class PIDMode(BaseMode):
     def __init__(self, configuration: IceRunnerConfiguration):
         super().__init__(configuration)
         coeffs: Tuple[float, float, float] = (
-                self.configuration.control_pid_p,
-                self.configuration.control_pid_i,
-                self.configuration.control_pid_d)
+                configuration.control_pid_p,
+                configuration.control_pid_i,
+                configuration.control_pid_d)
         self.pid_controller = PIDController(configuration.rpm, coeffs)
 
     def get_running_command(self, rpm) -> List[int]:
