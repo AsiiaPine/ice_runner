@@ -70,12 +70,12 @@ To start a simulator of the ICE start can interface (e.g. slcan/vcan), run the f
 ## Project structure
 Server is the main controller of the project.
 Server and Bot are asynchronous processes and communicate with each other using MQTT protocol. Therefore all parts of the project are independent and connected by MQTT.
-    ![Project structure](assets/auto_ice.png)
+    ![Project structure](assets/auto_ice_structure.png)[source](https://drive.google.com/file/d/1y8k6VckcmkdSaXO5kJmT2Wjp_cWLKK8U/view?usp=sharing)
 ### MQTT communication diagram
 Server subscribes to bot and rp topics and sends commands and statuses to the respective topics with commander suffix.
 Bot subscribes to its commander topic and sends user commands to the server.
 Raspberry Pi subscribes to its commander topic and sends parsed dronecan messages to the server.
-    ![MQTT communication diagram](assets/mqtt_diagram.svg)
+    ![MQTT communication diagram](assets/mqtt_diagram.svg)[source](https://drive.google.com/file/d/101-VWQ6xDPb7unSD5HLtugVJ_l3K8BXP/view?usp=sharing)
 
 
 # TODO:
