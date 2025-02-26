@@ -451,21 +451,7 @@ async def command_log_handler(message: Message, state: FSMContext) -> None:
     rp_id = (await state.get_data())["rp_id"]
     logging.info("Getting logs for %d", rp_id)
     MqttClient.client.publish("ice_runner/bot/usr_cmd/log", str(rp_id))
-    await asyncio.sleep(1)
-    if rp_id in MqttClient.rp_logs:
-        log_files: Dict[str, str] = MqttClient.rp_logs[rp_id]
-        if len(log_files) == 0:
-            await message.answer("Логов не пришло")
-        for name, log_file in log_files.items():
-            logging.info("Sending log %s", name)
-            try:
-                log = FSInputFile(log_file)
-                await message.answer_document(log, caption=name)
-            except Exception as e:
-                await message.answer(f"Ошибка при отправке лога {name}: {e}")
-                logging.error("Error sending log %s: %s", name, e)
-    else:
-        await message.answer("Лог не найден")
+    await message.answer("Пожалуйста, подождите")
 
 
 @dp.error()

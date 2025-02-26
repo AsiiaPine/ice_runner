@@ -5,6 +5,7 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
 import logging
+import os
 from typing import Dict
 from aiogram import Bot
 from aiogram.types import FSInputFile
@@ -12,8 +13,6 @@ from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from ice_runner.bot.mqtt.client import MqttClient
 from ice_runner.common.RunnerState import RunnerState
-from aiogram.exceptions import TelegramBadRequest
-
 
 class Scheduler:
     """The class is used to schedule tasks for the Telegram Bot"""
@@ -33,6 +32,8 @@ class Scheduler:
     @classmethod
     def guard_runner(cls, runner_id: int):
         """The function guards the RP state and waits until it stops"""
+        if runner_id in cls.jobs:
+            return
         cls.jobs[runner_id] = cls.scheduler.add_job(cls.check_rp_state, 'interval',
                                                 seconds=1, kwargs={"runner_id": runner_id})
         logging.info("Waiting for RP %d to stop", runner_id)
@@ -41,32 +42,35 @@ class Scheduler:
     async def check_rp_state(cls, runner_id: int):
         """The function checks the RP state and sends logs and stop reason
             if runner stops"""
-        if runner_id not in MqttClient.rp_states:
+        if runner_id not in MqttClient.rp_logs:
             return
-        if MqttClient.rp_states[runner_id] == RunnerState.STOPPED:
-            if runner_id not in MqttClient.rp_logs:
-                return
-            if runner_id not in MqttClient.rp_stop_handlers:
-                return
-            await cls.send_log(runner_id=runner_id)
-            await cls.send_stop_reason(runner_id=runner_id)
-            cls.jobs[runner_id].pause()
-            cls.jobs[runner_id].remove()
-            cls.jobs.pop(runner_id)
-            MqttClient.rp_states.pop(runner_id)
-            MqttClient.rp_logs.pop(runner_id)
+        await cls.send_log(runner_id=runner_id)
+        MqttClient.rp_logs.pop(runner_id)
+        if runner_id not in MqttClient.rp_stop_handlers:
+            return
+        await cls.send_stop_reason(runner_id=runner_id)
+        cls.jobs[runner_id].pause()
+        cls.jobs[runner_id].remove()
+        cls.jobs.pop(runner_id)
+        MqttClient.rp_states.pop(runner_id)
 
     @classmethod
     async def send_log(cls, runner_id):
         """The function sends logs to the specified RPi"""
         log_files: Dict = MqttClient.rp_logs[runner_id]
         if not log_files:
-            logging.debug("No logs to send")
             return
         for name, log_file in log_files.items():
-            logging.info("Sending log %s", name)
-            log = FSInputFile(log_file)
-            await cls.bot.send_document(cls.CHAT_ID, document=log, caption=name)
+            try:
+                if os.stat(log_file).st_size == 0:
+                    logging.warning("Empty log %s", name)
+                    await cls.bot.send_message(cls.CHAT_ID, f"Файл {name} пустой")
+                    continue
+                log = FSInputFile(log_file)
+                await cls.bot.send_document(cls.CHAT_ID, document=log, caption=name)
+            except Exception as e:
+                await cls.bot.send_message(cls.CHAT_ID, f"Ошибка при отправке лога {name}: {e}")
+                logging.error("Error sending log %s: %s", name, e)
         MqttClient.rp_logs[runner_id] = {}
 
     @classmethod
