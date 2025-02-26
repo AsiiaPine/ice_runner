@@ -67,8 +67,10 @@ class MqttClient:
         """This function should be called anytime the runner changes its log"""
         logging.debug("PUBLISH\t-\tlog")
         logging.debug("PUBLISH\t-\tlogs: %s", cls.run_logs)
-        MqttClient.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/log",
-                                  json.dumps(MqttClient.run_logs))
+        mes_info:MQTTMessageInfo = MqttClient.client.publish(
+            f"ice_runner/raspberry_pi/{cls.run_id}/log",json.dumps(MqttClient.run_logs))
+        mes_info.wait_for_publish(timeout=5)
+
 
     @classmethod
     def publish_configuration(cls) -> None:

@@ -30,7 +30,7 @@ class BaseTest():
         self.runner_state = RunnerState.STOPPED
         self.prev_state = RunnerState.STOPPED
         self.start_time = 0
-        self.prev_waiting_time = self.commander.state_controller.prev_waiting_state_time
+        self.commander.state_controller.prev_waiting_state_time = 0
 
     def make_config(self):
         config = {}
@@ -130,38 +130,42 @@ class TestSetState(BaseTest):
         ice_runner.raspberry.can_control.ice_commander.ICECommander.stop.assert_not_called()
         assert self.commander.state_controller.state == RunnerState.FAULT
 
-    def test_ice_waiting_run_state_not_connected(self):
+    def test_ice_waiting_run_state_not_connected(self, mocker):
+        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.save_file')
+        mocker.patch('ice_runner.raspberry.can_control.ice_commander.ICECommander.send_log')
+        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.change_file')
+        mocker.patch('ice_runner.raspberry.mqtt.client.MqttClient.publish_stop_reason')
+
         self.commander.state_controller.state = RunnerState.NOT_CONNECTED
         CanNode.state.ice_state = RecipState.WAITING
-        assert self.commander.state_controller.prev_waiting_state_time == self.prev_waiting_time
+        assert self.commander.state_controller.prev_waiting_state_time == 0
         self.commander.set_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING
-        assert self.commander.state_controller.prev_waiting_state_time != self.prev_waiting_time
+        assert self.commander.state_controller.prev_waiting_state_time != 0
 
     def test_ice_waiting_run_state_stopped(self):
         self.commander.state_controller.state = RunnerState.STOPPED
         CanNode.state.ice_state = RecipState.WAITING
-        assert self.commander.state_controller.prev_waiting_state_time == self.prev_waiting_time
+        assert self.commander.state_controller.prev_waiting_state_time == 0
         self.commander.set_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING
-        assert self.commander.state_controller.prev_waiting_state_time != self.prev_waiting_time
+        assert self.commander.state_controller.prev_waiting_state_time != 0
 
     def test_ice_waiting_run_state_running(self):
         self.commander.state_controller.state = RunnerState.RUNNING
         CanNode.state.ice_state = RecipState.WAITING
-        assert self.commander.state_controller.prev_waiting_state_time == self.prev_waiting_time
+        assert self.commander.state_controller.prev_waiting_state_time == 0
         self.commander.set_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING
-        assert self.commander.state_controller.prev_waiting_state_time != self.prev_waiting_time
+        assert self.commander.state_controller.prev_waiting_state_time != 0
 
     def test_ice_waiting_run_state_starting(self):
         self.commander.state_controller.state = RunnerState.STARTING
         CanNode.state.ice_state = RecipState.WAITING
-        self.commander.state_controller.prev_waiting_state_time = 0
-        assert self.commander.state_controller.prev_waiting_state_time == self.prev_waiting_time
+        assert self.commander.state_controller.prev_waiting_state_time == 0
         self.commander.set_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING
-        assert self.commander.state_controller.prev_waiting_state_time != self.prev_waiting_time
+        assert self.commander.state_controller.prev_waiting_state_time != 0
 
 class TestSetCommand(BaseTest):
     def test_no_command(self):

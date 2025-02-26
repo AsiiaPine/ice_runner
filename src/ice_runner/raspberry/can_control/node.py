@@ -50,10 +50,10 @@ class CanNode:
         cls.candump_task: asyncio.Task = None
         cls.node.health = Health.HEALTH_OK
         cls.node.mode = Mode.MODE_OPERATIONAL
+        cls.can_output_filenames = {}
         cls.change_file()
         cls.last_sync_time = 0
         cls.last_message_receive_time = 0
-
         cls.messages: Dict[str, Any] = {}
         cls.has_imu = False
 
@@ -72,11 +72,15 @@ class CanNode:
     def save_file(cls) -> None:
         """The function saves candump and humal-readable files"""
         try:
-            if time.time() - cls.last_sync_time > 1:
-                safely_write_to_file(cls.output_filename)
+            if time.time() - cls.last_sync_time > 5:
+                for can_type in cls.can_output_filenames:
+                    safely_write_to_file(cls.can_output_filenames[can_type])
                 safely_write_to_file(cls.candump_filename)
-        except Exception as e:
-            logger.error("An error occurred: %s",e)
+        except OSError as e:
+            if e.errno == 9:  # Bad file descriptor
+                print("Error: Bad file descriptor.")
+            else:
+                print(f"An error occurred: {e}")
 
     @classmethod
     def change_file(cls) -> None:
@@ -85,7 +89,8 @@ class CanNode:
         crnt_time = datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')
         log_base = os.path.join(cls.log_dir, "logs", "raspberry")
         os.makedirs(log_base, exist_ok=True)
-        cls.output_filename = os.path.join(log_base, f"messages_{crnt_time}.log")
+        for can_type in cls.can_output_filenames:
+            cls.can_output_filenames[can_type] = os.path.join(log_base, f"{can_type}_{crnt_time}.log")
 
         cls.__stop_candump__()
         cls.candump_filename = os.path.join(log_base, f"candump_{crnt_time}.log")
@@ -107,9 +112,9 @@ class CanNode:
         if cls.candump_task:
             subprocess.Popen.kill(cls.candump_task)
 
-def dump_msg(msg: dronecan.node.TransferEvent) -> None:
+def dump_msg(msg: dronecan.node.TransferEvent, can_type: str) -> None:
     """The function dumps dronecan message in human-readable format"""
-    with open(CanNode.output_filename, "a") as f:
+    with open(CanNode.can_output_filenames[can_type], "a") as f:
         f.write(dronecan.to_yaml(msg) + "\n")
     # CanNode.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
     CanNode.last_message_receive_time = time.time()
@@ -119,7 +124,7 @@ def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     CanNode.messages['uavcan.equipment.ice.FuelTankStatus'] = yaml.load(
                                                 dronecan.to_yaml(msg.message), yaml.BaseLoader)
     CanNode.state.update_with_fuel_tank_status(msg)
-    dump_msg(msg)
+    dump_msg(msg, "uavcan.equipment.ice.FuelTankStatus")
     logging.debug("MES\t-\tReceived fuel tank status")
 
 def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
@@ -133,25 +138,23 @@ def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
                                     CanNode.node.node_id, msg.message.source_node_id)
         param = param_interface.get("status.engaged_time")
         CanNode.state.engaged_time = param.value
-    dump_msg(msg)
+    dump_msg(msg, "uavcan.equipment.ahrs.RawIMU")
     logging.debug("MES\t-\tReceived raw imu")
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles uavcan.protocol.NodeStatus"""
     logging.debug("MES\t-\tReceived node status")
-    if msg.transfer.source_node_id == CanNode.node.node_id:
-        return
     CanNode.state.update_with_node_status(msg)
     CanNode.messages['uavcan.protocol.NodeStatus'] = yaml.load(dronecan.to_yaml(msg.message),
                                                                yaml.BaseLoader)
-    dump_msg(msg)
+    dump_msg(msg, "uavcan.protocol.NodeStatus")
 
 def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles uavcan.equipment.ice.reciprocating.Status"""
     CanNode.state.update_with_resiprocating_status(msg)
     CanNode.messages['uavcan.equipment.ice.reciprocating.Status'] = yaml.load(
                                                 dronecan.to_yaml(msg.message), yaml.BaseLoader)
-    dump_msg(msg)
+    dump_msg(msg, "uavcan.equipment.ice.reciprocating.Status")
     logging.debug("MES\t-\tReceived ICE reciprocating status")
 
 def start_dronecan_handlers() -> None:
@@ -161,6 +164,10 @@ def start_dronecan_handlers() -> None:
     CanNode.node.add_handler(dronecan.uavcan.equipment.ahrs.RawIMU, raw_imu_handler)
     CanNode.node.add_handler(dronecan.uavcan.protocol.NodeStatus, node_status_handler)
     CanNode.node.add_handler(dronecan.uavcan.equipment.ice.FuelTankStatus, fuel_tank_status_handler)
+    CanNode.can_output_filenames["uavcan.equipment.ice.reciprocating.Status"] = None
+    CanNode.can_output_filenames["uavcan.equipment.ahrs.RawIMU"] = None
+    CanNode.can_output_filenames["uavcan.protocol.NodeStatus"] = None
+    CanNode.can_output_filenames["uavcan.equipment.ice.FuelTankStatus"] = None
 
 def stop_dronecan_handlers() -> None:
     """The function stops all handlers for dronecan messages"""

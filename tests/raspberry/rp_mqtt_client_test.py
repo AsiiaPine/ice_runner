@@ -13,7 +13,7 @@ from ice_runner.raspberry.mqtt.handlers import MqttClient, add_handlers
 
 
 logger = logging.getLogger()
-logger.level = logging.DEBUG
+logger.level = logging.INFO
 
 
 class MQTTClient:

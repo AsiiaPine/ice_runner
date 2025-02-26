@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import time
+from unittest.mock import mock_open
 
 import pytest
 from typing import Any, Callable, List, Tuple
@@ -80,8 +81,6 @@ class EngineSimulator:
 class BaseTest():
     def setup_method(self, test_method):
         CanNode.messages = {}
-        CanNode.connect()
-        start_dronecan_handlers()
         self.engine_simulator: EngineSimulator = EngineSimulator()
         self.stream_handler = logging.StreamHandler(sys.stdout)
         logger.addHandler(self.stream_handler)
@@ -128,7 +127,18 @@ class BaseTest():
 
 class TestStateUpdate(BaseTest):
     @pytest.mark.asyncio
-    async def test_connection(self):
+    async def test_connection(self, mocker):
+        mocker.patch("builtins.open")
+        mocker.patch('os.path.join', return_value = "")
+        mocker.patch('os.makedirs')
+        mocker.patch("ice_runner.raspberry.can_control.node.dump_msg")
+        mocker.patch("ice_runner.raspberry.can_control.node.CanNode.__run_candump__")
+        mocker.patch("ice_runner.raspberry.can_control.node.CanNode.__stop_candump__")
+        mocker.patch("ice_runner.raspberry.can_control.node.safely_write_to_file")
+        mocker.patch("paho.mqtt.client.Client.publish")
+
+        CanNode.connect()
+        start_dronecan_handlers()
         res = await self.wait_for_bool(
             lambda: self.commander.state_controller.state > RunnerState.NOT_CONNECTED)
         assert res == False

@@ -19,6 +19,8 @@ from aiogram.fsm.strategy import FSMStrategy
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
+from aiogram.exceptions import TelegramBadRequest
+
 from aiogram.types import (
     Message,
     ReplyKeyboardRemove,
@@ -464,6 +466,11 @@ async def command_log_handler(message: Message, state: FSMContext) -> None:
                 logging.error("Error sending log %s: %s", name, e)
     else:
         await message.answer("Лог не найден")
+
+
+@dp.error()
+async def error_handler(event: TelegramBadRequest):
+    logging.critical("Critical error caused by %s", event.exception, exc_info=True)
 
 @form_router.message(Command(commands=["stop", "стоп"]), ChatIdFilter())
 async def command_stop_handler(message: Message, state: FSMContext) -> None:

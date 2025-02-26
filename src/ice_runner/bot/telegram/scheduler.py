@@ -12,6 +12,7 @@ from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from ice_runner.bot.mqtt.client import MqttClient
 from ice_runner.common.RunnerState import RunnerState
+from aiogram.exceptions import TelegramBadRequest
 
 
 class Scheduler:
@@ -64,12 +65,8 @@ class Scheduler:
             return
         for name, log_file in log_files.items():
             logging.info("Sending log %s", name)
-            try:
-                log = FSInputFile(log_file)
-                await cls.bot.send_document(cls.CHAT_ID, document=log, caption=name)
-            except Exception as e:
-                await cls.bot.send_message(cls.CHAT_ID, f"Ошибка при отправке лога {name}: {e}")
-                logging.error("Error sending log %s: %s", name, e)
+            log = FSInputFile(log_file)
+            await cls.bot.send_document(cls.CHAT_ID, document=log, caption=name)
         MqttClient.rp_logs[runner_id] = {}
 
     @classmethod

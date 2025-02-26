@@ -261,18 +261,18 @@ class ICECommander:
 
     def send_log(self) -> None:
         """The function starts new log files and sends logs to MQTT broker"""
+        MqttClient.run_logs = CanNode.can_output_filenames
         MqttClient.run_logs["candump"] = CanNode.candump_filename
-        MqttClient.run_logs["output"] = CanNode.output_filename
         MqttClient.publish_log()
-        logging.info("SEND\t-\tlog %s", CanNode.output_filename)
+        logging.info("SEND\t-\tlogs")
 
     async def run(self) -> None:
         """The function starts the ICE runner"""
         CanNode.connect()
-        CanNode.change_file()
-        MqttClient.run_logs["candump"] = CanNode.candump_filename
-        MqttClient.run_logs["output"] = CanNode.output_filename
         start_dronecan_handlers()
+        CanNode.change_file()
+        MqttClient.run_logs = CanNode.can_output_filenames
+        MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.publish_full_configuration(self.configuration.get_original_dict())
         while True:
             try:

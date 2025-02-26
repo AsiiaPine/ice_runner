@@ -15,6 +15,7 @@ from ice_runner.raspberry.can_control.node import (CanNode,
                                                    start_dronecan_handlers, stop_dronecan_handlers)
 from StoppableThread import StoppableThread
 
+
 logger = logging.getLogger()
 logger.level = logging.INFO
 
@@ -25,15 +26,11 @@ def pytest_configure(config):
     # Change color on existing log level
     logging_plugin.log_cli_handler.formatter.add_color_level(logging.INFO, "cyan")
 
-    # Add color to a custom log level (a custom log level `SPAM` is already set up)
-    logging_plugin.log_cli_handler.formatter.add_color_level(logging.SPAM, "blue")
-
 
 class BaseTest():
     def setup_method(self, test_method):
         CanNode.messages = {}
-        CanNode.connect()
-        start_dronecan_handlers()
+
         self.stream_handler = logging.StreamHandler(sys.stdout)
         logger.addHandler(self.stream_handler)
 
@@ -45,6 +42,14 @@ class BaseTest():
                                             baudrate=1000000)
         self.node.node.health = 0
         self.node.node.mode = 0
+
+    def setup_can_node(self, mocker):
+        mocker.patch("ice_runner.raspberry.can_control.node.CanNode.change_file")
+        mocker.patch("ice_runner.raspberry.can_control.node.dump_msg")
+        mocker.patch("ice_runner.raspberry.can_control.node.CanNode.save_file")
+
+        CanNode.connect()
+        start_dronecan_handlers()
 
     def run_node(self, timeout=None, tasks: List[Tuple[Callable, float]]=None):
         """The function runs the node, with the possibility to add tasks to be
@@ -71,7 +76,7 @@ class BaseTest():
         stop_dronecan_handlers()
         CanNode.messages = {}
 
-    async def wait_for_bool(self, expression: Callable, timeout: float = 3) -> bool:
+    async def wait_for_bool(self, expression: Callable, timeout: float = 3, mocker = None) -> bool:
         start_time = time.time()
         while (not expression()) and (time.time() - start_time < timeout):
             CanNode.spin()
@@ -81,11 +86,12 @@ class BaseTest():
         return False
 
     async def spin_nodes_with_tasks(self, node_tasks: List[Tuple[Callable, float]],
-                              tested_expression: Callable,timeout: float = 3) -> None:
+                              tested_expression: Callable,timeout: float = 3,
+                              mocker = None) -> None:
         self.node_thread = StoppableThread(target = self.run_node, args = (0.1, node_tasks))
         self.node_thread.start()
         res: bool = await self.wait_for_bool(
-            tested_expression, timeout=timeout)
+            tested_expression, timeout=timeout, mocker=mocker)
         self.node_thread.join()
         self.node_thread.stop()
         logging.info(f"res {res}, tested_expression: {tested_expression()}")
@@ -96,22 +102,27 @@ class TestSubscriptions(BaseTest):
         candump_task = mocker.patch('ice_runner.raspberry.can_control.node.CanNode.__run_candump__')
         candump_task.return_value = 42
         mocker.patch('ice_runner.raspberry.can_control.node.CanNode.__stop_candump__')
+        mocker.patch('os.path.join')
         CanNode.change_file()
         CanNode.__run_candump__.assert_called()
         CanNode.__stop_candump__.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_node_status_sub(self):
+    async def test_node_status_sub(self, mocker):
+        self.setup_can_node(mocker)
+
         timeout = 10
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.protocol.NodeStatus()), 0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
-                            lambda: len(CanNode.messages) > 0,
-                            timeout=timeout)
+                            lambda : "uavcan.protocol.NodeStatus" in CanNode.messages,
+                            timeout=timeout, mocker=mocker)
         assert res
 
     @pytest.mark.asyncio
     @pytest.mark.dependency()
-    async def test_raw_imu_sub(self):
+    async def test_raw_imu_sub(self, mocker):
+        self.setup_can_node(mocker)
+
         timeout = 4
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ahrs.RawIMU()), 0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
@@ -121,7 +132,9 @@ class TestSubscriptions(BaseTest):
 
     @pytest.mark.asyncio
     @pytest.mark.dependency()
-    async def test_fuel_tank_status_sub(self):
+    async def test_fuel_tank_status_sub(self, mocker):
+        self.setup_can_node(mocker)
+
         timeout = 4
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.FuelTankStatus()), 0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
@@ -132,7 +145,9 @@ class TestSubscriptions(BaseTest):
 
     @pytest.mark.dependency()
     @pytest.mark.asyncio
-    async def test_ice_reciprocating_status_sub(self):
+    async def test_ice_reciprocating_status_sub(self, mocker):
+        self.setup_can_node(mocker)
+
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status()), 0.5)]
         timeout = 4
         res = await self.spin_nodes_with_tasks(tasks,
@@ -144,7 +159,8 @@ class TestSubscriptions(BaseTest):
 class TestResipUpdate(BaseTest):
     @pytest.mark.dependency(depends=["TestSubscriptions::test_ice_reciprocating_status_sub"])
     @pytest.mark.asyncio
-    async def test_ice_state_update(self):
+    async def test_ice_state_update(self, mocker):
+        self.setup_can_node(mocker)
         assert CanNode.state.ice_state == RecipState.NOT_CONNECTED
         timeout = 4
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status()),
@@ -156,7 +172,8 @@ class TestResipUpdate(BaseTest):
 
     @pytest.mark.dependency(depends=["TestResipUpdate::test_ice_state_update"])
     @pytest.mark.asyncio
-    async def test_ice_state_mapping(self):
+    async def test_ice_state_mapping(self, mocker):
+        self.setup_can_node(mocker)
         assert CanNode.state.ice_state == RecipState.NOT_CONNECTED
         timeout = 2
         state = RecipState.STOPPED
@@ -175,7 +192,9 @@ class TestResipUpdate(BaseTest):
 
     @pytest.mark.dependency(depends=["TestResipUpdate::test_ice_state_mapping"])
     @pytest.mark.asyncio
-    async def test_rpm_mapping(self):
+    async def test_rpm_mapping(self, mocker):
+        self.setup_can_node(mocker)
+
         CanNode.state.rpm = 1001
         timeout = 2
         rpm = secrets.randbelow(1000)
@@ -189,7 +208,9 @@ class TestResipUpdate(BaseTest):
 
     @pytest.mark.dependency(depends=["TestResipUpdate::test_ice_state_mapping"])
     @pytest.mark.asyncio
-    async def test_temp_mapping(self):
+    async def test_temp_mapping(self, mocker):
+        self.setup_can_node(mocker)
+
         CanNode.state.temp = 101
         timeout = 2
         temp = secrets.randbelow(100)
@@ -201,7 +222,8 @@ class TestResipUpdate(BaseTest):
 
     @pytest.mark.asyncio
     @pytest.mark.dependency(depends=["TestResipUpdate::test_ice_state_mapping"])
-    async def test_full_ice_reciprocating(self):
+    async def test_full_ice_reciprocating(self, mocker):
+        self.setup_can_node(mocker)
         status_mes = dronecan.uavcan.equipment.ice.reciprocating.Status(
             ecu_index=0,
             state=1,
@@ -246,7 +268,9 @@ class TestResipUpdate(BaseTest):
 class TestFulelTankUpdate(BaseTest):
     @pytest.mark.dependency(depends=["TestSubscriptions::test_fuel_tank_status_sub"])
     @pytest.mark.asyncio
-    async def test_fuel_level_mapping(self):
+    async def test_fuel_level_mapping(self, mocker):
+        self.setup_can_node(mocker)
+
         CanNode.state.fuel_level_percent = 101
         timeout = 2
         fuel_lvl = secrets.randbelow(100)
@@ -262,7 +286,9 @@ class TestFulelTankUpdate(BaseTest):
 class TestRawIMUUpdate(BaseTest):
     @pytest.mark.dependency(depends=["TestSubscriptions::test_raw_imu_sub"])
     @pytest.mark.asyncio
-    async def test_raw_imu_mapping(self):
+    async def test_raw_imu_mapping(self, mocker):
+        self.setup_can_node(mocker)
+
         CanNode.has_imu = False
         CanNode.state.rec_imu = False
         CanNode.state.vibration = 1001
