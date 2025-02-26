@@ -487,8 +487,8 @@ async def command_stop_handler(message: Message, state: FSMContext) -> None:
         rp_status = MqttClient.rp_states[rp_id]
         if rp_status != RunnerState.RUNNING:
             break
-        await message.answer(f"Команда отправленна на обкатчик {rp_id}.\
-                             Текущий статус: {rp_status.name}")
+        await message.answer(
+            f"Команда отправленна на обкатчик {rp_id}.\nТекущий статус: {rp_status.name}")
         MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", str(rp_id))
         await asyncio.sleep(1)
     await message.answer(f"Остановлено")

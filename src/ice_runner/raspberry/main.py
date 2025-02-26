@@ -27,8 +27,8 @@ async def main(run_id: int, configuration: IceRunnerConfiguration) -> None:
     print(f"RP\t-\tStarting raspberry {run_id}")
     load_dotenv()
     server_ip = os.getenv("SERVER_IP")
-    serve_port = int(os.getenv("SERVER_PORT"))
-    MqttClient.connect(run_id, server_ip, serve_port)
+    server_port = int(os.getenv("SERVER_PORT"))
+    MqttClient.connect(run_id, server_ip, server_port)
     add_handlers()
     ice_commander = ICECommander(configuration=configuration)
 
