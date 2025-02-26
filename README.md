@@ -44,7 +44,7 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
 
     - Install required packages
         ```bash
-        .scripts/prepare_mqtt_server.sh
+        ./scripts/install_mqtt.sh
         ```
         To allow anonymous access to the server and setup the used port, edit the file `/etc/mosquitto/mosquitto.conf`:
         ```
@@ -80,4 +80,5 @@ Raspberry Pi subscribes to its commander topic and sends parsed dronecan message
 
 
 # TODO:
-- [ ] Fix the command sending rate of ice_commander
+- [ ] Fix the filepaths to logs
+- [ ] Fix issue with log files truncation

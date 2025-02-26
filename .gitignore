@@ -6,3 +6,4 @@ logs/*
 *.egg-info
 *.yml
 .vscode
+build/*

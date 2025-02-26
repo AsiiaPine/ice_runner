@@ -1,14 +1,17 @@
 mode:
   default: 1
-  help: "0 - CONST, ручное управление: выставляем команду соответствием с gas_throttle, air_hrottle\n\t1 - ПИД-регулятор, команда автоматически меняется поддерживая заданный rpm (требует настройки коэффициентов)\n\t\
-  2 - RPMCommand, контроль занчений оборотов осуществяется на самой плате ice_node,\n\
-  \t3 - Проверка стартера, двигатель запускается на 8 секунд\n\t4 - Запуск двигателя\
-  \ с закрытой воздушной заслонкой на 60 секунд"
+  help: "0 - CONST, ручное управление: выставляем команду соответствием с gas_throttle,\
+    \ air_hrottle\n\t1 - ПИД-регулятор, команда автоматически меняется поддерживая\
+    \ заданный rpm (требует настройки коэффициентов)\n\t2 - RPMCommand, контроль занчений\
+    \ оборотов осуществяется на самой плате ice_node,\n\t3 - Проверка стартера, двигатель\
+    \ запускается на 8 секунд\n\t4 - Запуск двигателя с закрытой воздушной заслонкой\
+    \ на 60 секунд"
   value: 0
   min: 0
   max: 4
   unit: ''
   type: int
+  usage: base
 
 rpm:
   default: 4500
@@ -18,6 +21,7 @@ rpm:
   max: 12000
   unit: 1/min
   type: int
+  usage: base
 
 time:
   default: 10
@@ -27,6 +31,7 @@ time:
   max: 3600
   unit: sec
   type: int
+  usage: base
 
 gas_throttle:
   default: 0
@@ -36,6 +41,7 @@ gas_throttle:
   max: 100
   unit: '%'
   type: int
+  usage: base
 
 air_throttle:
   default: 0
@@ -45,6 +51,7 @@ air_throttle:
   max: 100
   unit: '%'
   type: int
+  usage: base
 
 min_gas_throttle:
   default: 0
@@ -55,6 +62,7 @@ min_gas_throttle:
   max: 100
   unit: '%'
   type: int
+  usage: other
 
 max_gas_throttle:
   default: 0
@@ -65,6 +73,7 @@ max_gas_throttle:
   max: 100
   unit: '%'
   type: int
+  usage: other
 
 report_period:
   help: Период отправки dronecan, status, state сообщений на сервер
@@ -73,6 +82,7 @@ report_period:
   max: 60
   unit: sec
   type: int
+  usage: other
 
 control_pid_p:
   help: Коэффициент p для ПИД регулятора
@@ -81,6 +91,7 @@ control_pid_p:
   max: 999
   unit: ''
   type: float
+  usage: other
 
 control_pid_i:
   help: Коэффициент i для ПИД регулятора
@@ -89,6 +100,7 @@ control_pid_i:
   max: 999
   unit: ''
   type: float
+  usage: other
 
 control_pid_d:
   help: Коэффициент d для ПИД регулятора
@@ -97,6 +109,7 @@ control_pid_d:
   max: 999
   unit: ''
   type: float
+  usage: other
 
 max_temperature:
   help: Граничная температура двигателя, при достижении обкатка обрывается
@@ -105,6 +118,7 @@ max_temperature:
   max: 210
   unit: sec
   type: int
+  usage: flag
 
 min_fuel_volume:
   help: Граничный уровень топлива, при достижении обкатка обрывается
@@ -113,6 +127,7 @@ min_fuel_volume:
   max: 100
   unit: '%'
   type: int
+  usage: flag
 
 min_vin_voltage:
   help: Граничнное входное напряжение, при достижении обкатка обрывается
@@ -121,6 +136,7 @@ min_vin_voltage:
   max: 60.0
   unit: Volts
   type: float
+  usage: flag
 
 start_attemts:
   help: Количество попыток запуска двигателя на всю обкатку
@@ -129,6 +145,7 @@ start_attemts:
   max: 5
   unit: ''
   type: int
+  usage: flag
 
 max_vibration:
   help: Максимальный уровень вибраций
@@ -137,3 +154,4 @@ max_vibration:
   max: 2000
   unit: ''
   type: int
+  usage: flag
