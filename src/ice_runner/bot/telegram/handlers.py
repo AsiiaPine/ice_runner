@@ -210,9 +210,27 @@ async def config_tip_handler(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     runner_id = data["rp_id"]
     full_conf = await get_full_configuration(runner_id)
-    string = ""
-    for param_name, param_data in full_conf.items():
-        string += f"{param_name}:\n"
+    base_params = [key for key, value in full_conf.items() if 'base' in value["usage"]]
+    other_params = [key for key, value in full_conf.items() if 'other' in value["usage"]]
+    flag_params = [key for key, value in full_conf.items() if 'flag' in value["usage"]]
+    string = html.bold("Базовые параметры:\n")
+    for param_name in base_params:
+        param_data = full_conf[param_name]
+        string += f"\n{param_name}:\n"
+        for name, value in param_data.items():
+            string += f"\t{name}: {value}\n"
+    await message.answer(string)
+    string = html.bold("Другие параметры:\n")
+    for param_name in other_params:
+        param_data = full_conf[param_name]
+        string += f"\n{param_name}:\n"
+        for name, value in param_data.items():
+            string += f"\t{name}: {value}\n"
+    await message.answer(string)
+    string = html.bold("Флаги:\n")
+    for param_name in flag_params:
+        param_data = full_conf[param_name]
+        string += f"\n{param_name}:\n"
         for name, value in param_data.items():
             string += f"\t{name}: {value}\n"
     await message.answer(string)
@@ -452,11 +470,6 @@ async def command_log_handler(message: Message, state: FSMContext) -> None:
     logging.info("Getting logs for %d", rp_id)
     MqttClient.client.publish("ice_runner/bot/usr_cmd/log", str(rp_id))
     await message.answer("Пожалуйста, подождите")
-
-
-@dp.error()
-async def error_handler(event: TelegramBadRequest):
-    logging.critical("Critical error caused by %s", event.exception, exc_info=True)
 
 @form_router.message(Command(commands=["stop", "стоп"]), ChatIdFilter())
 async def command_stop_handler(message: Message, state: FSMContext) -> None:

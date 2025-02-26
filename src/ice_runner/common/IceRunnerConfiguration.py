@@ -26,7 +26,7 @@ class IceRunnerConfiguration:
                        "control_pid_i", "control_pid_d", "max_temperature",
                        "min_fuel_volume", "min_vin_voltage", "start_attemts",
                        "max_vibration"]
-    components = ["default", "help", "type", "value", "min", "max", "unit"]
+    components = ["default", "help", "type", "value", "min", "max", "unit", "usage"]
 
     def __init__(self, file_path: str = None, dict_conf: Dict[str, Any] = None) -> None:
         """The function loads configuration from file or dictionary"""
