@@ -11,13 +11,13 @@ import os
 import time
 import logging
 import traceback
-from ice_runner.raspberry.mqtt.handlers import MqttClient
-from ice_runner.raspberry.can_control.node import (
+from raspberry.mqtt.handlers import MqttClient
+from raspberry.can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL)
-from ice_runner.raspberry.can_control.modes import BaseMode, ICERunnerMode
-from ice_runner.common.ICEState import ICEState, RecipState
-from ice_runner.common.RunnerState import RunnerState, RunnerStateController
-from ice_runner.common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.modes import BaseMode, ICERunnerMode
+from common.ICEState import ICEState, RecipState
+from common.RunnerState import RunnerState, RunnerStateController
+from common.IceRunnerConfiguration import IceRunnerConfiguration
 if os.path.exists("/proc/device-tree/model"):
     from RPi import GPIO # Import Raspberry Pi GPIO library
 

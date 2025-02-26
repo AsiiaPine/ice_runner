@@ -11,8 +11,8 @@ from aiogram import Bot
 from aiogram.types import FSInputFile
 from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from ice_runner.bot.mqtt.client import MqttClient
-from ice_runner.common.RunnerState import RunnerState
+from bot.mqtt.client import MqttClient
+from common.RunnerState import RunnerState
 
 class Scheduler:
     """The class is used to schedule tasks for the Telegram Bot"""

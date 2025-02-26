@@ -1,7 +1,3 @@
-[build-system]
-requires = ["setuptools>=64.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "ice_runner"
 license = { text = "MIT" }
@@ -18,9 +14,6 @@ dynamic = ["dependencies"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
-
-[project.scripts]
-start = "ice_runner.main:main"
 
 [project.urls]
 "Homepage" = "https://github.com/AsiiaPine/ice_runner"

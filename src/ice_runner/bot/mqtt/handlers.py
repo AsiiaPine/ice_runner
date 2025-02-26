@@ -6,10 +6,10 @@
 
 import json
 import logging
-from ice_runner.bot.mqtt.client import MqttClient
-from ice_runner.bot.telegram.scheduler import Scheduler
-from ice_runner.common.RunnerState import RunnerState
-from ice_runner.common.algorithms import safe_literal_eval
+from bot.mqtt.client import MqttClient
+from bot.telegram.scheduler import Scheduler
+from common.RunnerState import RunnerState
+from common.algorithms import safe_literal_eval
 
 @MqttClient.client.topic_callback("ice_runner/server/bot_commander/rp_states/+/state")
 def handle_commander_state(client, userdata, message):

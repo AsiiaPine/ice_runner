@@ -24,7 +24,6 @@ One can control the ICE runners using the telegram bot. The bot can send command
     python3 -m venv venv
     source venv/bin/activate
     pip install -r requirements.txt
-    pip install -e . # Install the project
     ```
 
 1. Raspberry Pi ICE controller installation
@@ -36,7 +35,7 @@ One can control the ICE runners using the telegram bot. The bot can send command
     - Change ice runner configuration in `ice_configuration.yml` (you can change the configuration using telegram bot's command `/config`)
     - Run the script with the specified id for the raspberry pi. This id is used for MQTT communication and in telegram bot commands.
         ```bash
-        ./raspberry/main.py --id 1
+         ./src/ice_runner/main.py client --id 1 --config ice_configuration.yml
         ```
 
 2. Server installation
@@ -53,13 +52,13 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
         ```
     - Run the script
         ```bash
-        ./server/main.py
+        ./src/ice_runner/main.py srv
         ```
 3. Bot start
     - Run the script
 
         ```bash
-        ./bot/main.py
+         ./src/ice_runner/main.py bot
         ```
 
 To start a simulator of the ICE start can interface (e.g. slcan/vcan), run the following script:

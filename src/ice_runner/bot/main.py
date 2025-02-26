@@ -15,10 +15,10 @@ from dotenv import load_dotenv
 from aiogram import Bot
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
-import ice_runner.bot.mqtt.handlers as mqtt
-import ice_runner.bot.telegram.handlers as telegram
-from ice_runner.bot.telegram.scheduler import Scheduler
-from ice_runner.common import logging_configurator
+import bot.mqtt.handlers as mqtt
+import bot.telegram.handlers as telegram
+from bot.telegram.scheduler import Scheduler
+from common import logging_configurator
 
 async def start_bot() -> None:
     load_dotenv()

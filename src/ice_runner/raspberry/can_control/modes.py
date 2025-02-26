@@ -1,8 +1,8 @@
 from enum import IntEnum
 import time
 from typing import Any, Dict, List, Tuple, Type
-from ice_runner.common.RunnerState import RunnerState
-from ice_runner.common.IceRunnerConfiguration import IceRunnerConfiguration
+from common.RunnerState import RunnerState
+from common.IceRunnerConfiguration import IceRunnerConfiguration
 
 
 class ICERunnerMode(IntEnum):

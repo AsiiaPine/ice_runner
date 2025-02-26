@@ -14,11 +14,11 @@ from pathlib import Path
 import asyncio
 import argparse
 from dotenv import load_dotenv
-from ice_runner.raspberry.mqtt.handlers import MqttClient, add_handlers
-from ice_runner.raspberry.can_control.ice_commander import ICECommander
-from ice_runner.common.IceRunnerConfiguration import IceRunnerConfiguration
-from ice_runner.raspberry.can_control.node import CanNode
-from ice_runner.common import logging_configurator
+from raspberry.mqtt.handlers import MqttClient, add_handlers
+from raspberry.can_control.ice_commander import ICECommander
+from common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.node import CanNode
+from common import logging_configurator
 
 last_sync_time = time.time()
 

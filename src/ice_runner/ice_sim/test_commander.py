@@ -121,7 +121,7 @@ class Engine:
                 self.prev_waiting_time = time.time()
                 return
         if self.state == ICENodeStatus.WAITING:
-            if time.time() - self.prev_waiting_time  2:
+            if time.time() - self.prev_waiting_time > 2:
                 self.state = ICENodeStatus.RUNNING
                 print("RUNNING")
                 return

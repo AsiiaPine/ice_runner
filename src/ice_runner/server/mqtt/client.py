@@ -7,7 +7,7 @@
 import logging
 from typing import Any, Dict
 from paho.mqtt.client import MQTTv311, Client
-from ice_runner.common.IceRunnerConfiguration import IceRunnerConfiguration
+from common.IceRunnerConfiguration import IceRunnerConfiguration
 
 def on_disconnect(client: Client, userdata: Any, rc: int) -> None:
     """The callback for mqtt client disconnection"""

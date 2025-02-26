@@ -7,7 +7,7 @@
 import json
 import logging
 
-from ice_runner.server.mqtt.client import ServerMqttClient
+from server.mqtt.client import ServerMqttClient
 from paho.mqtt.client import Client
 
 
