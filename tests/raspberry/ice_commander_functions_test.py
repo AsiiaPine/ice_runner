@@ -7,12 +7,12 @@ from typing import Callable
 import dronecan
 
 import ice_runner
-from ice_runner.common.RunnerState import RunnerState
-from ice_runner.common.IceRunnerConfiguration import IceRunnerConfiguration
-import ice_runner.raspberry
-from ice_runner.raspberry.can_control.node import ICE_AIR_CHANNEL, CanNode
-from ice_runner.raspberry.can_control.ice_commander import ICECommander
-from ice_runner.common.ICEState import ICEState, RecipState
+from common.RunnerState import RunnerState
+from common.IceRunnerConfiguration import IceRunnerConfiguration
+import raspberry
+from raspberry.can_control.node import ICE_AIR_CHANNEL, CanNode
+from raspberry.can_control.ice_commander import ICECommander
+from common.ICEState import ICEState, RecipState
 
 logger = logging.getLogger()
 logger.level = logging.INFO
@@ -70,10 +70,10 @@ class TestSetState(BaseTest):
 
     # @pytest.mark.dependency(depends=["TestSetState::test_not_connected"])
     def test_start_again(self, mocker):
-        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.save_file')
-        mocker.patch('ice_runner.raspberry.can_control.ice_commander.ICECommander.send_log')
-        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.change_file')
-        mocker.patch('ice_runner.raspberry.mqtt.handlers.MqttClient.publish_stop_reason')
+        mocker.patch('raspberry.can_control.node.CanNode.save_file')
+        mocker.patch('raspberry.can_control.ice_commander.ICECommander.send_log')
+        mocker.patch('raspberry.can_control.node.CanNode.change_file')
+        mocker.patch('raspberry.mqtt.handlers.MqttClient.publish_stop_reason')
 
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.RUNNING
@@ -89,20 +89,20 @@ class TestSetState(BaseTest):
 
     @pytest.mark.dependency(depends=["TestSetState::test_not_connected"])
     def test_cond_exceeded_stopped(self, mocker):
-        mocker.patch('ice_runner.raspberry.can_control.ice_commander.ICECommander.stop')
+        mocker.patch('raspberry.can_control.ice_commander.ICECommander.stop')
         # does not affect stopped runner
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.NOT_CONNECTED
         self.commander.set_state(True)
-        ice_runner.raspberry.can_control.ice_commander.ICECommander.stop.assert_not_called()
+        raspberry.can_control.ice_commander.ICECommander.stop.assert_not_called()
         assert self.commander.state_controller.state == RunnerState.STOPPED
 
     def test_cond_exceeded_running(self, mocker):
         # affects running runner
-        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.save_file')
-        mocker.patch('ice_runner.raspberry.can_control.ice_commander.ICECommander.send_log')
-        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.change_file')
-        mocker.patch('ice_runner.raspberry.mqtt.client.MqttClient.publish_stop_reason')
+        mocker.patch('raspberry.can_control.node.CanNode.save_file')
+        mocker.patch('raspberry.can_control.ice_commander.ICECommander.send_log')
+        mocker.patch('raspberry.can_control.node.CanNode.change_file')
+        mocker.patch('raspberry.mqtt.client.MqttClient.publish_stop_reason')
 
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.RUNNING
@@ -111,10 +111,10 @@ class TestSetState(BaseTest):
 
     def test_cond_exceeded_starting(self, mocker):
         # affects running runner
-        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.save_file')
-        mocker.patch('ice_runner.raspberry.can_control.ice_commander.ICECommander.send_log')
-        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.change_file')
-        mocker.patch('ice_runner.raspberry.mqtt.client.MqttClient.publish_stop_reason')
+        mocker.patch('raspberry.can_control.node.CanNode.save_file')
+        mocker.patch('raspberry.can_control.ice_commander.ICECommander.send_log')
+        mocker.patch('raspberry.can_control.node.CanNode.change_file')
+        mocker.patch('raspberry.mqtt.client.MqttClient.publish_stop_reason')
 
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.STARTING
@@ -123,18 +123,18 @@ class TestSetState(BaseTest):
 
     def test_cond_exceeded_fault(self, mocker):
         # does not affect fault runner
-        mocker.patch('ice_runner.raspberry.can_control.ice_commander.ICECommander.stop')
+        mocker.patch('raspberry.can_control.ice_commander.ICECommander.stop')
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.FAULT
         self.commander.set_state(True)
-        ice_runner.raspberry.can_control.ice_commander.ICECommander.stop.assert_not_called()
+        raspberry.can_control.ice_commander.ICECommander.stop.assert_not_called()
         assert self.commander.state_controller.state == RunnerState.FAULT
 
     def test_ice_waiting_run_state_not_connected(self, mocker):
-        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.save_file')
-        mocker.patch('ice_runner.raspberry.can_control.ice_commander.ICECommander.send_log')
-        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.change_file')
-        mocker.patch('ice_runner.raspberry.mqtt.client.MqttClient.publish_stop_reason')
+        mocker.patch('raspberry.can_control.node.CanNode.save_file')
+        mocker.patch('raspberry.can_control.ice_commander.ICECommander.send_log')
+        mocker.patch('raspberry.can_control.node.CanNode.change_file')
+        mocker.patch('raspberry.mqtt.client.MqttClient.publish_stop_reason')
 
         self.commander.state_controller.state = RunnerState.NOT_CONNECTED
         CanNode.state.ice_state = RecipState.WAITING

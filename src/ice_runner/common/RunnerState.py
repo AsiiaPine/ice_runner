@@ -8,7 +8,7 @@ from enum import IntEnum
 import logging
 import time
 
-from ice_runner.common.ICEState import RecipState
+from common.ICEState import RecipState
 
 class RunnerState(IntEnum):
     NOT_CONNECTED=-1

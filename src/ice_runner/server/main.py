@@ -13,8 +13,8 @@ import logging
 
 import argparse
 from dotenv import load_dotenv
-from ice_runner.server.mqtt.handlers import ServerMqttClient
-from ice_runner.common import logging_configurator
+from server.mqtt.handlers import ServerMqttClient
+from common import logging_configurator
 
 last_keep_alive = 0
 async def ping_rpis() -> None:

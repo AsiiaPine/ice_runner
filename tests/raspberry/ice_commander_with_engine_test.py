@@ -11,12 +11,12 @@ import dronecan
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.common.device_manager import DeviceManager
 
-from ice_runner.common.RunnerState import RunnerState
-from ice_runner.common.IceRunnerConfiguration import IceRunnerConfiguration
-from ice_runner.raspberry.can_control.node import (CanNode, start_dronecan_handlers,
+from common.RunnerState import RunnerState
+from common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.node import (CanNode, start_dronecan_handlers,
                                                    stop_dronecan_handlers)
-from ice_runner.raspberry.can_control.ice_commander import ICECommander
-from ice_runner.common.ICEState import RecipState
+from raspberry.can_control.ice_commander import ICECommander
+from common.ICEState import RecipState
 from StoppableThread import StoppableThread
 
 logger = logging.getLogger()
@@ -131,10 +131,10 @@ class TestStateUpdate(BaseTest):
         mocker.patch("builtins.open")
         mocker.patch('os.path.join', return_value = "")
         mocker.patch('os.makedirs')
-        mocker.patch("ice_runner.raspberry.can_control.node.dump_msg")
-        mocker.patch("ice_runner.raspberry.can_control.node.CanNode.__run_candump__")
-        mocker.patch("ice_runner.raspberry.can_control.node.CanNode.__stop_candump__")
-        mocker.patch("ice_runner.raspberry.can_control.node.safely_write_to_file")
+        mocker.patch("raspberry.can_control.node.dump_msg")
+        mocker.patch("raspberry.can_control.node.CanNode.__run_candump__")
+        mocker.patch("raspberry.can_control.node.CanNode.__stop_candump__")
+        mocker.patch("raspberry.can_control.node.safely_write_to_file")
         mocker.patch("paho.mqtt.client.Client.publish")
 
         CanNode.connect()

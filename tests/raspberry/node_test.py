@@ -10,8 +10,8 @@ from typing import Callable, List, Tuple
 import dronecan
 from raccoonlab_tools.common.device_manager import DeviceManager
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-from ice_runner.common.ICEState import ICEState, RecipState
-from ice_runner.raspberry.can_control.node import (CanNode,
+from common.ICEState import ICEState, RecipState
+from raspberry.can_control.node import (CanNode,
                                                    start_dronecan_handlers, stop_dronecan_handlers)
 from StoppableThread import StoppableThread
 
@@ -44,9 +44,9 @@ class BaseTest():
         self.node.node.mode = 0
 
     def setup_can_node(self, mocker):
-        mocker.patch("ice_runner.raspberry.can_control.node.CanNode.change_file")
-        mocker.patch("ice_runner.raspberry.can_control.node.dump_msg")
-        mocker.patch("ice_runner.raspberry.can_control.node.CanNode.save_file")
+        mocker.patch("raspberry.can_control.node.CanNode.change_file")
+        mocker.patch("raspberry.can_control.node.dump_msg")
+        mocker.patch("raspberry.can_control.node.CanNode.save_file")
 
         CanNode.connect()
         start_dronecan_handlers()
@@ -99,9 +99,9 @@ class BaseTest():
 
 class TestSubscriptions(BaseTest):
     def test_candump(self, mocker):
-        candump_task = mocker.patch('ice_runner.raspberry.can_control.node.CanNode.__run_candump__')
+        candump_task = mocker.patch('raspberry.can_control.node.CanNode.__run_candump__')
         candump_task.return_value = 42
-        mocker.patch('ice_runner.raspberry.can_control.node.CanNode.__stop_candump__')
+        mocker.patch('raspberry.can_control.node.CanNode.__stop_candump__')
         mocker.patch('os.path.join')
         CanNode.change_file()
         CanNode.__run_candump__.assert_called()

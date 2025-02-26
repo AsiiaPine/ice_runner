@@ -17,7 +17,7 @@ from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.common.device_manager import DeviceManager
 import yaml
 
-from ice_runner.common.ICEState import Health, ICEState, Mode
+from common.ICEState import Health, ICEState, Mode
 
 logger = logging.getLogger(__name__)
 

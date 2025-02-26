@@ -8,7 +8,7 @@ from copy import deepcopy
 from typing import Any, Dict
 import yaml
 
-from ice_runner.common.algorithms import get_type_from_str
+from common.algorithms import get_type_from_str
 
 class MyDumper(yaml.SafeDumper):
     # HACK: insert blank lines between top-level objects
