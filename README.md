@@ -64,7 +64,7 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
 To start a simulator of the ICE start can interface (e.g. slcan/vcan), run the following script:
 
 ```bash
-./ice_sim/test_commander.py
+./src/ice_runner/main.py sim
 ```
 
 ## Project structure
