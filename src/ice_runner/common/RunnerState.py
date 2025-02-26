@@ -29,7 +29,7 @@ class RunnerStateController:
     def __init__(self) -> None:
         self.state = RunnerState.NOT_CONNECTED
         self.prev_state = RunnerState.NOT_CONNECTED
-        self.prev_waiting_state_time = time.time_ns()
+        self.prev_waiting_state_time = 0
 
     def update(self, ice_state: RecipState) -> None:
         """The function updates the state of the Runner"""
@@ -50,8 +50,12 @@ class RunnerStateController:
                 logging.info("STARTING\t-\ICE stopped, trying to start again")
  
         if ice_state == RecipState.WAITING and \
-                        self.prev_waiting_state_time + 3*10**9 < time.time_ns():
-            self.prev_waiting_state_time = time.time_ns()
+                        self.prev_waiting_state_time + 4 < time.time():
+            self.prev_waiting_state_time = time.time()
+            if self.prev_state == RunnerState.STOPPED:
+                self.state = RunnerState.STARTING
+                logging.info("STARTING\t-\tStarting")
+                return
             self.state = RunnerState.STARTING
             logging.info("WAITING\t-\twaiting state")
             return
@@ -65,8 +69,9 @@ class RunnerStateController:
         if self.state == RunnerState.STARTING:
             prev_waiting = self.prev_waiting_state_time
             if ice_state == RecipState.RUNNING\
-                    and time.time_ns() - prev_waiting > 3*10**9:
-                print( time.time_ns() - prev_waiting, prev_waiting, time.time_ns())
+                    and time.time() - prev_waiting > 4\
+                    and self.prev_waiting_state_time > 0:
+                print( time.time_ns() - prev_waiting, 4, prev_waiting, time.time())
                 logging.info("STARTING\t-\tstarted successfully")
                 self.state = RunnerState.RUNNING
                 self.prev_waiting_state_time = 0

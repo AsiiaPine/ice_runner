@@ -106,10 +106,25 @@ class Engine:
         self.starter = Starter(running_period_ms=3000, waiting_period_ms=500)
         self.last_upd = time.time()
         self.ice_acceleration = 0
+        self.n_starts = 0
+        self.n_starts_max = 3
+        self.prev_waiting_time = 0
 
     def update(self, cmd: int, air_cmd: int) -> None:
         dt = time.time() - self.last_upd
         self.last_upd = time.time()
+        if self.state == ICENodeStatus.RUNNING:
+            if self.n_starts < self.n_starts_max:
+                self.n_starts += 1
+                self.rpm = 0
+                self.state = ICENodeStatus.WAITING
+                self.prev_waiting_time = time.time()
+                return
+        if self.state == ICENodeStatus.WAITING:
+            if time.time() - self.prev_waiting_time  2:
+                self.state = ICENodeStatus.RUNNING
+                print("RUNNING")
+                return
         if cmd == 0:
             self.state = ICENodeStatus.STOPPED
             self.rpm = 0
