@@ -171,17 +171,17 @@ class TestSetState(BaseTest):
 class TestSetCommand(BaseTest):
     def test_no_command(self):
         self.commander.state_controller.state = RunnerState.NOT_CONNECTED
-        self.commander.set_command()
+        self.commander.set_can_command()
         assert sum(CanNode.cmd.cmd) == 0
         assert CanNode.air_cmd.command_value == -1
 
         self.commander.state_controller.state = RunnerState.STOPPED
-        self.commander.set_command()
+        self.commander.set_can_command()
         assert sum(CanNode.cmd.cmd) == 0
         assert CanNode.air_cmd.command_value == -1
 
         self.commander.state_controller.state = RunnerState.FAULT
-        self.commander.set_command()
+        self.commander.set_can_command()
         assert sum(CanNode.cmd.cmd) == 0
         assert CanNode.air_cmd.command_value == -1
 

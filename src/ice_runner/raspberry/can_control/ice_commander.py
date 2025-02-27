@@ -137,27 +137,30 @@ class ICECommander:
     """The class is used to control the ICE runner"""
     def __init__(self, configuration: IceRunnerConfiguration = None) -> None:
         self.configuration: IceRunnerConfiguration = configuration
-        self.ex_tracker: ExceedanceTracker = ExceedanceTracker()
+        self.exceedance_tracker: ExceedanceTracker = ExceedanceTracker()
         mode: ICERunnerMode = ICERunnerMode(configuration.mode)
         self.mode: BaseMode = mode.get_mode_class(configuration)
         self.start_time: float = 0
         self.prev_state_report_time: float = 0
         self.prev_report_time: float = 0
-        self.last_button_cmd = 1
         self.state_controller = RunnerStateController()
 
-    def check_conditions(self) -> int:
-        """The function analyzes the conditions of the ICE runner
-            and returns if any Configuration parameters were exceeded.
-            Returns 0 if no conditions were exceeded, 1 if conditions were exceeded."""
-        return self.ex_tracker.check(CanNode.state, self.configuration,
-                                     self.state_controller, self.start_time)
-
-    def set_command(self) -> None:
-        """The function sets the command to the ICE node according to the current mode"""
-        command = self.mode.get_command(self.state_controller.state, rpm=CanNode.state.rpm)
-        CanNode.cmd.cmd[ICE_THR_CHANNEL] = command[0]
-        CanNode.air_cmd.command_value = command[1]
+    async def run(self) -> None:
+        """The function starts the ICE runner"""
+        CanNode.connect()
+        start_dronecan_handlers()
+        CanNode.change_file()
+        MqttClient.run_logs = CanNode.can_output_filenames
+        MqttClient.run_logs["candump"] = CanNode.candump_filename
+        MqttClient.publish_full_configuration(self.configuration.get_original_dict())
+        while True:
+            try:
+                await self.spin()
+            except asyncio.CancelledError:
+                self.on_keyboard_interrupt()
+            except Exception as e:
+                logging.error(f"{e}\n{traceback.format_exc()}")
+                continue
 
     def stop(self) -> None:
         """The function stops the ICE runner and resets the runner state"""
@@ -168,18 +171,6 @@ class ICECommander:
         CanNode.change_file()
         self.start_time = 0
 
-    def set_state(self, cond_exceeded: bool) -> None:
-        """Analyzes engine state send with Reciprocating status and sets the runner state
-            accordingly."""
-        if cond_exceeded and (self.state_controller.state in
-                                (RunnerState.STARTING, RunnerState.RUNNING)):
-            MqttClient.publish_stop_reason(f"Conditions exceeded: {vars(self.ex_tracker)}")
-            logging.info("STOP\t-\tconditions exceeded")
-            self.ex_tracker.cleanup()
-            self.stop()
-            return
-        self.state_controller.update(CanNode.state.ice_state)
-
     async def spin(self) -> None:
         """Main function called in loop"""
         CanNode.spin()
@@ -189,17 +180,49 @@ class ICECommander:
         ice_state = CanNode.state.ice_state
         self.check_mqtt_cmd()
         cond_exceeded = self.check_conditions()
-        self.set_state(cond_exceeded)
+        self.update_state(cond_exceeded)
         if ice_state == RecipState.NOT_CONNECTED:
             logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
             await asyncio.sleep(1)
             return
 
-        self.set_command()
+        self.set_can_command()
         logging.debug(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
         self.report_state()
         self.prev_state = self.state_controller
         await asyncio.sleep(0.05)
+
+    def on_keyboard_interrupt(self):
+        """The function is called when KeyboardInterrupt is 
+            received and inform MQTT server about the exception"""
+        self.stop()
+        MqttClient.publish_stop_reason("Received KeyboardInterrupt")
+        raise asyncio.CancelledError
+
+    def check_conditions(self) -> int:
+        """The function analyzes the conditions of the ICE runner
+            and returns if any Configuration parameters were exceeded.
+            Returns 0 if no conditions were exceeded, 1 if conditions were exceeded."""
+        return self.exceedance_tracker.check(CanNode.state, self.configuration,
+                                     self.state_controller, self.start_time)
+
+    def set_can_command(self) -> None:
+        """The function sets the command to the ICE node according to the current mode"""
+        command = self.mode.get_command(self.state_controller.state, rpm=CanNode.state.rpm)
+        CanNode.cmd.cmd[ICE_THR_CHANNEL] = command[0]
+        CanNode.air_cmd.command_value = command[1]
+
+    def update_state(self, cond_exceeded: bool) -> None:
+        """Analyzes engine state send with Reciprocating status and sets the runner state
+            accordingly."""
+        if cond_exceeded and (self.state_controller.state in
+                                (RunnerState.STARTING, RunnerState.RUNNING)):
+            MqttClient.publish_stop_reason(f"Conditions exceeded: {vars(self.exceedance_tracker)}")
+            logging.info("STOP\t-\tconditions exceeded")
+            self.exceedance_tracker.cleanup()
+            self.stop()
+            return
+        self.state_controller.update(CanNode.state.ice_state)
 
     def report_state(self) -> None:
         """The function reports state to MQTT broker"""
@@ -226,19 +249,7 @@ class ICECommander:
 
     def check_buttons(self):
         """The function checks the state of the stop button"""
-        stop_switch = GPIO.input(START_STOP_PIN)
-        if self.last_button_cmd == stop_switch:
-            return
-        if stop_switch:
-            if self.state_controller.state in (RunnerState.STARTING, RunnerState.RUNNING):
-                self.state_controller.state = RunnerState.STOPPING
-            logging.info("BUTTON\t  Button released, state: %s", {self.state_controller.state.name})
-        else:
-            if self.state_controller.state > RunnerState.STARTING:
-                self.state_controller.state = RunnerState.STARTING
-                self.start_time = time.time()
-            logging.info("BUTTON\t  Button pressed, state: %s", {self.state_controller.state.name})
-        self.last_button_cmd = stop_switch
+        raise NotImplementedError
 
     def check_mqtt_cmd(self):
         """The function checks if MQTT command is received"""
@@ -257,6 +268,13 @@ class ICECommander:
         if MqttClient.conf_updated:
             self.configuration = MqttClient.configuration
             self.configuration.to_file()
+            if self.configuration.mode != self.mode.name:
+                mode = ICERunnerMode(self.configuration.mode)
+                self.mode: BaseMode = mode.get_mode_class(self.configuration)
+                MqttClient.publish_stop_reason(f"Switched to new mode {self.mode.name.name}")
+                self.stop()
+            else:
+                self.mode.update_configuration(self.configuration)
             MqttClient.conf_updated = False
             logging.info("MQTT\t-\tCOMMAND\t configuration updated")
 
@@ -266,27 +284,3 @@ class ICECommander:
         MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.publish_log()
         logging.info("SEND\t-\tlogs")
-
-    async def run(self) -> None:
-        """The function starts the ICE runner"""
-        CanNode.connect()
-        start_dronecan_handlers()
-        CanNode.change_file()
-        MqttClient.run_logs = CanNode.can_output_filenames
-        MqttClient.run_logs["candump"] = CanNode.candump_filename
-        MqttClient.publish_full_configuration(self.configuration.get_original_dict())
-        while True:
-            try:
-                await self.spin()
-            except asyncio.CancelledError:
-                self.on_keyboard_interrupt()
-            except Exception as e:
-                logging.error(f"{e}\n{traceback.format_exc()}")
-                continue
-
-    def on_keyboard_interrupt(self):
-        """The function is called when KeyboardInterrupt is 
-            received and inform MQTT server about the exception"""
-        self.stop()
-        MqttClient.publish_stop_reason("Received KeyboardInterrupt")
-        raise asyncio.CancelledError
