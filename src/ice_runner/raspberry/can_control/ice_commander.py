@@ -69,15 +69,15 @@ class ExceedanceTracker:
         """The function checks conditions when the ICE is in specialized mode"""
 
         if configuration.mode == ICERunnerMode.CHECK:
-            #   last 8 seconds
+            #   last 12 seconds
             self.time = start_time > 0 and\
-                                    8 < time.time() - start_time
+                                    12 < time.time() - start_time
             return
 
         if configuration.mode == ICERunnerMode.FUEL_PUMPTING:
-            #   last 60 seconds
+            #   last 30 seconds
             self.time = start_time > 0 and\
-                                    60 < time.time() - start_time
+                                    30 < time.time() - start_time
             return
 
         self.time = start_time > 0 and time.time() - start_time > configuration.time

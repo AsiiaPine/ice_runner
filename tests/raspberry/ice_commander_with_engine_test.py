@@ -159,15 +159,10 @@ class TestStateUpdate(BaseTest):
 
 
 def main():
-    # cmd = ["pytest", os.path.abspath(__file__), "-v", '-W', 'ignore::DeprecationWarning']
-    # cmd += sys.argv[1:]
-    # sys.exit(subprocess.call(cmd))
-
     pytest_args = [
         '--verbose',
         '-W', 'ignore::DeprecationWarning',
         os.path.abspath(__file__),
-        # other tests here...
     ]
     pytest.main(pytest_args)
 if __name__ == "__main__":

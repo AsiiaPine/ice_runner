@@ -78,9 +78,7 @@ Raspberry Pi subscribes to its commander topic and sends parsed dronecan message
 
 
 # TODO:
-- [ ] Fix the filepaths to logs
-- [ ] Fix issue with log files truncation
-
+- [ ] Maybe split ExceedanceTracker responsibility to Modes
 
 ## Hints
 For fast mqtt server setup, edit the file `/etc/mosquitto/mosquitto.conf` and add the following lines:
