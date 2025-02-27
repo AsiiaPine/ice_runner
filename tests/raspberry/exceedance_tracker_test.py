@@ -262,7 +262,7 @@ class TestCheckMode(BaseTest):
         self.check_temp()
 
     def test_time_exceeded(self):
-        """Constant value for time 8, so config does not influence the state"""
+        """Constant value for time 12, so config does not influence the state"""
         self.runner_state.state = RunnerState.RUNNING
         self.start_time = time.time()
         assert not self.ex_tracker.check(
@@ -270,7 +270,7 @@ class TestCheckMode(BaseTest):
         self.start_time = time.time() - 4
         assert not self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
-        self.start_time = time.time() - 8
+        self.start_time = time.time() - 12
         assert self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
 
@@ -297,21 +297,16 @@ class TestFuelPumpMode(BaseTest):
         self.start_time = time.time() - 10
         assert not self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
-        self.start_time = time.time() - 60
+        self.start_time = time.time() - 30
         assert self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
 
 
 def main():
-    # cmd = ["pytest", os.path.abspath(__file__), "-v", '-W', 'ignore::DeprecationWarning']
-    # cmd += sys.argv[1:]
-    # sys.exit(subprocess.call(cmd))
-
     pytest_args = [
         '--verbose',
         '-W', 'ignore::DeprecationWarning',
         os.path.abspath(__file__),
-        # other tests here...
     ]
     pytest.main(pytest_args)
 if __name__ == "__main__":

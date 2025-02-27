@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import time
 
 import pytest
@@ -183,3 +184,14 @@ class TestSetCommand(BaseTest):
         self.commander.set_command()
         assert sum(CanNode.cmd.cmd) == 0
         assert CanNode.air_cmd.command_value == -1
+
+
+def main():
+    pytest_args = [
+        '--verbose',
+        '-W', 'ignore::DeprecationWarning',
+        os.path.abspath(__file__),
+    ]
+    pytest.main(pytest_args)
+if __name__ == "__main__":
+    main()

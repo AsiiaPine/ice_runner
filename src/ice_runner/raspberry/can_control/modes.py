@@ -96,10 +96,10 @@ class CheckMode(BaseMode):
         super().__init__(configuration)
 
     def get_running_command(self, **kwargs) -> List[int]:
-        return [int(0.2 * 8191), self.air_throttle]
+        return [self.gas_throttle, 1]
 
     def get_starting_command(self):
-        return [int(0.2 * 8191), self.air_throttle]
+        return [self.gas_throttle, 1]
 
 class FuelPumpMode(BaseMode):
     name = ICERunnerMode.FUEL_PUMPTING
@@ -107,10 +107,10 @@ class FuelPumpMode(BaseMode):
         super().__init__(configuration)
 
     def get_running_command(self, **kwargs) -> List[int]:
-        return [self.gas_throttle, -1]
+        return [int(0.1 * 8191), -1]
 
     def get_starting_command(self):
-        return [self.gas_throttle, -1]
+        return [int(0.1 * 8191), -1]
 
 class PIDController:
     """Basic PID controller"""
