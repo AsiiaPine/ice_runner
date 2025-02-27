@@ -185,10 +185,11 @@ class ICECommander:
         CanNode.spin()
         self.report_status()
         ice_state = CanNode.state.ice_state
+        if CanNode.last_message_receive_time + 2 < time.time():
+            ice_state = RecipState.NOT_CONNECTED
         self.check_mqtt_cmd()
         cond_exceeded = self.check_conditions()
         self.set_state(cond_exceeded)
-
         if ice_state == RecipState.NOT_CONNECTED:
             logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
             await asyncio.sleep(1)
