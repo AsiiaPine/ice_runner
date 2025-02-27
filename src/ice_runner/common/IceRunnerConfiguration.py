@@ -21,8 +21,8 @@ class MyDumper(yaml.SafeDumper):
 
 class IceRunnerConfiguration:
     """The class is used to define the configuration of the ICE runner"""
-    attribute_names = ["mode", "rpm", "time", "gas_throttle", "air_throttle",
-                       "min_gas_throttle", "max_gas_throttle", "report_period", "control_pid_p",
+    attribute_names = ["mode", "rpm", "time", "gas_throttle_pct", "air_throttle_pct",
+                       "min_gas_throttle_pct", "max_gas_throttle_pct", "report_period", "control_pid_p",
                        "control_pid_i", "control_pid_d", "max_temperature",
                        "min_fuel_volume", "min_vin_voltage", "start_attemts",
                        "max_vibration"]

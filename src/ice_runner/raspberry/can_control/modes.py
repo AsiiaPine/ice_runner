@@ -1,9 +1,13 @@
+"""The module defines the modes of the ICE runner"""
+
 from enum import IntEnum
 import time
 from typing import Any, Dict, List, Tuple, Type
 from common.RunnerState import RunnerState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 
+MAX_AIR_CMD = 2000
+MIN_AIR_CMD = 1000
 
 class ICERunnerMode(IntEnum):
     """The class is used to define the mode of the ICE runner"""
@@ -32,8 +36,14 @@ class ICERunnerMode(IntEnum):
 class BaseMode:
     name: ICERunnerMode
     def __init__(self, configuration: IceRunnerConfiguration):
-        self.gas_throttle = configuration.gas_throttle * 8191 / 100
-        self.air_throttle = int(configuration.air_throttle / 50) - 1
+        self.gas_throttle = int(configuration.gas_throttle_pct * 8191 / 100)
+        self.air_throttle = int((configuration.air_throttle_pct / 100)\
+                            * (MAX_AIR_CMD - MIN_AIR_CMD) + MIN_AIR_CMD)
+
+    def update_configuration(self, configuration: IceRunnerConfiguration) -> None:
+        self.gas_throttle = int(configuration.gas_throttle_pct * 8191 / 100)
+        self.air_throttle = int((configuration.air_throttle_pct / 100)\
+                            * (MAX_AIR_CMD - MIN_AIR_CMD) + MIN_AIR_CMD)
 
     def get_command(self, run_state: RunnerState, **kwargs) -> List[int]:
         if run_state == RunnerState.RUNNING:
@@ -43,13 +53,13 @@ class BaseMode:
         return self.get_zero_command()
 
     def get_running_command(self, **kwargs) -> List[int]:
-        pass
+        raise NotImplementedError
 
     def get_zero_command(self):
         return [0, -1]
 
     def get_starting_command(self):
-        return [3500, (self.air_throttle / 50) - 1.0]
+        return [self.gas_throttle, self.air_throttle]
 
 class ConstMode(BaseMode):
     name = ICERunnerMode.CONST
@@ -84,39 +94,30 @@ class RPMMode(BaseMode):
         super().__init__(configuration)
         self.rpm = configuration.rpm
 
-    def get_running_command(self, **kwargs) -> List[int]:
-        command = [0, 0]
-        command[0] = int(self.rpm)
-        command[1] = self.air_throttle
-        return command
-
 class CheckMode(BaseMode):
     name = ICERunnerMode.CHECK
     def __init__(self, configuration: IceRunnerConfiguration):
         super().__init__(configuration)
+        self.air_throttle = MAX_AIR_CMD
 
     def get_running_command(self, **kwargs) -> List[int]:
-        return [self.gas_throttle, 1]
-
-    def get_starting_command(self):
-        return [self.gas_throttle, 1]
+        return [self.gas_throttle, MAX_AIR_CMD]
 
 class FuelPumpMode(BaseMode):
     name = ICERunnerMode.FUEL_PUMPTING
     def __init__(self, configuration: IceRunnerConfiguration):
         super().__init__(configuration)
+        self.gas_throttle = int(0.1 * 8191)
+        self.air_throttle = -1
 
     def get_running_command(self, **kwargs) -> List[int]:
-        return [int(0.1 * 8191), -1]
-
-    def get_starting_command(self):
-        return [int(0.1 * 8191), -1]
+        return [self.gas_throttle, self.air_throttle]
 
 class PIDController:
     """Basic PID controller"""
 
-    def __init__(self, seeked_value: int, coeffs: Tuple[float, float, float]) -> None:
-        self.seeked_value = seeked_value
+    def __init__(self, target_value: int, coeffs: Tuple[float, float, float]) -> None:
+        self.target_value = target_value
         self.coeffs: Dict[str, float] = {"kp": coeffs[0], "ki": coeffs[1], "kd": coeffs[2]}
         self.prev_time = 0
         self.prev_error = 0
@@ -125,7 +126,7 @@ class PIDController:
     def get_pid_command(self, val: int) -> int:
         """The function calculates PID command"""
         dt = time.time() - self.prev_time
-        error = self.seeked_value - val
+        error = self.target_value - val
         drpm = (error - self.prev_error) / dt
         self.integral += self.coeffs["ki"] * error * (dt)
 
@@ -134,7 +135,7 @@ class PIDController:
         diff_part = self.coeffs["kd"] * drpm
         int_part = self.coeffs["ki"] * self.integral
         pos_part = self.coeffs["kp"] * error
-        return self.seeked_value + pos_part + diff_part + int_part
+        return self.target_value + pos_part + diff_part + int_part
 
     def change_coeffs(self, coeffs: Dict[str, float]) -> None:
         """The function changes the coefficients of the PID controller"""

@@ -68,6 +68,9 @@ class RunnerStateController:
 
         if self.state == RunnerState.STARTING:
             prev_waiting = self.prev_waiting_state_time
+            if prev_waiting == 0:
+                self.prev_waiting_state_time = time.time()
+                return
             if ice_state == RecipState.RUNNING\
                     and time.time() - prev_waiting > 4\
                     and self.prev_waiting_state_time > 0:
