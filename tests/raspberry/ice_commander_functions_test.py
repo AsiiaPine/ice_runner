@@ -57,16 +57,16 @@ class TestSetState(BaseTest):
     @pytest.mark.dependency()
     def test_not_connected(self):
         self.commander.state_controller.state = RunnerState.NOT_CONNECTED
-        self.commander.set_state(False)
+        self.commander.update_state(False)
         assert self.commander.state_controller.state == RunnerState.NOT_CONNECTED
-        self.commander.set_state(True)
+        self.commander.update_state(True)
         assert self.commander.state_controller.state == RunnerState.NOT_CONNECTED
 
     @pytest.mark.dependency(depends=["TestSetState::test_not_connected"])
     def test_just_connected(self):
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.NOT_CONNECTED
-        self.commander.set_state(False)
+        self.commander.update_state(False)
         assert self.commander.state_controller.state == RunnerState.STOPPED
 
     # @pytest.mark.dependency(depends=["TestSetState::test_not_connected"])
@@ -80,12 +80,12 @@ class TestSetState(BaseTest):
         self.commander.state_controller.state = RunnerState.RUNNING
 
         # if conditions are not exceeded, try to start again
-        self.commander.set_state(False)
+        self.commander.update_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING
 
         # if conditions are exceeded, stop the runner
         self.commander.state_controller.state = RunnerState.RUNNING
-        self.commander.set_state(True)
+        self.commander.update_state(True)
         assert self.commander.state_controller.state == RunnerState.STOPPING
 
     @pytest.mark.dependency(depends=["TestSetState::test_not_connected"])
@@ -94,7 +94,7 @@ class TestSetState(BaseTest):
         # does not affect stopped runner
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.NOT_CONNECTED
-        self.commander.set_state(True)
+        self.commander.update_state(True)
         raspberry.can_control.ice_commander.ICECommander.stop.assert_not_called()
         assert self.commander.state_controller.state == RunnerState.STOPPED
 
@@ -107,7 +107,7 @@ class TestSetState(BaseTest):
 
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.RUNNING
-        self.commander.set_state(True)
+        self.commander.update_state(True)
         assert self.commander.state_controller.state == RunnerState.STOPPING
 
     def test_cond_exceeded_starting(self, mocker):
@@ -119,7 +119,7 @@ class TestSetState(BaseTest):
 
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.STARTING
-        self.commander.set_state(True)
+        self.commander.update_state(True)
         assert self.commander.state_controller.state == RunnerState.STOPPING
 
     def test_cond_exceeded_fault(self, mocker):
@@ -127,7 +127,7 @@ class TestSetState(BaseTest):
         mocker.patch('raspberry.can_control.ice_commander.ICECommander.stop')
         CanNode.state.ice_state = RecipState.STOPPED
         self.commander.state_controller.state = RunnerState.FAULT
-        self.commander.set_state(True)
+        self.commander.update_state(True)
         raspberry.can_control.ice_commander.ICECommander.stop.assert_not_called()
         assert self.commander.state_controller.state == RunnerState.FAULT
 
@@ -140,7 +140,7 @@ class TestSetState(BaseTest):
         self.commander.state_controller.state = RunnerState.NOT_CONNECTED
         CanNode.state.ice_state = RecipState.WAITING
         assert self.commander.state_controller.prev_waiting_state_time == 0
-        self.commander.set_state(False)
+        self.commander.update_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING
         assert self.commander.state_controller.prev_waiting_state_time != 0
 
@@ -148,7 +148,7 @@ class TestSetState(BaseTest):
         self.commander.state_controller.state = RunnerState.STOPPED
         CanNode.state.ice_state = RecipState.WAITING
         assert self.commander.state_controller.prev_waiting_state_time == 0
-        self.commander.set_state(False)
+        self.commander.update_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING
         assert self.commander.state_controller.prev_waiting_state_time != 0
 
@@ -156,7 +156,7 @@ class TestSetState(BaseTest):
         self.commander.state_controller.state = RunnerState.RUNNING
         CanNode.state.ice_state = RecipState.WAITING
         assert self.commander.state_controller.prev_waiting_state_time == 0
-        self.commander.set_state(False)
+        self.commander.update_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING
         assert self.commander.state_controller.prev_waiting_state_time != 0
 
@@ -164,7 +164,7 @@ class TestSetState(BaseTest):
         self.commander.state_controller.state = RunnerState.STARTING
         CanNode.state.ice_state = RecipState.WAITING
         assert self.commander.state_controller.prev_waiting_state_time == 0
-        self.commander.set_state(False)
+        self.commander.update_state(False)
         assert self.commander.state_controller.state == RunnerState.STARTING
         assert self.commander.state_controller.prev_waiting_state_time != 0
 
