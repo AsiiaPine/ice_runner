@@ -184,9 +184,9 @@ class ICECommander:
         """Main function called in loop"""
         CanNode.spin()
         self.report_status()
-        ice_state = CanNode.state.ice_state
         if CanNode.last_message_receive_time + 2 < time.time():
-            ice_state = RecipState.NOT_CONNECTED
+            CanNode.state.ice_state = RecipState.NOT_CONNECTED
+        ice_state = CanNode.state.ice_state
         self.check_mqtt_cmd()
         cond_exceeded = self.check_conditions()
         self.set_state(cond_exceeded)

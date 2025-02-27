@@ -20,7 +20,6 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.exceptions import TelegramBadRequest
-
 from aiogram.types import (
     Message,
     ReplyKeyboardRemove,
@@ -81,6 +80,22 @@ async def get_full_configuration(runner_id: int) -> Dict[str, Any]:
             return None
     return MqttClient.runner_full_configuration[runner_id]
 
+def get_emoji(state: RunnerState) -> str:
+    """The function returns the emoji for the specified state"""
+    if state == RunnerState.NOT_CONNECTED:
+        return "🚫"
+    if state == RunnerState.RUNNING:
+        return "🚀"
+    if state == RunnerState.STARTING:
+        return "🔵"
+    if state == RunnerState.STOPPED:
+        return "🛑"
+    if state == RunnerState.STOPPING:
+        return "🚩"
+    if state == RunnerState.FAULT:
+        return "⁉"
+
+
 async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], bool]:
     """The function sets the status of the Raspberry Pi,
         returns the status string and the state of the info was is updated"""
@@ -104,7 +119,7 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
     MqttClient.rp_status[rp_id] = None
     MqttClient.rp_states[rp_id] = None
     if rp_state is not None:
-        status_str = "\t\tСтатус: " + rp_state.name + '\n'
+        status_str = "\t\tСтатус: " + rp_state.name + get_emoji(rp_state) + '\n'
         if status is None:
             status_str = "\tОбкатчик не шлет свой статус\n"
         else:

@@ -79,6 +79,11 @@ Raspberry Pi subscribes to its commander topic and sends parsed dronecan message
 
 # TODO:
 - [ ] Maybe split ExceedanceTracker responsibility to Modes
+## Tests
+- [ ] Add tests for bot
+- [ ] Add tests for server
+Extend tests for client:
+    - [ ] Test on NOT_CONNECTED state after successful connection to exteranl node
 
 ## Hints
 For fast mqtt server setup, edit the file `/etc/mosquitto/mosquitto.conf` and add the following lines:
