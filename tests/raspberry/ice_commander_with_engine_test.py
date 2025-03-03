@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 import time
-from unittest.mock import mock_open
 
 import pytest
 from typing import Any, Callable, List, Tuple
@@ -131,7 +130,6 @@ class TestStateUpdate(BaseTest):
         mocker.patch("builtins.open")
         mocker.patch('os.path.join', return_value = "")
         mocker.patch('os.makedirs')
-        mocker.patch("raspberry.can_control.node.dump_msg")
         mocker.patch("raspberry.can_control.node.CanNode.__run_candump__")
         mocker.patch("raspberry.can_control.node.CanNode.__stop_candump__")
         mocker.patch("raspberry.can_control.node.safely_write_to_file")

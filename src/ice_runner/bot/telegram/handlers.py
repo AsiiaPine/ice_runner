@@ -356,11 +356,15 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     for i in range(5):
         if (await state.get_state()) != BotState.starting_state:
             return
-        MqttClient.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
+        MqttClient.publish_start(rp_id)
         await asyncio.sleep(1)
         rp_state = MqttClient.rp_states[rp_id].name
         if rp_state == "STARTING":
             await message.answer(f"Запущено")
+            break
+        if rp_state == "RUNNING":
+            await message.answer(f"Ошибка\n\t{rp_state}")
+            MqttClient.publish_stop(rp_id)
             break
         await message.answer(f"Ошибка\n\t{rp_state}")
     logging.info("CMD START send to Raspberry Pi %d", rp_id)
@@ -456,6 +460,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
             else:
                 report_period = 10
             data["report_period"] = report_period
+    report_period = data["report_period"]
     await state.set_data(data)
     status_str, is_updated = await get_rp_status(rp_id, state)
 
@@ -468,10 +473,11 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
         MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
         status_str, is_updated = await get_rp_status(rp_id, state)
         if not is_updated:
+            await asyncio.sleep(report_period)
             continue
         message_text = header_str + status_str + conf_str
         await res.edit_text(message_text, parse_mode=ParseMode.HTML)
-        await asyncio.sleep(1)
+        await asyncio.sleep(report_period)
 
 @form_router.message(Command(commands=["log", "лог"]), ChatIdFilter())
 async def command_log_handler(message: Message, state: FSMContext) -> None:

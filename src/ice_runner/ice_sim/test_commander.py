@@ -99,6 +99,12 @@ class Starter:
                                 min(time.time_ns() / 1000000 - self.t1_ms, max_cycle_time_ms))
         return cycle_time_ms
 
+    def cleanup(self):
+        self.t1_ms = 0
+        self.t2_ms = 0
+        self.t3_ms = 0
+        self.state = StarterState.STOPPED
+
 class Engine:
     def __init__(self) -> None:
         self.rpm = 0
@@ -128,6 +134,7 @@ class Engine:
         if cmd == 0:
             self.state = ICENodeStatus.STOPPED
             self.rpm = 0
+            self.starter.cleanup()
             return
         self.ice_acceleration += self.random_d_rpm_change()
         if air_cmd < 100:

@@ -27,7 +27,7 @@ class MqttClient:
     to_stop: bool = 0
     status: Dict[str, Any] = {}
     configuration: IceRunnerConfiguration
-    state: int = -1
+    state: RunnerState = -1
     run_logs: Dict[str, str] = {}
 
     @classmethod
@@ -54,12 +54,12 @@ class MqttClient:
         cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/status", json.dumps(status))
 
     @classmethod
-    def publish_state(cls, state: int) -> None:
+    def publish_state(cls, state: RunnerState) -> None:
         """The function publishes state to MQTT broker"""
-        logging.debug("PUBLISH\t-\tstate %d", state)
+        logging.debug("PUBLISH\t-\tstate %d", state.value)
         MqttClient.state = state
         mes_info: MQTTMessageInfo = cls.client.publish(
-            f"ice_runner/raspberry_pi/{cls.run_id}/state", state)
+            f"ice_runner/raspberry_pi/{cls.run_id}/state", state.value)
         mes_info.wait_for_publish(timeout=1)
 
     @classmethod
@@ -87,7 +87,7 @@ class MqttClient:
         mes_info:MQTTMessageInfo = cls.client.publish(
                                 f"ice_runner/raspberry_pi/{cls.run_id}/stop_reason", reason)
         mes_info.wait_for_publish(timeout=5)
-        cls.publish_state(RunnerState.STOPPED.value)
+        cls.publish_state(RunnerState.STOPPED)
 
     @classmethod
     def publish_full_configuration(cls, full_configuration: Dict[str, Any]) -> None:

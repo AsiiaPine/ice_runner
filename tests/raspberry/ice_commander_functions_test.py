@@ -7,7 +7,6 @@ import pytest
 from typing import Callable
 import dronecan
 
-import ice_runner
 from common.RunnerState import RunnerState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 import raspberry

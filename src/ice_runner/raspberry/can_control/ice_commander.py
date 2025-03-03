@@ -170,6 +170,8 @@ class ICECommander:
         self.send_log()
         CanNode.change_file()
         self.start_time = 0
+        self.state_controller.prev_waiting_state_time = 0
+        self.exceedance_tracker.cleanup()
 
     async def spin(self) -> None:
         """Main function called in loop"""
@@ -190,6 +192,8 @@ class ICECommander:
         logging.debug(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
         self.report_state()
         self.prev_state = self.state_controller
+        if self.state_controller == RunnerState.STOPPED:
+            self.exceedance_tracker.start_attempts = 0
         await asyncio.sleep(0.05)
 
     def on_keyboard_interrupt(self):
@@ -219,7 +223,6 @@ class ICECommander:
                                 (RunnerState.STARTING, RunnerState.RUNNING)):
             MqttClient.publish_stop_reason(f"Conditions exceeded: {vars(self.exceedance_tracker)}")
             logging.info("STOP\t-\tconditions exceeded")
-            self.exceedance_tracker.cleanup()
             self.stop()
             return
         self.state_controller.update(CanNode.state.ice_state)
@@ -227,7 +230,7 @@ class ICECommander:
     def report_state(self) -> None:
         """The function reports state to MQTT broker"""
         if time.time() - self.prev_state_report_time > 0.5:
-            MqttClient.publish_state(self.state_controller.state.value)
+            MqttClient.publish_state(self.state_controller.state)
             self.prev_state_report_time = time.time()
 
     def report_status(self) -> None:
@@ -238,11 +241,11 @@ class ICECommander:
             if self.start_time > 0:
                 state_dict["start_time"] = datetime.datetime.fromtimestamp(self.start_time)\
                                                             .strftime('%Y-%m-%d %H:%M:%S')
-                state_dict["time_left"] = time_left / 60.0
+                state_dict["time_left"] = f"{int(time_left)} seconds"
             else:
                 state_dict["start_time"] = "not started"
                 state_dict["time_left"] = "not started"
-            MqttClient.publish_state(self.state_controller.state.value)
+            MqttClient.publish_state(self.state_controller.state)
             MqttClient.publish_status(state_dict)
             MqttClient.publish_messages(CanNode.messages)
             self.prev_report_time = time.time()
