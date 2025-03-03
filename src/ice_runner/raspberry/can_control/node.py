@@ -4,7 +4,9 @@
 """The module is used to control the DroneCAN ICE node by raccoonlab"""
 
 import asyncio
+import csv
 import datetime
+import json
 import logging
 import os
 import subprocess
@@ -51,6 +53,8 @@ class CanNode:
         cls.node.health = Health.HEALTH_OK
         cls.node.mode = Mode.MODE_OPERATIONAL
         cls.can_output_filenames = {}
+        cls.can_output_files = {}
+        cls.can_output_dict_writers: Dict[str, csv.DictWriter] = {}
         cls.change_file()
         cls.last_sync_time = 0
         cls.last_message_receive_time = 0

@@ -4,7 +4,7 @@ import secrets
 import time
 
 import pytest
-from common.ICEState import ICEState, RecipState
+from common.ICEState import ICEState, EngineState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from common.RunnerState import RunnerState, RunnerStateController
 from raspberry.can_control.ice_commander import ExceedanceTracker, ICERunnerMode
@@ -79,7 +79,7 @@ class TestNotStarted(BaseTest):
         candump_task.assert_called_once()
 
     def test_not_started(self):
-        self.state.ice_state = RecipState.STOPPED
+        self.state.ice_state = EngineState.STOPPED
         assert not self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
 
@@ -152,16 +152,7 @@ class TestStarting(BaseTest):
     def test_start_attempts(self):
         assert not self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
-        # we already tried to start
-        assert self.ex_tracker.check(
-            self.state, self.config, self.runner_state, self.start_time)
-        self.ex_tracker.cleanup()
-
-        self.runner_state.prev_state = RunnerState.STARTING
-        assert not self.ex_tracker.check(
-            self.state, self.config, self.runner_state, self.start_time)
-
-        self.runner_state.prev_state = RunnerState.STOPPED
+        self.runner_state.start_attempts = 2
         assert self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
 
@@ -179,12 +170,14 @@ class TestStarting(BaseTest):
     def test_rpm_exceeded(self):
         """ExceedanceTracker should ignore RPM if the state is STARTING"""
         self.runner_state.prev_state = RunnerState.STARTING
-        self.config.rpm = 1000
+        self.state.rpm = 1000
         assert not self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
-        self.config.rpm = 1
-        self.state.rpm = 10000
+        self.state.rpm = 7500
         assert not self.ex_tracker.check(
+            self.state, self.config, self.runner_state, self.start_time)
+        self.state.rpm = 7501
+        assert self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
 
 class TestCONSTMode(BaseTest):

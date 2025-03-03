@@ -15,7 +15,7 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 from raspberry.can_control.node import (CanNode, start_dronecan_handlers,
                                                    stop_dronecan_handlers)
 from raspberry.can_control.ice_commander import ICECommander
-from common.ICEState import RecipState
+from common.ICEState import EngineState
 from StoppableThread import StoppableThread
 
 logger = logging.getLogger()
@@ -24,7 +24,7 @@ logger.level = logging.INFO
 class EngineSimulator:
     def __init__(self) -> None:
         self.recip_status_message: Any = dronecan.uavcan.equipment.ice.reciprocating.Status()
-        self.recip_status_message.state = RecipState.STOPPED.value
+        self.recip_status_message.state = EngineState.STOPPED.value
         self.recip_status_message.engine_speed_rpm = 0
         self.recip_status_message.oil_temperature = 0
         self.recip_status_message.engine_load_percent = 0

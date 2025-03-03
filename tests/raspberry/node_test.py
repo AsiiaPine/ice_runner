@@ -10,7 +10,7 @@ from typing import Callable, List, Tuple
 import dronecan
 from raccoonlab_tools.common.device_manager import DeviceManager
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-from common.ICEState import ICEState, RecipState
+from common.ICEState import ICEState, EngineState
 from raspberry.can_control.node import (CanNode,
                                                    start_dronecan_handlers, stop_dronecan_handlers)
 from StoppableThread import StoppableThread
@@ -161,12 +161,12 @@ class TestResipUpdate(BaseTest):
     @pytest.mark.asyncio
     async def test_ice_state_update(self, mocker):
         self.setup_can_node(mocker)
-        assert CanNode.state.ice_state == RecipState.NOT_CONNECTED
+        assert CanNode.state.ice_state == EngineState.NOT_CONNECTED
         timeout = 4
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status()),
                   0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
-                                   lambda: CanNode.state.ice_state > RecipState.NOT_CONNECTED,
+                                   lambda: CanNode.state.ice_state > EngineState.NOT_CONNECTED,
                                    timeout=timeout)
         assert res
 
@@ -174,15 +174,15 @@ class TestResipUpdate(BaseTest):
     @pytest.mark.asyncio
     async def test_ice_state_mapping(self, mocker):
         self.setup_can_node(mocker)
-        assert CanNode.state.ice_state == RecipState.NOT_CONNECTED
+        assert CanNode.state.ice_state == EngineState.NOT_CONNECTED
         timeout = 2
-        state = RecipState.STOPPED
+        state = EngineState.STOPPED
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status(state=state.value)), 0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
                                    lambda: CanNode.state.ice_state == state,
                                    timeout=timeout)
         assert res
-        state = RecipState.RUNNING
+        state = EngineState.RUNNING
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status(state=state.value)), 0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
                                    lambda: CanNode.state.ice_state==state,
