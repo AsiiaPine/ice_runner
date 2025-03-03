@@ -56,7 +56,7 @@ class MqttClient:
     @classmethod
     def publish_state(cls, state: RunnerState) -> None:
         """The function publishes state to MQTT broker"""
-        logging.debug("PUBLISH\t-\tstate %d", state.name)
+        logging.debug("PUBLISH\t-\tstate %d", state.value)
         MqttClient.state = state
         mes_info: MQTTMessageInfo = cls.client.publish(
             f"ice_runner/raspberry_pi/{cls.run_id}/state", state.value)

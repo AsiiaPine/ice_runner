@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 import time
-from unittest.mock import mock_open
 
 import pytest
 from typing import Any, Callable, List, Tuple

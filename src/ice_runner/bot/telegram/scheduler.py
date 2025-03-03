@@ -32,7 +32,7 @@ class Scheduler:
     @classmethod
     def guard_runner(cls, runner_id: int):
         """The function guards the RP state and waits until it stops"""
-        if runner_id in cls.jobs:
+        if runner_id in cls.jobs.keys():
             return
         cls.jobs[runner_id] = cls.scheduler.add_job(cls.check_rp_state, 'interval',
                                                 seconds=1, kwargs={"runner_id": runner_id})
