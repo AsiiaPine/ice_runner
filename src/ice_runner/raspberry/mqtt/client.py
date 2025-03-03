@@ -87,7 +87,7 @@ class MqttClient:
         mes_info:MQTTMessageInfo = cls.client.publish(
                                 f"ice_runner/raspberry_pi/{cls.run_id}/stop_reason", reason)
         mes_info.wait_for_publish(timeout=5)
-        cls.publish_state(RunnerState.STOPPED.value)
+        cls.publish_state(RunnerState.STOPPED)
 
     @classmethod
     def publish_full_configuration(cls, full_configuration: Dict[str, Any]) -> None:

@@ -241,7 +241,7 @@ class ICECommander:
             if self.start_time > 0:
                 state_dict["start_time"] = datetime.datetime.fromtimestamp(self.start_time)\
                                                             .strftime('%Y-%m-%d %H:%M:%S')
-                state_dict["time_left"] = time_left / 60.0
+                state_dict["time_left"] = f"{int(time_left)} seconds"
             else:
                 state_dict["start_time"] = "not started"
                 state_dict["time_left"] = "not started"
