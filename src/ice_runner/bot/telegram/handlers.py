@@ -356,11 +356,15 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     for i in range(5):
         if (await state.get_state()) != BotState.starting_state:
             return
-        MqttClient.client.publish("ice_runner/bot/usr_cmd/start", str(rp_id))
+        MqttClient.publish_start(rp_id)
         await asyncio.sleep(1)
         rp_state = MqttClient.rp_states[rp_id].name
         if rp_state == "STARTING":
             await message.answer(f"Запущено")
+            break
+        if rp_state == "RUNNING":
+            await message.answer(f"Ошибка\n\t{rp_state}")
+            MqttClient.publish_stop(rp_id)
             break
         await message.answer(f"Ошибка\n\t{rp_state}")
     logging.info("CMD START send to Raspberry Pi %d", rp_id)
