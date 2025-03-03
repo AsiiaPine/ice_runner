@@ -46,6 +46,7 @@ class BaseMode:
                             * (MAX_AIR_CMD - MIN_AIR_CMD) + MIN_AIR_CMD)
 
     def get_command(self, run_state: RunnerState, **kwargs) -> List[int]:
+        # print(f"\n\n\n\n {run_state.name}")
         if run_state == RunnerState.RUNNING:
             return self.get_running_command(**kwargs)
         if run_state == RunnerState.STARTING:
