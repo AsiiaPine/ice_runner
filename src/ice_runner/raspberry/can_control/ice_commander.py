@@ -171,7 +171,7 @@ class ICECommander:
         CanNode.change_file()
         self.start_time = 0
         self.state_controller.prev_waiting_state_time = 0
-        self.exceedance_tracker.cleanup()
+        CanNode.state.start_attempts = 0
 
     async def spin(self) -> None:
         """Main function called in loop"""
@@ -187,7 +187,8 @@ class ICECommander:
             logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
             await asyncio.sleep(1)
             return
-
+        if self.state_controller.state == RunnerState.STOPPED:
+            self.exceedance_tracker.cleanup()
         self.set_can_command()
         logging.debug(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
         self.report_state()
