@@ -42,6 +42,7 @@ class ExceedanceTracker:
         self.fuel_level: bool = False
         self.start_attempts: bool = False
         self.rpm: bool = False
+        self.max_rpm: bool = False
 
     def check_not_started(self, state: ICEState) -> bool:
         """The function checks conditions when the ICE is not started"""
@@ -101,6 +102,9 @@ class ExceedanceTracker:
     def check_running(self, state: ICEState, configuration: IceRunnerConfiguration,
                         start_time: float, state_controller: RunnerStateController) -> bool:
         """The function checks conditions when the ICE is running"""
+        if state.rpm > 7500:
+            logging.warning(f"STATUS\t-\tRPM exceeded {state.rpm}, 7500")
+            self.max_rpm = True
         # the ICE is running, so check dynamic conditions
         if state_controller.state == RunnerState.STARTING\
              and state_controller.prev_state != RunnerState.STARTING:
