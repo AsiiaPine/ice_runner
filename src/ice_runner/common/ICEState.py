@@ -50,6 +50,7 @@ class ICEState:
         self.mode: Mode = Mode.MODE_OPERATIONAL
         self.health: Health = Health.HEALTH_OK
         self.rec_imu: bool = False
+        self.start_attempts: int = 0
 
     def update_with_resiprocating_status(self, msg) -> None:
         logging.getLogger(__name__).info(f"UPD STATE: {msg.message.state}")

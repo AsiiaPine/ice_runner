@@ -143,14 +143,14 @@ class TestUpdateState(BaseTest):
         self.commander.state_controller.state = RunnerState.NOT_CONNECTED
         CanNode.state.ice_state = EngineState.WAITING
         self.commander.update_state(False)
-        assert self.commander.state_controller.state == RunnerState.STOPPED
+        assert self.commander.state_controller.state == RunnerState.STOPPING
 
     def test_ice_waiting_run_state_stopped(self):
         self.commander.state_controller.state = RunnerState.STOPPED
         CanNode.state.ice_state = EngineState.WAITING
         assert self.commander.state_controller.prev_waiting_state_time == 0
         self.commander.update_state(False)
-        assert self.commander.state_controller.state == RunnerState.STOPPED
+        assert self.commander.state_controller.state == RunnerState.STOPPING
         assert self.commander.state_controller.prev_waiting_state_time == 0
 
     def test_ice_waiting_run_state_running(self):

@@ -55,7 +55,9 @@ class CanNode:
         cls.prev_broadcast_time: float = 0
         cls.node.health = Health.HEALTH_OK
         cls.node.mode = Mode.MODE_OPERATIONAL
-
+        cls.can_output_filenames = {}
+        cls.can_output_header_written = {}
+        cls.messages: Dict[str, Any] = {}
         cls.can_output_dict_writers: Dict[str, csv.DictWriter] = {}
         cls.change_file()
         cls.last_sync_time = 0
@@ -126,15 +128,11 @@ def make_dict_csv_header(d: Dict, prefix: str="") -> List[str]:
         prefix += '_'
     for key, value in d.items():
         if isinstance(value, dict):
-            print("hi")
             header += make_dict_csv_header(value, prefix+key)
         elif isinstance(value, list) and not isinstance(value, str):
-            print("hi1")
             for i, item in enumerate(value):
-                print("hola")
                 header.append(f"{prefix+key}_{i}")
         else:
-            print("hello")
             header.append(prefix+key)
     return header
 

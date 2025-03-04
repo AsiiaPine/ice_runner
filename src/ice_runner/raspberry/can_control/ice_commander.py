@@ -235,6 +235,7 @@ class ICECommander:
             self.stop()
             return
         self.state_controller.update(CanNode.state.ice_state)
+        CanNode.state.start_attempts = self.state_controller.start_attempts
 
     def report_state(self) -> None:
         """The function reports state to MQTT broker"""

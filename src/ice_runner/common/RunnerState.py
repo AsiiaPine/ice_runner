@@ -41,24 +41,39 @@ class RunnerStateController:
             return
 
         if self.state == RunnerState.NOT_CONNECTED:
-            self.state = RunnerState.STOPPED
-
-        if self.state in (RunnerState.STOPPING, RunnerState.NOT_CONNECTED):
             if ice_state == EngineState.STOPPED:
                 self.state = RunnerState.STOPPED
                 logging.info("STOP\t-\tRunner stopped")
                 return
+            self.state = RunnerState.STOPPING
+            logging.warning("STOPPING\t-\tRunner is running, but not connected")
+            return
+
+        if self.state == RunnerState.STOPPED:
+            if ice_state != EngineState.STOPPED:
+                self.state = RunnerState.STOPPING
+                logging.warning("STOPPING\t-\tRunner is not stopped")
+            return
+
+        if self.state == RunnerState.STOPPING:
+            if ice_state == EngineState.STOPPED:
+                self.state = RunnerState.STOPPED
+                logging.info("STOP\t-\tRunner stopped")
+            return
 
         if self.state == RunnerState.STARTING:
             prev_waiting = self.prev_waiting_state_time
             if prev_waiting == 0:
                 self.prev_waiting_state_time = time.time()
                 return
+
             if ice_state == EngineState.WAITING and \
                         self.prev_waiting_state_time + 4 < time.time():
+                self.start_attempts +=1
                 self.prev_waiting_state_time = time.time()
                 logging.info("STARTING\t-\tReceived waiting state")
                 return
+
             if ice_state == EngineState.RUNNING\
                     and time.time() - prev_waiting > 4\
                     and self.prev_waiting_state_time > 0:
@@ -67,13 +82,13 @@ class RunnerStateController:
                 self.state = RunnerState.RUNNING
                 self.prev_waiting_state_time = 0
                 return
+
             if ice_state == EngineState.STOPPED:
                 return
 
         if self.state == RunnerState.RUNNING:
             if ice_state == EngineState.WAITING:
                 self.state = RunnerState.STARTING
-                self.start_attempts +=1
                 self.prev_waiting_state_time = time.time()
 
                 logging.info("RUNNING\t-\tReceived waiting state")
