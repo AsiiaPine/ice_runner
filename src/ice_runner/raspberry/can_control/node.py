@@ -6,12 +6,11 @@
 import asyncio
 import csv
 import datetime
-import json
 import logging
 import os
 import subprocess
 import time
-from typing import Any, TextIO, Dict
+from typing import Any, List, Dict
 import dronecan
 from dronecan.node import Node
 from raccoonlab_tools.dronecan.utils import ParametersInterface
@@ -39,6 +38,11 @@ class CanNode:
     """The class is used to connect to dronecan node and send/receive messages"""
     node = None
     log_dir: str = None
+    can_output_filenames = {}
+    can_output_header_written = {}
+    messages: Dict[str, Any] = {}
+    candump_task: asyncio.Task = None
+    candump_filename: str = None
     @classmethod
     def connect(cls) -> None:
         """The function establishes dronecan node and starts candump"""
@@ -49,16 +53,13 @@ class CanNode:
                                             actuator_id=ICE_AIR_CHANNEL, command_value=0)
         cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
         cls.prev_broadcast_time: float = 0
-        cls.candump_task: asyncio.Task = None
         cls.node.health = Health.HEALTH_OK
         cls.node.mode = Mode.MODE_OPERATIONAL
-        cls.can_output_filenames = {}
-        cls.can_output_files = {}
+
         cls.can_output_dict_writers: Dict[str, csv.DictWriter] = {}
         cls.change_file()
         cls.last_sync_time = 0
         cls.last_message_receive_time = 0
-        cls.messages: Dict[str, Any] = {}
         cls.has_imu = False
 
     @classmethod
@@ -94,34 +95,73 @@ class CanNode:
         log_base = os.path.join(cls.log_dir, "logs", "raspberry")
         os.makedirs(log_base, exist_ok=True)
         for can_type in cls.can_output_filenames:
-            cls.can_output_filenames[can_type] = os.path.join(log_base, f"{can_type}_{crnt_time}.log")
+            cls.can_output_filenames[can_type] = os.path.join(log_base,
+                                                              f"{can_type}_{crnt_time}.csv")
+            cls.can_output_header_written = {}
 
-        cls.__stop_candump__()
         cls.candump_filename = os.path.join(log_base, f"candump_{crnt_time}.log")
-        cls.__run_candump__()
         logging.info("SEND\t-\tchanged log files")
 
     @classmethod
-    def __run_candump__(cls) -> None:
+    def run_candump(cls) -> None:
         """The function runs candump, used to save dronecan messages"""
+        assert cls.candump_filename
         with open(cls.candump_filename, "wb", buffering=0) as cls.candump_file:
             # filter NodeStatus messages
             cls.candump_task = subprocess.Popen(
-                                ["candump", "-L", f"{cls.transport},0x15500~0xFFFF00"],
+                                ["candump", "-L", f"{cls.transport}"],
                                 stdout=cls.candump_file, bufsize=0)
 
     @classmethod
-    def __stop_candump__(cls) -> None:
+    def stop_candump(cls) -> None:
         """The function stops candump"""
-        if cls.candump_task:
+        if cls.candump_task is not None:
             subprocess.Popen.kill(cls.candump_task)
+            cls.candump_task = None
+
+def make_dict_csv_header(d: Dict, prefix: str="") -> List[str]:
+    """The function gets csv header"""
+    header = []
+    if len(prefix) != 0:
+        prefix += '_'
+    for key, value in d.items():
+        if isinstance(value, dict):
+            print("hi")
+            header += make_dict_csv_header(value, prefix+key)
+        elif isinstance(value, list) and not isinstance(value, str):
+            print("hi1")
+            for i, item in enumerate(value):
+                print("hola")
+                header.append(f"{prefix+key}_{i}")
+        else:
+            print("hello")
+            header.append(prefix+key)
+    return header
+
+def dict_to_csv_row(d: Dict) -> List[str]:
+    """The function gets csv row"""
+    row = []
+    for key, value in d.items():
+        if isinstance(value, dict):
+            row += dict_to_csv_row(value)
+        elif isinstance(value, list) and not isinstance(value, str):
+            for i, item in enumerate(value):
+                row.append(f"{item}")
+        else:
+            row.append(f"{value}")
+    return row
 
 def dump_msg(msg: dronecan.node.TransferEvent, can_type: str) -> None:
     """The function dumps dronecan message in human-readable format"""
-    with open(CanNode.can_output_filenames[can_type], "a") as f:
-        f.write(dronecan.to_yaml(msg) + "\n")
-    # CanNode.temp_output_file.write(dronecan.to_yaml(msg) + "\n")
     CanNode.last_message_receive_time = time.time()
+    mes_dict: Dict = yaml.load(dronecan.to_yaml(msg.message), yaml.BaseLoader)
+    mes_dict["t"] = time.time()
+    with open(CanNode.can_output_filenames[can_type], "a", encoding="utf-8", newline="") as f:
+        w = csv.writer(f)
+        if not can_type in CanNode.can_output_header_written:
+            CanNode.can_output_header_written[can_type] = True
+            w.writerow(make_dict_csv_header(mes_dict))
+        w.writerow(dict_to_csv_row(mes_dict))
 
 def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles dronecan.uavcan.equipment.ice.FuelTankStatus"""

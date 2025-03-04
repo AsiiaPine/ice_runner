@@ -42,7 +42,7 @@ async def main(run_id: int, configuration: IceRunnerConfiguration) -> None:
     try:
         await asyncio.gather(*background_tasks)
     except asyncio.CancelledError:
-        ice_commander.stop()
+        ice_commander.stop(False)
         await asyncio.sleep(0.5)
         mqtt_task.cancel()
         ice_task.cancel()

@@ -70,9 +70,11 @@ class TestUpdateState(BaseTest):
 
     # @pytest.mark.dependency(depends=["TestSetState::test_not_connected"])
     def test_start_again(self, mocker):
-        mocker.patch('raspberry.can_control.node.CanNode.save_file')
-        mocker.patch('raspberry.can_control.ice_commander.ICECommander.send_log')
         mocker.patch('raspberry.can_control.node.CanNode.change_file')
+        mocker.patch('raspberry.can_control.node.CanNode.save_file')
+        mocker.patch('raspberry.can_control.node.CanNode.stop_candump')
+        mocker.patch('raspberry.can_control.node.CanNode.run_candump')
+        mocker.patch('raspberry.can_control.ice_commander.ICECommander.send_log')
         mocker.patch('raspberry.mqtt.handlers.MqttClient.publish_stop_reason')
 
         CanNode.state.ice_state = EngineState.STOPPED
@@ -100,6 +102,7 @@ class TestUpdateState(BaseTest):
     def test_cond_exceeded_running(self, mocker):
         # affects running runner
         mocker.patch('raspberry.can_control.node.CanNode.save_file')
+        mocker.patch('raspberry.can_control.node.CanNode.run_candump')
         mocker.patch('raspberry.can_control.ice_commander.ICECommander.send_log')
         mocker.patch('raspberry.can_control.node.CanNode.change_file')
         mocker.patch('raspberry.mqtt.client.MqttClient.publish_stop_reason')
@@ -112,6 +115,7 @@ class TestUpdateState(BaseTest):
     def test_cond_exceeded_starting(self, mocker):
         # affects running runner
         mocker.patch('raspberry.can_control.node.CanNode.save_file')
+        mocker.patch('raspberry.can_control.node.CanNode.run_candump')
         mocker.patch('raspberry.can_control.ice_commander.ICECommander.send_log')
         mocker.patch('raspberry.can_control.node.CanNode.change_file')
         mocker.patch('raspberry.mqtt.client.MqttClient.publish_stop_reason')

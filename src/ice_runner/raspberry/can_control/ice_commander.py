@@ -155,6 +155,7 @@ class ICECommander:
         CanNode.connect()
         start_dronecan_handlers()
         CanNode.change_file()
+        CanNode.run_candump()
         MqttClient.run_logs = CanNode.can_output_filenames
         MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.publish_full_configuration(self.configuration.get_original_dict())
@@ -167,13 +168,16 @@ class ICECommander:
                 logging.error(f"{e}\n{traceback.format_exc()}")
                 continue
 
-    def stop(self) -> None:
+    def stop(self, to_change_file = True) -> None:
         """The function stops the ICE runner and resets the runner state"""
         self.state_controller.state = RunnerState.STOPPING
         MqttClient.to_stop = 0
         CanNode.save_file()
         self.send_log()
-        CanNode.change_file()
+        CanNode.stop_candump()
+        if to_change_file:
+            CanNode.change_file()
+            CanNode.run_candump()
         self.start_time = 0
         self.state_controller.prev_waiting_state_time = 0
 
@@ -194,7 +198,7 @@ class ICECommander:
         if self.state_controller.state == RunnerState.STOPPED:
             self.exceedance_tracker.cleanup()
         self.set_can_command()
-        logging.debug(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
+        logging.info(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
         self.report_state()
         self.prev_state = self.state_controller
         if self.state_controller == RunnerState.STOPPED:
@@ -204,7 +208,7 @@ class ICECommander:
     def on_keyboard_interrupt(self):
         """The function is called when KeyboardInterrupt is 
             received and inform MQTT server about the exception"""
-        self.stop()
+        self.stop(to_change_file=False)
         MqttClient.publish_stop_reason("Received KeyboardInterrupt")
         raise asyncio.CancelledError
 

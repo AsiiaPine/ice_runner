@@ -130,8 +130,8 @@ class TestStateUpdate(BaseTest):
         mocker.patch("builtins.open")
         mocker.patch('os.path.join', return_value = "")
         mocker.patch('os.makedirs')
-        mocker.patch("raspberry.can_control.node.CanNode.__run_candump__")
-        mocker.patch("raspberry.can_control.node.CanNode.__stop_candump__")
+        # mocker.patch("raspberry.can_control.node.CanNode.__run_candump__")
+        # mocker.patch("raspberry.can_control.node.CanNode.__stop_candump__")
         mocker.patch("raspberry.can_control.node.safely_write_to_file")
         mocker.patch("paho.mqtt.client.Client.publish")
 

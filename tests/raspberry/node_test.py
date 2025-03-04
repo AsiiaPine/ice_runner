@@ -98,15 +98,6 @@ class BaseTest():
         return res
 
 class TestSubscriptions(BaseTest):
-    def test_candump(self, mocker):
-        candump_task = mocker.patch('raspberry.can_control.node.CanNode.__run_candump__')
-        candump_task.return_value = 42
-        mocker.patch('raspberry.can_control.node.CanNode.__stop_candump__')
-        mocker.patch('os.path.join')
-        CanNode.change_file()
-        CanNode.__run_candump__.assert_called()
-        CanNode.__stop_candump__.assert_called_once()
-
     @pytest.mark.asyncio
     async def test_node_status_sub(self, mocker):
         self.setup_can_node(mocker)
