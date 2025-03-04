@@ -1,6 +1,7 @@
 __py*
 *.env
 *.log*
+*.csv
 *.txt
 logs/*
 *.egg-info

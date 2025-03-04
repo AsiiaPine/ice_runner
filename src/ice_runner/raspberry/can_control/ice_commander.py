@@ -15,7 +15,7 @@ from raspberry.mqtt.handlers import MqttClient
 from raspberry.can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL)
 from raspberry.can_control.modes import BaseMode, ICERunnerMode
-from common.ICEState import ICEState, RecipState
+from common.ICEState import ICEState, EngineState
 from common.RunnerState import RunnerState, RunnerStateController
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 if os.path.exists("/proc/device-tree/model"):
@@ -42,6 +42,7 @@ class ExceedanceTracker:
         self.fuel_level: bool = False
         self.start_attempts: bool = False
         self.rpm: bool = False
+        self.max_rpm: bool = False
 
     def check_not_started(self, state: ICEState) -> bool:
         """The function checks conditions when the ICE is not started"""
@@ -101,12 +102,16 @@ class ExceedanceTracker:
     def check_running(self, state: ICEState, configuration: IceRunnerConfiguration,
                         start_time: float, state_controller: RunnerStateController) -> bool:
         """The function checks conditions when the ICE is running"""
+        if state.rpm > 7500:
+            logging.warning(f"STATUS\t-\tRPM exceeded {state.rpm}, 7500")
+            self.max_rpm = True
         # the ICE is running, so check dynamic conditions
         if state_controller.state == RunnerState.STARTING\
              and state_controller.prev_state != RunnerState.STARTING:
-            state.start_attempts += 1
-            if state.start_attempts > configuration.start_attemts:
-                logging.warning(f"STATUS\t-\tStart attempts exceeded {state.start_attempts}, {configuration.start_attemts}")
+            if state_controller.start_attempts > configuration.start_attemts:
+                logging.warning(
+                    f"STATUS\t-\tStart attempts exceeded {state_controller.start_attempts},\
+                    {configuration.start_attemts}")
                 self.start_attempts = True
                 return True
         self.check_mode_specialized(state, configuration, start_time, state_controller)
@@ -150,6 +155,7 @@ class ICECommander:
         CanNode.connect()
         start_dronecan_handlers()
         CanNode.change_file()
+        CanNode.run_candump()
         MqttClient.run_logs = CanNode.can_output_filenames
         MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.publish_full_configuration(self.configuration.get_original_dict())
@@ -162,45 +168,47 @@ class ICECommander:
                 logging.error(f"{e}\n{traceback.format_exc()}")
                 continue
 
-    def stop(self) -> None:
+    def stop(self, to_change_file = True) -> None:
         """The function stops the ICE runner and resets the runner state"""
         self.state_controller.state = RunnerState.STOPPING
         MqttClient.to_stop = 0
         CanNode.save_file()
         self.send_log()
-        CanNode.change_file()
+        CanNode.stop_candump()
+        if to_change_file:
+            CanNode.change_file()
+            CanNode.run_candump()
         self.start_time = 0
         self.state_controller.prev_waiting_state_time = 0
-        CanNode.state.start_attempts = 0
 
     async def spin(self) -> None:
         """Main function called in loop"""
         CanNode.spin()
         self.report_status()
         if CanNode.last_message_receive_time + 2 < time.time():
-            CanNode.state.ice_state = RecipState.NOT_CONNECTED
+            CanNode.state.ice_state = EngineState.NOT_CONNECTED
         ice_state = CanNode.state.ice_state
         self.check_mqtt_cmd()
         cond_exceeded = self.check_conditions()
         self.update_state(cond_exceeded)
-        if ice_state == RecipState.NOT_CONNECTED:
+        if ice_state == EngineState.NOT_CONNECTED:
             logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
             await asyncio.sleep(1)
             return
         if self.state_controller.state == RunnerState.STOPPED:
             self.exceedance_tracker.cleanup()
         self.set_can_command()
-        logging.debug(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
+        logging.info(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
         self.report_state()
         self.prev_state = self.state_controller
         if self.state_controller == RunnerState.STOPPED:
-            self.exceedance_tracker.start_attempts = 0
+            self.state_controller.start_attempts = 0
         await asyncio.sleep(0.05)
 
     def on_keyboard_interrupt(self):
         """The function is called when KeyboardInterrupt is 
             received and inform MQTT server about the exception"""
-        self.stop()
+        self.stop(to_change_file=False)
         MqttClient.publish_stop_reason("Received KeyboardInterrupt")
         raise asyncio.CancelledError
 

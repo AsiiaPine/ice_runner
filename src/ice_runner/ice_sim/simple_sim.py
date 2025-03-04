@@ -10,12 +10,12 @@ import dronecan
 import numpy as np
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 
-from common.ICEState import Health, Mode, RecipState
+from common.ICEState import Health, Mode, EngineState
 from ice_sim.test_commander import ICE_AIR_CHANNEL, ICE_CMD_CHANNEL
 
 class Engine:
     def __init__(self):
-        self.state = RecipState.STOPPED
+        self.state = EngineState.STOPPED
         self.rpm = 0
         self.n_tries = 0
         self.prev_time = 0 
@@ -23,22 +23,22 @@ class Engine:
     def update(self, cmd: int, air_cmd: int) -> None:
         del air_cmd
         if cmd == 0:
-            self.state = RecipState.STOPPED
+            self.state = EngineState.STOPPED
             self.rpm = 0
             return
         if self.n_tries > 2:
             self.rpm = cmd + np.sin((time.time() % 1000) * np.pi / 1000) * 500
-            self.state = RecipState.RUNNING
+            self.state = EngineState.RUNNING
             return
 
         if time.time() - self.prev_time > 1.5:
             if self.rpm > 0:
                 self.prev_time = time.time()
-                self.state = RecipState.WAITING
+                self.state = EngineState.WAITING
                 self.rpm = 0
                 print("WAITING")
                 return
-            self.state = RecipState.RUNNING
+            self.state = EngineState.RUNNING
             self.rpm = 3000
             self.n_tries += 1
             self.prev_time = time.time()
@@ -56,7 +56,7 @@ class ICENODE:
         self.node = DronecanNode(node_id= 101)
         self.dt = 0.05
         self.rpm = 0
-        self.status = RecipState.STOPPED
+        self.status = EngineState.STOPPED
         self.temp: float = 0
         self.int_temp: float = 0
 
