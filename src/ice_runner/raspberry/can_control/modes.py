@@ -4,7 +4,7 @@ from enum import IntEnum
 import time
 from typing import Any, Dict, List, Tuple, Type
 from common.RunnerState import RunnerState
-from common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 
 MAX_AIR_CMD = 2000
 MIN_AIR_CMD = 1000
@@ -19,7 +19,7 @@ class ICERunnerMode(IntEnum):
     CHECK = 3 # Запуск на 8 секунд, проверка сартера
     FUEL_PUMPTING = 4 # Запуск на 60 секунд
 
-    def get_mode_class(self, configuration: IceRunnerConfiguration) -> Type["BaseMode"]:
+    def get_mode_class(self, configuration: RunnerConfiguration) -> Type["BaseMode"]:
         if self == ICERunnerMode.CONST:
             return ConstMode(configuration=configuration)
         if self == ICERunnerMode.PID:
@@ -35,12 +35,12 @@ class ICERunnerMode(IntEnum):
 
 class BaseMode:
     name: ICERunnerMode
-    def __init__(self, configuration: IceRunnerConfiguration):
+    def __init__(self, configuration: RunnerConfiguration):
         self.gas_throttle = int(configuration.gas_throttle_pct * 8191 / 100)
         self.air_throttle = int((configuration.air_throttle_pct / 100)\
                             * (MAX_AIR_CMD - MIN_AIR_CMD) + MIN_AIR_CMD)
 
-    def update_configuration(self, configuration: IceRunnerConfiguration) -> None:
+    def update_configuration(self, configuration: RunnerConfiguration) -> None:
         self.gas_throttle = int(configuration.gas_throttle_pct * 8191 / 100)
         self.air_throttle = int((configuration.air_throttle_pct / 100)\
                             * (MAX_AIR_CMD - MIN_AIR_CMD) + MIN_AIR_CMD)
@@ -64,7 +64,7 @@ class BaseMode:
 
 class ConstMode(BaseMode):
     name = ICERunnerMode.CONST
-    def __init__(self, configuration: IceRunnerConfiguration):
+    def __init__(self, configuration: RunnerConfiguration):
         super().__init__(configuration)
 
     def get_running_command(self, **kwargs) -> List[int]:
@@ -75,7 +75,7 @@ class ConstMode(BaseMode):
 
 class PIDMode(BaseMode):
     name = ICERunnerMode.PID
-    def __init__(self, configuration: IceRunnerConfiguration):
+    def __init__(self, configuration: RunnerConfiguration):
         super().__init__(configuration)
         coeffs: Tuple[float, float, float] = (
                 configuration.control_pid_p,
@@ -91,13 +91,13 @@ class PIDMode(BaseMode):
 
 class RPMMode(BaseMode):
     name = ICERunnerMode.RPM
-    def __init__(self, configuration: IceRunnerConfiguration):
+    def __init__(self, configuration: RunnerConfiguration):
         super().__init__(configuration)
         self.rpm = configuration.rpm
 
 class CheckMode(BaseMode):
     name = ICERunnerMode.CHECK
-    def __init__(self, configuration: IceRunnerConfiguration):
+    def __init__(self, configuration: RunnerConfiguration):
         super().__init__(configuration)
         self.air_throttle = MAX_AIR_CMD
 
@@ -106,7 +106,7 @@ class CheckMode(BaseMode):
 
 class FuelPumpMode(BaseMode):
     name = ICERunnerMode.FUEL_PUMPTING
-    def __init__(self, configuration: IceRunnerConfiguration):
+    def __init__(self, configuration: RunnerConfiguration):
         super().__init__(configuration)
         self.gas_throttle = int(0.1 * 8191)
         self.air_throttle = -1

@@ -11,7 +11,7 @@ from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.common.device_manager import DeviceManager
 
 from common.RunnerState import RunnerState
-from common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 from raspberry.can_control.node import (CanNode, start_dronecan_handlers,
                                                    stop_dronecan_handlers)
 from raspberry.can_control.ice_commander import ICECommander
@@ -53,7 +53,7 @@ class EngineSimulator:
         self.node.node.add_handler(dronecan.uavcan.equipment.actuator.Command, self.on_actuator_command)
         self.node.node.add_handler(dronecan.uavcan.equipment.esc.RawCommand, self.on_esc_raw_command)
 
-    def fit_to_config(self, config: IceRunnerConfiguration) -> None:
+    def fit_to_config(self, config: RunnerConfiguration) -> None:
         self.recip_status_message.engine_speed_rpm = config.rpm
         self.recip_status_message.oil_temperature = config.min_temperature
         self.recip_status_message.engine_load_percent = config.gas_throttle
@@ -86,16 +86,16 @@ class BaseTest():
         CanNode.status = EngineStatus()
         self.engine_simulator: EngineSimulator = EngineSimulator()
         self.generate_config_dict()
-        self.config = IceRunnerConfiguration(dict_conf=self.config_dict)
+        self.config = RunnerConfiguration(dict_conf=self.config_dict)
         self.commander: ICECommander = ICECommander(self.config)
         self.stream_handler = logging.StreamHandler(sys.stdout)
         logger.addHandler(self.stream_handler)
 
     def generate_config_dict(self):
         config = {}
-        for name in IceRunnerConfiguration.attribute_names:
+        for name in RunnerConfiguration.attribute_names:
             config[name] = {}
-            for component in IceRunnerConfiguration.components:
+            for component in RunnerConfiguration.components:
                 config[name][component] = ""
             config[name]["type"] = "int"
             config[name]["value"] = 0

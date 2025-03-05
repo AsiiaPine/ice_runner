@@ -18,7 +18,7 @@ from raspberry.can_control.modes import BaseMode, ICERunnerMode
 from raspberry.can_control.EngineState import EngineStatus, EngineState
 from raspberry.can_control.RunnerStateController import RunnerStateController
 from common.RunnerState import RunnerState
-from common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 if os.path.exists("/proc/device-tree/model"):
     from RPi import GPIO # Import Raspberry Pi GPIO library
 
@@ -66,7 +66,7 @@ class ExceedanceTracker:
         for key in dictionary:
             dictionary[key] = False
 
-    def check_mode_specialized(self, state: EngineStatus, configuration: IceRunnerConfiguration,
+    def check_mode_specialized(self, state: EngineStatus, configuration: RunnerConfiguration,
                                start_time: float, state_controller: RunnerStateController) -> None:
         """The function checks conditions when the ICE is in specialized mode"""
 
@@ -100,7 +100,7 @@ class ExceedanceTracker:
             return
 
 
-    def check_running(self, state: EngineStatus, configuration: IceRunnerConfiguration,
+    def check_running(self, state: EngineStatus, configuration: RunnerConfiguration,
                         start_time: float, state_controller: RunnerStateController) -> bool:
         """The function checks conditions when the ICE is running"""
         if state.rpm > 7500:
@@ -126,7 +126,7 @@ class ExceedanceTracker:
             logging.warning(f"STATUS\t-\tFlags exceeded:\n{vars(self)}")
         return bool(sum(flags_attr[name] for name in flags_attr.keys() if flags_attr[name]))
 
-    def check(self, state: EngineStatus, configuration: IceRunnerConfiguration,
+    def check(self, state: EngineStatus, configuration: RunnerConfiguration,
                                 state_controller: RunnerStateController, start_time: float) -> bool:
         """The function analyzes the conditions of the ICE runner and returns
         if any Configuration parameters were exceeded. Returns 0 if no conditions were exceeded,
@@ -141,8 +141,8 @@ class ExceedanceTracker:
 
 class ICECommander:
     """The class is used to control the ICE runner"""
-    def __init__(self, configuration: IceRunnerConfiguration = None) -> None:
-        self.configuration: IceRunnerConfiguration = configuration
+    def __init__(self, configuration: RunnerConfiguration = None) -> None:
+        self.configuration: RunnerConfiguration = configuration
         self.exceedance_tracker: ExceedanceTracker = ExceedanceTracker()
         mode: ICERunnerMode = ICERunnerMode(configuration.mode)
         self.mode: BaseMode = mode.get_mode_class(configuration)
@@ -188,11 +188,11 @@ class ICECommander:
         self.report_status()
         if CanNode.last_message_receive_time + 2 < time.time():
             CanNode.status.state = EngineState.NOT_CONNECTED
-        ice_state = CanNode.status.state
+        engine_state = CanNode.status.state
         self.check_mqtt_cmd()
         cond_exceeded = self.check_conditions()
         self.update_state(cond_exceeded)
-        if ice_state == EngineState.NOT_CONNECTED:
+        if engine_state == EngineState.NOT_CONNECTED:
             logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
             await asyncio.sleep(1)
             return

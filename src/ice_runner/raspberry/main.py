@@ -16,13 +16,13 @@ import argparse
 from dotenv import load_dotenv
 from raspberry.mqtt.handlers import MqttClient, add_handlers
 from raspberry.can_control.ice_commander import ICECommander
-from common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 from raspberry.can_control.node import CanNode
 from common import logging_configurator
 
 last_sync_time = time.time()
 
-async def main(run_id: int, configuration: IceRunnerConfiguration) -> None:
+async def main(run_id: int, configuration: RunnerConfiguration) -> None:
     """The function starts the ICE runner"""
     print(f"RP\t-\tStarting raspberry {run_id}")
     load_dotenv()
@@ -72,7 +72,7 @@ def start(log_dir: str, args: list['str'] = None) -> None:
     if args.id is None:
         print("RP\t-\tNo ID provided, exiting")
         sys.exit(-1)
-    config = IceRunnerConfiguration(file_path=args.config)
+    config = RunnerConfiguration(file_path=args.config)
     MqttClient.configuration = config
     try:
         asyncio.run(main(args.id, config))

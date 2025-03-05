@@ -5,7 +5,7 @@ import time
 
 import pytest
 from raspberry.can_control.EngineState import EngineStatus, EngineState
-from common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 from common.RunnerState import RunnerState
 from raspberry.can_control.RunnerStateController import RunnerStateController
 from raspberry.can_control.ice_commander import ExceedanceTracker, ICERunnerMode
@@ -27,7 +27,7 @@ class BaseTest():
         self.ex_tracker: ExceedanceTracker = ExceedanceTracker()
         self.make_config()
         self.state = EngineStatus()
-        self.config = IceRunnerConfiguration(dict_conf=self.config_dict)
+        self.config = RunnerConfiguration(dict_conf=self.config_dict)
         self.runner_state = RunnerStateController()
         self.runner_state.state = RunnerState.STOPPED
         self.runner_state.prev_state = RunnerState.STOPPED
@@ -35,9 +35,9 @@ class BaseTest():
 
     def make_config(self):
         config = {}
-        for name in IceRunnerConfiguration.attribute_names:
+        for name in RunnerConfiguration.attribute_names:
             config[name] = {}
-            for component in IceRunnerConfiguration.components:
+            for component in RunnerConfiguration.components:
                 config[name][component] = ""
             config[name]["type"] = "int"
             config[name]["value"] = 0
@@ -110,7 +110,7 @@ class TestNotStarted(BaseTest):
 class TestStarting(BaseTest):
     def setup_method(self, test_method):
         super().setup_method(test_method)
-        self.config = IceRunnerConfiguration(dict_conf=self.config_dict)
+        self.config = RunnerConfiguration(dict_conf=self.config_dict)
         self.runner_state.state = RunnerState.STARTING
         self.start_time = time.time()
         self.config.start_attemts = 1

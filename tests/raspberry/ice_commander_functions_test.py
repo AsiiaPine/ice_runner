@@ -8,7 +8,7 @@ from typing import Callable
 import dronecan
 
 from common.RunnerState import RunnerState
-from common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 import raspberry
 from raspberry.can_control.node import ICE_AIR_CHANNEL, CanNode
 from raspberry.can_control.ice_commander import ICECommander
@@ -25,7 +25,7 @@ class BaseTest():
         CanNode.air_cmd = dronecan.uavcan.equipment.actuator.Command(
                                             actuator_id=ICE_AIR_CHANNEL, command_value=0)
         CanNode.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
-        self.config = IceRunnerConfiguration(dict_conf=self.config_dict)
+        self.config = RunnerConfiguration(dict_conf=self.config_dict)
         self.commander: ICECommander = ICECommander(self.config)
         self.runner_state = RunnerState.STOPPED
         self.prev_state = RunnerState.STOPPED
@@ -34,9 +34,9 @@ class BaseTest():
 
     def make_config(self):
         config = {}
-        for name in IceRunnerConfiguration.attribute_names:
+        for name in RunnerConfiguration.attribute_names:
             config[name] = {}
-            for component in IceRunnerConfiguration.components:
+            for component in RunnerConfiguration.components:
                 config[name][component] = ""
             config[name]["type"] = "int"
             config[name]["value"] = 0
