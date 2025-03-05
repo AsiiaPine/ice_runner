@@ -8,7 +8,7 @@ from raspberry.can_control.EngineState import EngineStatus, EngineState
 from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 from common.RunnerState import RunnerState
 from raspberry.can_control.RunnerStateController import RunnerStateController
-from raspberry.can_control.ice_commander import ExceedanceTracker, ICERunnerMode
+from raspberry.can_control.IceCommander import ExceedanceTracker, ICERunnerMode
 
 logger = logging.getLogger()
 logger.level = logging.INFO
