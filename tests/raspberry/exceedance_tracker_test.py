@@ -4,7 +4,7 @@ import secrets
 import time
 
 import pytest
-from common.ICEState import ICEState, EngineState
+from common.EngineState import EngineStatus, EngineState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from common.RunnerState import RunnerState, RunnerStateController
 from raspberry.can_control.ice_commander import ExceedanceTracker, ICERunnerMode
@@ -25,7 +25,7 @@ class BaseTest():
     def setup_method(self, test_method):
         self.ex_tracker: ExceedanceTracker = ExceedanceTracker()
         self.make_config()
-        self.state = ICEState()
+        self.state = EngineStatus()
         self.config = IceRunnerConfiguration(dict_conf=self.config_dict)
         self.runner_state = RunnerStateController()
         self.runner_state.state = RunnerState.STOPPED
@@ -79,7 +79,7 @@ class TestNotStarted(BaseTest):
         candump_task.assert_called_once()
 
     def test_not_started(self):
-        self.state.ice_state = EngineState.STOPPED
+        self.state.state = EngineState.STOPPED
         assert not self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
 

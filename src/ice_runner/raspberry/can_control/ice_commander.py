@@ -15,7 +15,7 @@ from raspberry.mqtt.handlers import MqttClient
 from raspberry.can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL)
 from raspberry.can_control.modes import BaseMode, ICERunnerMode
-from common.ICEState import ICEState, EngineState
+from common.EngineState import EngineStatus, EngineState
 from common.RunnerState import RunnerState, RunnerStateController
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 if os.path.exists("/proc/device-tree/model"):
@@ -44,7 +44,7 @@ class ExceedanceTracker:
         self.rpm: bool = False
         self.max_rpm: bool = False
 
-    def check_not_started(self, state: ICEState) -> bool:
+    def check_not_started(self, state: EngineStatus) -> bool:
         """The function checks conditions when the ICE is not started"""
         eng_time_ex = False
         if state.engaged_time is not None:
@@ -65,7 +65,7 @@ class ExceedanceTracker:
         for key in dictionary:
             dictionary[key] = False
 
-    def check_mode_specialized(self, state: ICEState, configuration: IceRunnerConfiguration,
+    def check_mode_specialized(self, state: EngineStatus, configuration: IceRunnerConfiguration,
                                start_time: float, state_controller: RunnerStateController) -> None:
         """The function checks conditions when the ICE is in specialized mode"""
 
@@ -99,7 +99,7 @@ class ExceedanceTracker:
             return
 
 
-    def check_running(self, state: ICEState, configuration: IceRunnerConfiguration,
+    def check_running(self, state: EngineStatus, configuration: IceRunnerConfiguration,
                         start_time: float, state_controller: RunnerStateController) -> bool:
         """The function checks conditions when the ICE is running"""
         if state.rpm > 7500:
@@ -125,7 +125,7 @@ class ExceedanceTracker:
             logging.warning(f"STATUS\t-\tFlags exceeded:\n{vars(self)}")
         return bool(sum(flags_attr[name] for name in flags_attr.keys() if flags_attr[name]))
 
-    def check(self, state: ICEState, configuration: IceRunnerConfiguration,
+    def check(self, state: EngineStatus, configuration: IceRunnerConfiguration,
                                 state_controller: RunnerStateController, start_time: float) -> bool:
         """The function analyzes the conditions of the ICE runner and returns
         if any Configuration parameters were exceeded. Returns 0 if no conditions were exceeded,
@@ -186,8 +186,8 @@ class ICECommander:
         CanNode.spin()
         self.report_status()
         if CanNode.last_message_receive_time + 2 < time.time():
-            CanNode.state.ice_state = EngineState.NOT_CONNECTED
-        ice_state = CanNode.state.ice_state
+            CanNode.status.state = EngineState.NOT_CONNECTED
+        ice_state = CanNode.status.state
         self.check_mqtt_cmd()
         cond_exceeded = self.check_conditions()
         self.update_state(cond_exceeded)
@@ -216,12 +216,12 @@ class ICECommander:
         """The function analyzes the conditions of the ICE runner
             and returns if any Configuration parameters were exceeded.
             Returns 0 if no conditions were exceeded, 1 if conditions were exceeded."""
-        return self.exceedance_tracker.check(CanNode.state, self.configuration,
+        return self.exceedance_tracker.check(CanNode.status, self.configuration,
                                      self.state_controller, self.start_time)
 
     def set_can_command(self) -> None:
         """The function sets the command to the ICE node according to the current mode"""
-        command = self.mode.get_command(self.state_controller.state, rpm=CanNode.state.rpm)
+        command = self.mode.get_command(self.state_controller.state, rpm=CanNode.status.rpm)
         CanNode.cmd.cmd[ICE_THR_CHANNEL] = command[0]
         CanNode.air_cmd.command_value = command[1]
 
@@ -234,8 +234,8 @@ class ICECommander:
             logging.info("STOP\t-\tconditions exceeded")
             self.stop()
             return
-        self.state_controller.update(CanNode.state.ice_state)
-        CanNode.state.start_attempts = self.state_controller.start_attempts
+        self.state_controller.update(CanNode.status.state)
+        CanNode.status.start_attempts = self.state_controller.start_attempts
 
     def report_state(self) -> None:
         """The function reports state to MQTT broker"""
@@ -246,7 +246,7 @@ class ICECommander:
     def report_status(self) -> None:
         """The function reports status to MQTT broker"""
         if self.prev_report_time + self.configuration.report_period < time.time():
-            state_dict = CanNode.state.to_dict()
+            state_dict = CanNode.status.to_dict()
             time_left = self.configuration.time + self.start_time - time.time()
             if self.start_time > 0:
                 state_dict["start_time"] = datetime.datetime.fromtimestamp(self.start_time)\

@@ -8,7 +8,7 @@ from enum import IntEnum
 import logging
 import time
 
-from common.ICEState import EngineState
+from common.EngineState import EngineState
 
 class RunnerState(IntEnum):
     NOT_CONNECTED=-1
@@ -43,16 +43,16 @@ class RunnerStateController:
         if self.state == RunnerState.NOT_CONNECTED:
             if ice_state == EngineState.STOPPED:
                 self.state = RunnerState.STOPPED
-                logging.info("STOP\t-\tRunner stopped")
+                logging.info("NOT_CONNECTED\t-\tRunner stopped")
                 return
             self.state = RunnerState.STOPPING
-            logging.warning("STOPPING\t-\tRunner is running, but not connected")
+            logging.warning("NOT_CONNECTED\t-\tRunner is running, but state was not connected")
             return
 
         if self.state == RunnerState.STOPPED:
             if ice_state != EngineState.STOPPED:
                 self.state = RunnerState.STOPPING
-                logging.warning("STOPPING\t-\tRunner is not stopped")
+                logging.warning("STOPPING\t-\tRunner is not stopped %s", ice_state.name)
             return
 
         if self.state == RunnerState.STOPPING:

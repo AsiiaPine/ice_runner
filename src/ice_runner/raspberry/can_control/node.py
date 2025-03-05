@@ -18,7 +18,7 @@ from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.common.device_manager import DeviceManager
 import yaml
 
-from common.ICEState import Health, ICEState, Mode
+from common.EngineState import Health, EngineStatus, Mode
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class CanNode:
     @classmethod
     def connect(cls) -> None:
         """The function establishes dronecan node and starts candump"""
-        cls.state: ICEState = ICEState()
+        cls.status: EngineStatus = EngineStatus()
         cls.node: Node = DronecanNode(node_id=100).node
         cls.transport = DeviceManager.get_device_port()
         cls.air_cmd = dronecan.uavcan.equipment.actuator.Command(
@@ -165,39 +165,39 @@ def fuel_tank_status_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles dronecan.uavcan.equipment.ice.FuelTankStatus"""
     CanNode.messages['uavcan.equipment.ice.FuelTankStatus'] = yaml.load(
                                                 dronecan.to_yaml(msg.message), yaml.BaseLoader)
-    CanNode.state.update_with_fuel_tank_status(msg)
+    CanNode.status.update_with_fuel_tank_status(msg)
     dump_msg(msg, "uavcan.equipment.ice.FuelTankStatus")
     logging.debug("MES\t-\tReceived fuel tank status")
 
 def raw_imu_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles uavcan.equipment.ahrs.RawIMU"""
-    CanNode.state.update_with_raw_imu(msg)
+    CanNode.status.update_with_raw_imu(msg)
     CanNode.messages['uavcan.equipment.ahrs.RawIMU'] = yaml.load(dronecan.to_yaml(msg.message),
                                                                 yaml.BaseLoader)
     CanNode.has_imu = True
-    if CanNode.state.engaged_time is None:
+    if CanNode.status.engaged_time is None:
         param_interface = ParametersInterface(
                                     CanNode.node.node_id, msg.message.source_node_id)
         param = param_interface.get("status.engaged_time")
-        CanNode.state.engaged_time = param.value
+        CanNode.status.engaged_time = param.value
     dump_msg(msg, "uavcan.equipment.ahrs.RawIMU")
     logging.debug("MES\t-\tReceived raw imu")
 
 def node_status_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles uavcan.protocol.NodeStatus"""
     logging.debug("MES\t-\tReceived node status")
-    CanNode.state.update_with_node_status(msg)
+    CanNode.status.update_with_node_status(msg)
     CanNode.messages['uavcan.protocol.NodeStatus'] = yaml.load(dronecan.to_yaml(msg.message),
                                                                yaml.BaseLoader)
     dump_msg(msg, "uavcan.protocol.NodeStatus")
 
 def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     """The function handles uavcan.equipment.ice.reciprocating.Status"""
-    CanNode.state.update_with_resiprocating_status(msg)
+    CanNode.status.update_with_resiprocating_status(msg)
     CanNode.messages['uavcan.equipment.ice.reciprocating.Status'] = yaml.load(
                                                 dronecan.to_yaml(msg.message), yaml.BaseLoader)
     dump_msg(msg, "uavcan.equipment.ice.reciprocating.Status")
-    logging.debug("MES\t-\tReceived ICE reciprocating status")
+    logging.info("MES\t-\tReceived ICE reciprocating status")
 
 def start_dronecan_handlers() -> None:
     """The function starts all handlers for dronecan messages"""
