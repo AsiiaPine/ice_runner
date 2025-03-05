@@ -44,22 +44,21 @@ def handle_raspberry_pi_state(client: Client, userdata,  msg):
 def handle_raspberry_pi_configuration(client: Client, userdata,  msg):
     """The function transmit configuration messages from Raspberry Pi to Bot"""
     del userdata
-    config = json.loads(msg.payload.decode())
+    config = (msg.payload.decode())
     rp_id = int(msg.topic.split("/")[2])
-    logging.info("Received\t| Raspberry Pi %d configuration", rp_id)
+    logging.info("Received\t| Raspberry Pi %d configuration", config)
     ServerMqttClient.rp_configuration[rp_id] = config
-    client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/config",
-                   msg.payload.decode())
+    client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/config", config)
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/full_config")
 def handle_raspberry_pi_full_config(client: Client, userdata,  msg):
     """The function transmit full configuration messages from Raspberry Pi to Bot"""
     del userdata
     rp_id = int(msg.topic.split("/")[2])
+    config = (msg.payload.decode())
     logging.info("Received\t| Raspberry Pi %d full configuration", rp_id)
-    ServerMqttClient.rp_full_configuration[rp_id] = json.loads(msg.payload.decode())
-    client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/full_config",
-                   msg.payload.decode())
+    ServerMqttClient.rp_full_configuration[rp_id] = config
+    client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/full_config", config)
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/log")
 def handle_raspberry_pi_log(client: Client, userdata,  msg):

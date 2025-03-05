@@ -4,9 +4,10 @@ import secrets
 import time
 
 import pytest
-from common.ICEState import ICEState, EngineState
-from common.IceRunnerConfiguration import IceRunnerConfiguration
-from common.RunnerState import RunnerState, RunnerStateController
+from raspberry.can_control.EngineState import EngineStatus, EngineState
+from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from common.RunnerState import RunnerState
+from raspberry.can_control.RunnerStateController import RunnerStateController
 from raspberry.can_control.ice_commander import ExceedanceTracker, ICERunnerMode
 
 logger = logging.getLogger()
@@ -25,8 +26,8 @@ class BaseTest():
     def setup_method(self, test_method):
         self.ex_tracker: ExceedanceTracker = ExceedanceTracker()
         self.make_config()
-        self.state = ICEState()
-        self.config = IceRunnerConfiguration(dict_conf=self.config_dict)
+        self.state = EngineStatus()
+        self.config = RunnerConfiguration(dict_conf=self.config_dict)
         self.runner_state = RunnerStateController()
         self.runner_state.state = RunnerState.STOPPED
         self.runner_state.prev_state = RunnerState.STOPPED
@@ -34,9 +35,9 @@ class BaseTest():
 
     def make_config(self):
         config = {}
-        for name in IceRunnerConfiguration.attribute_names:
+        for name in RunnerConfiguration.attribute_names:
             config[name] = {}
-            for component in IceRunnerConfiguration.components:
+            for component in RunnerConfiguration.components:
                 config[name][component] = ""
             config[name]["type"] = "int"
             config[name]["value"] = 0
@@ -79,7 +80,7 @@ class TestNotStarted(BaseTest):
         candump_task.assert_called_once()
 
     def test_not_started(self):
-        self.state.ice_state = EngineState.STOPPED
+        self.state.state = EngineState.STOPPED
         assert not self.ex_tracker.check(
             self.state, self.config, self.runner_state, self.start_time)
 
@@ -109,7 +110,7 @@ class TestNotStarted(BaseTest):
 class TestStarting(BaseTest):
     def setup_method(self, test_method):
         super().setup_method(test_method)
-        self.config = IceRunnerConfiguration(dict_conf=self.config_dict)
+        self.config = RunnerConfiguration(dict_conf=self.config_dict)
         self.runner_state.state = RunnerState.STARTING
         self.start_time = time.time()
         self.config.start_attemts = 1

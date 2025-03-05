@@ -10,7 +10,7 @@ import dronecan
 import numpy as np
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 
-from common.ICEState import Health, Mode, EngineState
+from raspberry.can_control.EngineState import Health, Mode, EngineState
 from ice_sim.test_commander import ICE_AIR_CHANNEL, ICE_CMD_CHANNEL
 
 class Engine:

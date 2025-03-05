@@ -19,13 +19,10 @@ from aiogram.fsm.strategy import FSMStrategy
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (
     Message,
     ReplyKeyboardRemove,
-    FSInputFile,
 )
-import yaml
 
 from bot.mqtt.client import MqttClient
 from bot.telegram.filters import ChatIdFilter

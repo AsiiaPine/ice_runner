@@ -8,7 +8,7 @@ from functools import partial
 from threading import Event
 from paho.mqtt.enums import CallbackAPIVersion
 from paho.mqtt.client import Client
-from common.IceRunnerConfiguration import IceRunnerConfiguration
+from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 from raspberry.mqtt.handlers import MqttClient, add_handlers
 
 
@@ -33,7 +33,7 @@ class BaseTest():
     def setup_method(self, test_method):
         self.mqtt = MQTTClient()
         self.make_config()
-        MqttClient.configuration = IceRunnerConfiguration(dict_conf=self.config_dict)
+        MqttClient.configuration = RunnerConfiguration(dict_conf=self.config_dict)
 
         self.stream_handler = logging.StreamHandler(sys.stdout)
         logger.addHandler(self.stream_handler)
@@ -45,9 +45,9 @@ class BaseTest():
 
     def make_config(self):
         config = {}
-        for name in IceRunnerConfiguration.attribute_names:
+        for name in RunnerConfiguration.attribute_names:
             config[name] = {}
-            for component in IceRunnerConfiguration.components:
+            for component in RunnerConfiguration.components:
                 config[name][component] = ""
             config[name]["type"] = "int"
             config[name]["value"] = 1

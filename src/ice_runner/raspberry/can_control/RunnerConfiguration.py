@@ -19,7 +19,7 @@ class MyDumper(yaml.SafeDumper):
         if len(self.indents) == 1:
             super().write_line_break()
 
-class IceRunnerConfiguration:
+class RunnerConfiguration:
     """The class is used to define the configuration of the ICE runner"""
     attribute_names = ["mode", "rpm", "time", "gas_throttle_pct", "air_throttle_pct",
                        "min_gas_throttle_pct", "max_gas_throttle_pct", "report_period", "control_pid_p",
