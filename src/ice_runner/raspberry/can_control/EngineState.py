@@ -81,7 +81,7 @@ class EngineStatus:
     def to_dict(self) -> Dict[str, Any]:
         vars_dict = copy.deepcopy(vars(self))
 
-        vars_dict["ice_state"] = self.state.name
+        vars_dict["state"] = self.state.name
         vars_dict["mode"] = self.mode.name
         vars_dict["health"] = self.health.name
         return vars_dict

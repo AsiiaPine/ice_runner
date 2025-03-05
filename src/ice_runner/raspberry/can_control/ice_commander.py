@@ -16,7 +16,8 @@ from raspberry.can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL)
 from raspberry.can_control.modes import BaseMode, ICERunnerMode
 from raspberry.can_control.EngineState import EngineStatus, EngineState
-from common.RunnerState import RunnerState, RunnerStateController
+from raspberry.can_control.RunnerStateController import RunnerStateController
+from common.RunnerState import RunnerState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 if os.path.exists("/proc/device-tree/model"):
     from RPi import GPIO # Import Raspberry Pi GPIO library
