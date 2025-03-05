@@ -37,6 +37,9 @@ class RunnerStateController:
             return
 
         if self.state == RunnerState.STOPPED:
+            self.start_attempts = 0
+            self.prev_waiting_state_time = 0
+
             if engine_state != EngineState.STOPPED:
                 self.state = RunnerState.STOPPING
                 logging.warning("STOPPING\t-\tRunner is not stopped %s", engine_state.name)
@@ -67,7 +70,6 @@ class RunnerStateController:
                 print( time.time_ns() - prev_waiting, 4, prev_waiting, time.time())
                 logging.info("STARTING\t-\tStarted successfully")
                 self.state = RunnerState.RUNNING
-                self.prev_waiting_state_time = 0
                 return
 
             if engine_state == EngineState.STOPPED:

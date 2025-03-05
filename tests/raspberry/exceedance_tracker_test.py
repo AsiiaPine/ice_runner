@@ -41,7 +41,7 @@ class BaseTest():
                 config[name][component] = ""
             config[name]["type"] = "int"
             config[name]["value"] = 0
-        config["mode"]["value"] = 1
+        config["mode"]["value"] = 0
         self.config_dict = config
 
     def check_fuel_level(self):
