@@ -4,6 +4,7 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import asyncio
 import logging
 import os
 from typing import Dict
@@ -71,6 +72,7 @@ class Scheduler:
             except Exception as e:
                 await cls.bot.send_message(cls.CHAT_ID, f"Ошибка при отправке лога {name}: {e}")
                 logging.error("Error sending log %s: %s", name, e)
+            await asyncio.sleep(1)
         MqttClient.rp_logs[runner_id] = {}
 
     @classmethod
