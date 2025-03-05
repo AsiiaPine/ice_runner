@@ -20,11 +20,12 @@ class RunnerStateController:
 
     def update(self, engine_state: EngineState) -> None:
         """The function updates the state of the Runner"""
-        self.prev_state = self.state
         if engine_state == EngineState.NOT_CONNECTED:
-            logging.warning("NOT_CONNECTED\t-\tNo ICE connected")
             self.state = RunnerState.NOT_CONNECTED
+            self.prev_state = self.state
             return
+
+        self.prev_state = self.state
 
         if self.state == RunnerState.NOT_CONNECTED:
             if engine_state == EngineState.STOPPED:
