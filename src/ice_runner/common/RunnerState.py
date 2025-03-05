@@ -8,7 +8,7 @@ from enum import IntEnum
 import logging
 import time
 
-from common.EngineState import EngineState
+from raspberry.can_control.EngineState import EngineState
 
 class RunnerState(IntEnum):
     NOT_CONNECTED=-1

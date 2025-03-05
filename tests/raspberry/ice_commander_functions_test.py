@@ -12,7 +12,7 @@ from common.IceRunnerConfiguration import IceRunnerConfiguration
 import raspberry
 from raspberry.can_control.node import ICE_AIR_CHANNEL, CanNode
 from raspberry.can_control.ice_commander import ICECommander
-from common.EngineState import EngineStatus, EngineState
+from raspberry.can_control.EngineState import EngineStatus, EngineState
 
 logger = logging.getLogger()
 logger.level = logging.INFO

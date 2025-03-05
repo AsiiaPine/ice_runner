@@ -10,7 +10,7 @@ from typing import Callable, List, Tuple
 import dronecan
 from raccoonlab_tools.common.device_manager import DeviceManager
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-from common.EngineState import EngineStatus, EngineState
+from raspberry.can_control.EngineState import EngineStatus, EngineState
 from raspberry.can_control.node import (CanNode,
                                                    start_dronecan_handlers, stop_dronecan_handlers)
 from StoppableThread import StoppableThread

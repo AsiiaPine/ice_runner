@@ -18,7 +18,7 @@ from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.common.device_manager import DeviceManager
 import yaml
 
-from common.EngineState import Health, EngineStatus, Mode
+from raspberry.can_control.EngineState import Health, EngineStatus, Mode
 
 logger = logging.getLogger(__name__)
 

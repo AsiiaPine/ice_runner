@@ -15,7 +15,7 @@ from raspberry.mqtt.handlers import MqttClient
 from raspberry.can_control.node import (
     CanNode, start_dronecan_handlers, ICE_THR_CHANNEL)
 from raspberry.can_control.modes import BaseMode, ICERunnerMode
-from common.EngineState import EngineStatus, EngineState
+from raspberry.can_control.EngineState import EngineStatus, EngineState
 from common.RunnerState import RunnerState, RunnerStateController
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 if os.path.exists("/proc/device-tree/model"):

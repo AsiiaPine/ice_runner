@@ -4,7 +4,7 @@ import secrets
 import time
 
 import pytest
-from common.EngineState import EngineStatus, EngineState
+from raspberry.can_control.EngineState import EngineStatus, EngineState
 from common.IceRunnerConfiguration import IceRunnerConfiguration
 from common.RunnerState import RunnerState, RunnerStateController
 from raspberry.can_control.ice_commander import ExceedanceTracker, ICERunnerMode
