@@ -199,7 +199,6 @@ class ICECommander:
         if self.state_controller.state == RunnerState.STOPPED:
             self.exceedance_tracker.cleanup()
         self.set_can_command()
-        logging.info(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
         self.report_state()
         self.prev_state = self.state_controller
         if self.state_controller == RunnerState.STOPPED:
@@ -235,6 +234,13 @@ class ICECommander:
             logging.info("STOP\t-\tconditions exceeded")
             self.stop()
             return
+
+        if CanNode.status.state == EngineState.NOT_CONNECTED and\
+                                    self.state_controller.prev_state != RunnerState.NOT_CONNECTED:
+            logging.warning("%s\t-\tEngine disconnected", self.state_controller.prev_state.name)
+            MqttClient.publish_stop_reason("Engine Disconnected!")
+            self.stop()
+
         self.state_controller.update(CanNode.status.state)
         CanNode.status.start_attempts = self.state_controller.start_attempts
 
@@ -243,6 +249,7 @@ class ICECommander:
         if time.time() - self.prev_state_report_time > 0.5:
             MqttClient.publish_state(self.state_controller.state)
             self.prev_state_report_time = time.time()
+            logging.info(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
 
     def report_status(self) -> None:
         """The function reports status to MQTT broker"""
