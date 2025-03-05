@@ -15,7 +15,7 @@ import asyncio
 import argparse
 from dotenv import load_dotenv
 from raspberry.mqtt.handlers import MqttClient, add_handlers
-from raspberry.can_control.ice_commander import ICECommander
+from raspberry.can_control.IceCommander import ICECommander
 from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 from raspberry.can_control.node import CanNode
 from common import logging_configurator

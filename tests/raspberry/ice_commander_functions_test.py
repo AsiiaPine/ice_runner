@@ -11,7 +11,7 @@ from common.RunnerState import RunnerState
 from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 import raspberry
 from raspberry.can_control.node import ICE_AIR_CHANNEL, CanNode
-from raspberry.can_control.ice_commander import ICECommander
+from raspberry.can_control.IceCommander import ICECommander
 from raspberry.can_control.EngineState import EngineStatus, EngineState
 
 logger = logging.getLogger()

@@ -14,7 +14,7 @@ from common.RunnerState import RunnerState
 from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 from raspberry.can_control.node import (CanNode, start_dronecan_handlers,
                                                    stop_dronecan_handlers)
-from raspberry.can_control.ice_commander import ICECommander
+from raspberry.can_control.IceCommander import ICECommander
 from raspberry.can_control.EngineState import EngineState, EngineStatus
 from StoppableThread import StoppableThread
 
