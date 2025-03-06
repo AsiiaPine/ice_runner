@@ -15,13 +15,18 @@ class RunnerStateController:
     def __init__(self) -> None:
         self.state = RunnerState.NOT_CONNECTED
         self.prev_state = RunnerState.NOT_CONNECTED
-        self.prev_waiting_state_time = 0
+        self.last_starter_run_time = 0
         self.start_attempts = 0
 
     def update(self, engine_state: EngineState) -> None:
         """The function updates the state of the Runner"""
         if engine_state == EngineState.NOT_CONNECTED:
             self.state = RunnerState.NOT_CONNECTED
+            self.prev_state = self.state
+            return
+
+        if engine_state == EngineState.FAULT:
+            self.state = RunnerState.FAULT
             self.prev_state = self.state
             return
 
@@ -38,7 +43,7 @@ class RunnerStateController:
 
         if self.state == RunnerState.STOPPED:
             self.start_attempts = 0
-            self.prev_waiting_state_time = 0
+            self.last_starter_run_time = 0
 
             if engine_state != EngineState.STOPPED:
                 self.state = RunnerState.STOPPING
@@ -48,26 +53,27 @@ class RunnerStateController:
         if self.state == RunnerState.STOPPING:
             if engine_state == EngineState.STOPPED:
                 self.state = RunnerState.STOPPED
+                self.start_attempts = 0
+
                 logging.info("STOP\t-\tRunner stopped")
             return
 
         if self.state == RunnerState.STARTING:
-            prev_waiting = self.prev_waiting_state_time
-            if prev_waiting == 0:
-                self.prev_waiting_state_time = time.time()
+            last_starter_run_time = self.last_starter_run_time
+            if last_starter_run_time == 0:
+                self.last_starter_run_time = time.time()
                 return
 
-            if engine_state == EngineState.WAITING and \
-                        self.prev_waiting_state_time + 4 < time.time():
+            if engine_state == EngineState.STARTER_RUNNING and \
+                        last_starter_run_time + 4 < time.time():
                 self.start_attempts +=1
-                self.prev_waiting_state_time = time.time()
+                self.last_starter_run_time = time.time()
                 logging.info("STARTING\t-\tReceived waiting state")
                 return
 
-            if engine_state == EngineState.RUNNING\
-                    and time.time() - prev_waiting > 4\
-                    and self.prev_waiting_state_time > 0:
-                print( time.time_ns() - prev_waiting, 4, prev_waiting, time.time())
+            if engine_state == EngineState.STARTER_WAITING\
+                    and time.time() - last_starter_run_time > 4\
+                    and last_starter_run_time > 0:
                 logging.info("STARTING\t-\tStarted successfully")
                 self.state = RunnerState.RUNNING
                 return
@@ -76,13 +82,13 @@ class RunnerStateController:
                 return
 
         if self.state == RunnerState.RUNNING:
-            if engine_state == EngineState.WAITING:
+            if engine_state == EngineState.STARTER_RUNNING:
                 self.state = RunnerState.STARTING
-                self.prev_waiting_state_time = time.time()
+                self.last_starter_run_time = time.time()
 
                 logging.info("RUNNING\t-\tReceived waiting state")
                 return
-            if engine_state == EngineState.RUNNING:
+            if engine_state == EngineState.STARTER_WAITING:
                 return
             if engine_state == EngineState.STOPPED:
                 self.state = RunnerState.STARTING

@@ -25,8 +25,8 @@ class Health(IntEnum):
 class EngineState(IntEnum):
     NOT_CONNECTED = -1
     STOPPED = 0
-    RUNNING = 1
-    WAITING = 2
+    STARTER_RUNNING = 1
+    STARTER_WAITING = 2
     FAULT = 3
 
 class EngineStatus:

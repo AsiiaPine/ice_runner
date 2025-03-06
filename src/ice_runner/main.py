@@ -18,7 +18,7 @@ if command.command == 'bot':
     start(command.log_dir, rem)
 
 elif command.command == 'sim':
-    from ice_sim.test_commander import start
+    from ice_sim.simple_sim import start
     start(rem)
 
 elif command.command == 'client':

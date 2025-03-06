@@ -46,7 +46,6 @@ class BaseMode:
                             * (MAX_AIR_CMD - MIN_AIR_CMD) + MIN_AIR_CMD)
 
     def get_command(self, run_state: RunnerState, **kwargs) -> List[int]:
-        # print(f"\n\n\n\n {run_state.name}")
         if run_state == RunnerState.RUNNING:
             return self.get_running_command(**kwargs)
         if run_state == RunnerState.STARTING:
@@ -57,7 +56,7 @@ class BaseMode:
         raise NotImplementedError
 
     def get_zero_command(self):
-        return [0, -1]
+        return [-1, self.air_throttle]
 
     def get_starting_command(self):
         return [self.gas_throttle, self.air_throttle]
