@@ -173,7 +173,7 @@ class TestResipUpdate(BaseTest):
                                    lambda: CanNode.status.state == state,
                                    timeout=timeout)
         assert res
-        state = EngineState.RUNNING
+        state = EngineState.STARTER_RUNNING
         tasks = [(lambda x: x.node.broadcast(dronecan.uavcan.equipment.ice.reciprocating.Status(state=state.value)), 0.5)]
         res = await self.spin_nodes_with_tasks(tasks,
                                    lambda: CanNode.status.state==state,

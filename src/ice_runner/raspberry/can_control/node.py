@@ -43,6 +43,9 @@ class CanNode:
     messages: Dict[str, Any] = {}
     candump_task: asyncio.Task = None
     candump_filename: str = None
+    last_sync_time = 0
+    last_message_receive_time = 0
+
     @classmethod
     def connect(cls) -> None:
         """The function establishes dronecan node and starts candump"""
@@ -60,8 +63,6 @@ class CanNode:
         cls.messages: Dict[str, Any] = {}
         cls.can_output_dict_writers: Dict[str, csv.DictWriter] = {}
         cls.change_file()
-        cls.last_sync_time = 0
-        cls.last_message_receive_time = 0
         cls.has_imu = False
 
     @classmethod
@@ -74,6 +75,18 @@ class CanNode:
             cls.node.broadcast(dronecan.uavcan.equipment.actuator.ArrayCommand(
                                                                         commands = [cls.air_cmd]))
             cls.save_file()
+
+    @classmethod
+    def start_dump(cls) -> None:
+        """The function restarts dumping"""
+        cls.change_file()
+        cls.run_candump()
+
+    @classmethod
+    def stop_dump(cls) -> None:
+        """The function stops dumping"""
+        cls.stop_candump()
+        cls.save_file()
 
     @classmethod
     def save_file(cls) -> None:

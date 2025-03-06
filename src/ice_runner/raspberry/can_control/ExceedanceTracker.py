@@ -111,8 +111,9 @@ class ExceedanceTracker:
         self.vin = configuration.min_vin_voltage > state.voltage_in
         self.temp = configuration.max_temperature < state.temp
         self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
-        if state_controller.state > RunnerState.STARTING:
-            assert state_controller.start_attempts == 0
+        if state_controller.state == RunnerState.STOPPED:
+            assert state_controller.start_attempts == 0, f"{state_controller.state.name}\
+                {state_controller.start_attempts}"
             return self.check_not_started(state)
 
         return self.check_running(state, configuration, start_time, state_controller)

@@ -64,16 +64,10 @@ class ICECommander:
                 logging.error(f"{e}\n{traceback.format_exc()}")
                 continue
 
-    def stop(self, to_change_file = True) -> None:
+    def stop(self) -> None:
         """The function stops the ICE runner and resets the runner state"""
         self.state_controller.state = RunnerState.STOPPING
         MqttClient.to_stop = 0
-        CanNode.save_file()
-        self.send_log()
-        CanNode.stop_candump()
-        if to_change_file:
-            CanNode.change_file()
-            CanNode.run_candump()
         self.start_time = 0
 
     async def spin(self) -> None:
@@ -100,7 +94,8 @@ class ICECommander:
     def on_keyboard_interrupt(self):
         """The function is called when KeyboardInterrupt is 
             received and inform MQTT server about the exception"""
-        self.stop(to_change_file=False)
+        self.stop()
+        CanNode.stop_dump()
         MqttClient.publish_stop_reason("Received KeyboardInterrupt")
         raise asyncio.CancelledError
 
@@ -135,13 +130,18 @@ class ICECommander:
 
         self.state_controller.update(CanNode.status.state)
         CanNode.status.start_attempts = self.state_controller.start_attempts
+        if self.state_controller.state == RunnerState.STOPPED\
+            and self.state_controller.prev_state != RunnerState.STOPPED:
+            CanNode.stop_dump()
+            self.send_log()
+            CanNode.start_dump()
 
     def report_state(self) -> None:
         """The function reports state to MQTT broker"""
         if time.time() - self.prev_state_report_time > 0.5:
             MqttClient.publish_state(self.state_controller.state)
             self.prev_state_report_time = time.time()
-            logging.info(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
+            # logging.info(f"CMD\t-\t{list(CanNode.cmd.cmd)}")
 
     def report_status(self) -> None:
         """The function reports status to MQTT broker"""

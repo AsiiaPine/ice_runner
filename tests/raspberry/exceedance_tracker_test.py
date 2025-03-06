@@ -75,7 +75,7 @@ class TestNotStarted(BaseTest):
     def test_not_started_call(self, mocker):
 
         candump_task = mocker.patch(
-            'raspberry.can_control.ice_commander.ExceedanceTracker.check_not_started')
+            'raspberry.can_control.IceCommander.ExceedanceTracker.check_not_started')
         self.ex_tracker.check(self.state, self.config, self.runner_state, self.start_time)
         candump_task.assert_called_once()
 
@@ -119,7 +119,7 @@ class TestStarting(BaseTest):
     def test_running_call(self, mocker):
         """ExceedanceTracker should use check_running method if the state is STARTING"""
         candump_task = mocker.patch(
-            'raspberry.can_control.ice_commander.ExceedanceTracker.check_running')
+            'raspberry.can_control.IceCommander.ExceedanceTracker.check_running')
         self.ex_tracker.check(self.state, self.config, self.runner_state, self.start_time)
         candump_task.assert_called_once()
 

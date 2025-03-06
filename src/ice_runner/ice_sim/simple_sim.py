@@ -22,23 +22,27 @@ class Engine:
 
     def update(self, cmd: int, air_cmd: int) -> None:
         del air_cmd
-        if cmd == 0:
+        if cmd <= 0:
             self.state = EngineState.STOPPED
             self.rpm = 0
-            return
-        if self.n_tries > 2:
-            self.rpm = cmd + np.sin((time.time() % 1000) * np.pi / 1000) * 500
-            self.state = EngineState.RUNNING
+            self.n_tries = 0
+            self.prev_time = 0
             return
 
-        if time.time() - self.prev_time > 1.5:
+        if self.n_tries > 3:
+            self.rpm = cmd + np.sin((time.time() % 1000) * np.pi / 1000) * 500
+            self.state = EngineState.STARTER_WAITING
+            return
+
+        if time.time() - self.prev_time > 5:
             if self.rpm > 0:
                 self.prev_time = time.time()
-                self.state = EngineState.WAITING
+                self.state = EngineState.STARTER_WAITING
                 self.rpm = 0
                 print("WAITING")
                 return
-            self.state = EngineState.RUNNING
+
+            self.state = EngineState.STARTER_RUNNING
             self.rpm = 3000
             self.n_tries += 1
             self.prev_time = time.time()
@@ -121,10 +125,12 @@ def get_air_cmd(res: dronecan.node.TransferEvent) -> None:
             ICENODE.air_throttle = int(max(1000, min(cmd, 2000)) / 100)
             ICENODE.air_cmd = cmd
 
-
-if __name__ == "__main__":
+def start(args: list['str'] = None) -> None:
     node = ICENODE()
     node.node.node.add_handler(dronecan.uavcan.equipment.esc.RawCommand, get_raw_command)
     node.node.node.add_handler(dronecan.uavcan.equipment.actuator.ArrayCommand, get_air_cmd)
     while True:
         node.spin()
+
+if __name__ == "__main__":
+    start()
