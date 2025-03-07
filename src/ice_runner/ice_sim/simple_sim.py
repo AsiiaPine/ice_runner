@@ -10,9 +10,9 @@ import time
 import dronecan
 import numpy as np
 from raccoonlab_tools.dronecan.global_node import DronecanNode
-
+from raspberry.can_control.node import ICE_AIR_CHANNEL
+from raspberry.can_control.modes import MAX_AIR_CMD, MIN_AIR_CMD
 from raspberry.can_control.EngineState import Health, Mode, EngineState
-from ice_sim.test_commander import ICE_AIR_CHANNEL, ICE_CMD_CHANNEL
 
 class Engine:
     def __init__(self, max_n_tries: int = 3):
@@ -32,7 +32,7 @@ class Engine:
             return
 
         if self.n_tries > self.max_n_tries:
-            self.rpm = cmd + np.sin((time.time() % 1000) * np.pi / 1000) * 500
+            self.rpm = cmd
             self.state = EngineState.STARTER_WAITING
             return
 
@@ -112,9 +112,9 @@ class ICENODE:
             self.node.publish(dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=0))
 
 def get_raw_command(res: dronecan.node.TransferEvent) -> None:
-    if len(res.message.cmd) < ICE_CMD_CHANNEL:
+    if len(res.message.cmd) < 7:
         return
-    cmd = res.message.cmd[ICE_CMD_CHANNEL]
+    cmd = res.message.cmd[7]
     ICENODE.command = cmd
     ICENODE.gas_throttle = int(max(0, min(cmd, 6000)) / 100)
 
