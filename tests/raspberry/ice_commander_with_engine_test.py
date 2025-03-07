@@ -14,7 +14,7 @@ from common.RunnerState import RunnerState
 from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 from raspberry.can_control.node import (CanNode, start_dronecan_handlers,
                                                    stop_dronecan_handlers)
-from raspberry.can_control.ice_commander import ICECommander
+from raspberry.can_control.IceCommander import ICECommander
 from raspberry.can_control.EngineState import EngineState, EngineStatus
 from StoppableThread import StoppableThread
 
@@ -128,7 +128,7 @@ class BaseTest():
         logging.info(f"res {res}, tested_expression: {tested_expression()}")
         return res
 
-    def setup_cannode(self, mocker, can_node_status=EngineState.NOT_CONNECTED):
+    def setup_cannode(self, mocker, engine_status=EngineState.NOT_CONNECTED):
         mocker.patch("raspberry.can_control.node.CanNode.change_file")
         mocker.patch("raspberry.can_control.node.CanNode.run_candump")
         mocker.patch("raspberry.can_control.node.CanNode.stop_candump")
@@ -136,8 +136,8 @@ class BaseTest():
         CanNode.connect()
         start_dronecan_handlers()
         CanNode.spin()
-        if can_node_status != EngineState.NOT_CONNECTED:
-            CanNode.status.state = can_node_status
+        if engine_status != EngineState.NOT_CONNECTED:
+            CanNode.status.state = engine_status
             CanNode.last_message_receive_time = time.time()
         return mocker
 
@@ -201,7 +201,7 @@ class TestNotConnectedState(BaseTest):
     async def test_running_state(self, mocker):
         mocker = self.setup_cannode(mocker)
         mocker = self.mock_required(mocker)
-        self.engine_simulator.recip_status_message.state = EngineState.RUNNING.value
+        self.engine_simulator.recip_status_message.state = EngineState.STARTER_RUNNING.value
         tasks = [(lambda x: x.node.node.broadcast(x.recip_status_message), 1)]
         res = await self.spin_engine_with_tasks(tasks,
                             lambda: self.commander.state_controller.state == RunnerState.STOPPING,
@@ -212,7 +212,7 @@ class TestNotConnectedState(BaseTest):
     async def test_wating_state(self, mocker):
         mocker = self.setup_cannode(mocker)
         mocker = self.mock_required(mocker)
-        self.engine_simulator.recip_status_message.state = EngineState.WAITING.value
+        self.engine_simulator.recip_status_message.state = EngineState.STARTER_WAITING.value
         tasks = [(lambda x: x.node.node.broadcast(x.recip_status_message), 2)]
         res = await self.spin_engine_with_tasks(tasks,
                             lambda: self.commander.state_controller.state == RunnerState.STOPPING,
@@ -229,7 +229,7 @@ class TestStoppedState(BaseTest):
     @pytest.mark.asyncio()
     async def test_not_connected_state(self, mocker):
         mocker = self.mock_required(mocker)
-        mocker = self.setup_cannode(mocker, can_node_status=EngineState.STOPPED)
+        mocker = self.setup_cannode(mocker, engine_status=EngineState.STOPPED)
 
         logging.info(
             f"res: {self.commander.state_controller.state.name}, {CanNode.status.state.name}, {self.engine_simulator.recip_status_message.state}")
@@ -250,10 +250,10 @@ class TestRunningState(BaseTest):
     @pytest.mark.asyncio()
     async def test_stopped_state(self, mocker):
         mocker = self.mock_required(mocker)
-        mocker = self.setup_cannode(mocker, can_node_status=EngineState.RUNNING)
+        mocker = self.setup_cannode(mocker, engine_status=EngineState.STARTER_RUNNING)
 
         assert CanNode.last_message_receive_time != 0
-        assert CanNode.status.state == EngineState.RUNNING
+        assert CanNode.status.state == EngineState.STARTER_RUNNING
         self.engine_simulator.recip_status_message.state = EngineState.STOPPED.value
         tasks = [(lambda x: x.node.node.broadcast(x.recip_status_message), 1),
                  (lambda x: (x.set_state(EngineState.STOPPED.value)), 0.5)]
@@ -263,26 +263,26 @@ class TestRunningState(BaseTest):
         assert res
 
     @pytest.mark.asyncio()
-    async def test_running_state(self, mocker):
+    async def test_starter_running_state(self, mocker):
         mocker = self.mock_required(mocker)
-        mocker = self.setup_cannode(mocker, can_node_status=EngineState.RUNNING)
+        mocker = self.setup_cannode(mocker, engine_status=EngineState.STARTER_RUNNING)
 
-        self.engine_simulator.recip_status_message.state = EngineState.RUNNING.value
+        self.engine_simulator.recip_status_message.state = EngineState.STARTER_RUNNING.value
         tasks = [(lambda x: x.node.node.broadcast(x.recip_status_message), 1),
-                 (lambda x: x.set_state(EngineState.RUNNING.value), 1)]
+                 (lambda x: x.set_state(EngineState.STARTER_RUNNING.value), 1)]
         res = await self.spin_engine_with_tasks(tasks,
-                            lambda: self.commander.state_controller.state == RunnerState.RUNNING,
+                            lambda: self.commander.state_controller.state == RunnerState.STARTING,
                             timeout=self.timeout)
         assert res
 
     @pytest.mark.asyncio()
-    async def test_wating_state(self, mocker):
+    async def test_starter_waiting_state(self, mocker):
         mocker = self.mock_required(mocker)
-        mocker = self.setup_cannode(mocker, can_node_status=EngineState.RUNNING)
-        self.engine_simulator.recip_status_message.state = EngineState.WAITING.value
+        mocker = self.setup_cannode(mocker, engine_status=EngineState.STARTER_WAITING)
+        self.engine_simulator.recip_status_message.state = EngineState.STARTER_WAITING.value
         tasks = [(lambda x: x.node.node.broadcast(x.recip_status_message), 2)]
         res = await self.spin_engine_with_tasks(tasks,
-                            lambda: self.commander.state_controller.state == RunnerState.STARTING,
+                            lambda: self.commander.state_controller.state == RunnerState.RUNNING,
                             timeout=self.timeout)
         assert res
 

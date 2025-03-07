@@ -46,7 +46,7 @@ def handle_raspberry_pi_configuration(client: Client, userdata,  msg):
     del userdata
     config = (msg.payload.decode())
     rp_id = int(msg.topic.split("/")[2])
-    logging.info("Received\t| Raspberry Pi %d configuration", config)
+    logging.info("Received\t| Raspberry Pi %d configuration", rp_id)
     ServerMqttClient.rp_configuration[rp_id] = config
     client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/config", config)
 

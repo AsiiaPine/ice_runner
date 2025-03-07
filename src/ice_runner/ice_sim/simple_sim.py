@@ -5,6 +5,7 @@
 
 '''The script is used to simulate the ICE node'''
 
+import argparse
 import time
 import dronecan
 import numpy as np
@@ -14,31 +15,36 @@ from raspberry.can_control.EngineState import Health, Mode, EngineState
 from ice_sim.test_commander import ICE_AIR_CHANNEL, ICE_CMD_CHANNEL
 
 class Engine:
-    def __init__(self):
+    def __init__(self, max_n_tries: int = 3):
         self.state = EngineState.STOPPED
         self.rpm = 0
         self.n_tries = 0
         self.prev_time = 0 
+        self.max_n_tries = max_n_tries
 
     def update(self, cmd: int, air_cmd: int) -> None:
         del air_cmd
-        if cmd == 0:
+        if cmd <= 0:
             self.state = EngineState.STOPPED
             self.rpm = 0
-            return
-        if self.n_tries > 2:
-            self.rpm = cmd + np.sin((time.time() % 1000) * np.pi / 1000) * 500
-            self.state = EngineState.RUNNING
+            self.n_tries = 0
+            self.prev_time = 0
             return
 
-        if time.time() - self.prev_time > 1.5:
+        if self.n_tries > self.max_n_tries:
+            self.rpm = cmd + np.sin((time.time() % 1000) * np.pi / 1000) * 500
+            self.state = EngineState.STARTER_WAITING
+            return
+
+        if time.time() - self.prev_time > 5:
             if self.rpm > 0:
                 self.prev_time = time.time()
-                self.state = EngineState.WAITING
+                self.state = EngineState.STARTER_WAITING
                 self.rpm = 0
                 print("WAITING")
                 return
-            self.state = EngineState.RUNNING
+
+            self.state = EngineState.STARTER_RUNNING
             self.rpm = 3000
             self.n_tries += 1
             self.prev_time = time.time()
@@ -52,7 +58,7 @@ class ICENODE:
     gas_throttle: int = 0
     air_throttle: int = 0
 
-    def __init__(self) -> None:
+    def __init__(self, max_n_tries: int = 3) -> None:
         self.node = DronecanNode(node_id= 101)
         self.dt = 0.05
         self.rpm = 0
@@ -71,7 +77,7 @@ class ICENODE:
         self.node.node.mode = Mode.MODE_OPERATIONAL
         self.node.node.health = Health.HEALTH_OK
         self.prev_broadcast_time = 0
-        self.engine = Engine()
+        self.engine = Engine(max_n_tries=max_n_tries)
 
     def create_ice_reciprocating_status(self) -> dronecan.uavcan.equipment.ice.reciprocating.Status:
         return dronecan.uavcan.equipment.ice.reciprocating.Status(
@@ -121,10 +127,20 @@ def get_air_cmd(res: dronecan.node.TransferEvent) -> None:
             ICENODE.air_throttle = int(max(1000, min(cmd, 2000)) / 100)
             ICENODE.air_cmd = cmd
 
+def start(args: list['str'] = None) -> None:
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        description='Raspberry Pi CAN node which simulates combustion engine')
+    parser.add_argument("--n_tries",
+                        default=3,
+                        type=int,
+                        help="number of tries to start the engine")
 
-if __name__ == "__main__":
-    node = ICENODE()
+    args: argparse.Namespace = parser.parse_args(args)
+    node = ICENODE(max_n_tries=args.n_tries)
     node.node.node.add_handler(dronecan.uavcan.equipment.esc.RawCommand, get_raw_command)
     node.node.node.add_handler(dronecan.uavcan.equipment.actuator.ArrayCommand, get_air_cmd)
     while True:
         node.spin()
+
+if __name__ == "__main__":
+    start()
