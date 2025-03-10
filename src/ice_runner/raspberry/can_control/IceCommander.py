@@ -60,6 +60,9 @@ class ICECommander:
                 await self.spin()
             except asyncio.CancelledError:
                 self.on_keyboard_interrupt()
+            except KeyboardInterrupt:
+                self.on_keyboard_interrupt()
+                raise asyncio.CancelledError
             except Exception as e:
                 logging.error(f"{e}\n{traceback.format_exc()}")
                 continue
@@ -97,6 +100,7 @@ class ICECommander:
         self.stop()
         CanNode.stop_dump()
         MqttClient.publish_stop_reason("Received KeyboardInterrupt")
+        self.send_log()
         raise asyncio.CancelledError
 
     def check_conditions(self) -> int:

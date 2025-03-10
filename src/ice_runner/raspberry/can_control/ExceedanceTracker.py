@@ -70,7 +70,8 @@ class ExceedanceTracker:
             return
 
         if configuration.mode == ICERunnerMode.PID:
-            self.rpm = not(configuration.rpm - 500 < state.rpm < configuration.rpm + 500)
+            if state_controller.state == RunnerState.RUNNING:
+                self.rpm = not(configuration.rpm - 1500 < state.rpm < configuration.rpm + 1500)
             return
 
         if configuration.mode == ICERunnerMode.RPM:
