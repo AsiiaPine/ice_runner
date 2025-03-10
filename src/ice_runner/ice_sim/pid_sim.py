@@ -102,7 +102,9 @@ class ICENODE:
         if cmd <= 0:
             self.engine.rpm = 0
             print(self.engine.rpm)
+            self.engine.state = EngineState.STOPPED
             return
+        self.engine.state = EngineState.STARTER_WAITING
         self.engine.rpm = 16000/(1+np.exp(1/(16*(cmd/8000)**2)))
         print(self.engine.rpm)
 
