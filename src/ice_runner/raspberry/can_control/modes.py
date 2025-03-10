@@ -126,6 +126,7 @@ class PIDController:
     def get_pid_command(self, val: int) -> int:
         """The function calculates PID command"""
         dt = time.time() - self.prev_time
+        print(dt)
         error = self.target_value - val
         drpm = (error - self.prev_error) / dt
         self.integral += self.coeffs["ki"] * error * (dt)
@@ -135,8 +136,12 @@ class PIDController:
         diff_part = self.coeffs["kd"] * drpm
         int_part = self.coeffs["ki"] * self.integral
         pos_part = self.coeffs["kp"] * error
+        print(pos_part)
         return self.target_value + pos_part + diff_part + int_part
 
-    def change_coeffs(self, coeffs: Dict[str, float]) -> None:
+    def update_configuration(self, configuration: RunnerConfiguration) -> None:
         """The function changes the coefficients of the PID controller"""
-        self.coeffs = coeffs
+        super().update_configuration(configuration)
+        self.coeffs: Dict[str, float] = {"kp": configuration.control_pid_p,
+                                         "ki": configuration.control_pid_i,
+                                         "kd": configuration.control_pid_d}
