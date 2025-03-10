@@ -99,10 +99,10 @@ class ICENODE:
 
     def func(self):
         cmd = ICENODE.command
-        if cmd == 0:
+        if cmd <= 0:
             self.engine.rpm = 0
             return
-        self.engine.rpm = int(np.log((cmd)))
+        self.engine.rpm = 16000/(1+np.exp(1/(16*(cmd/8000)**2))) 
 
     def spin(self) -> None:
         self.node.node.spin(0)
@@ -117,7 +117,7 @@ class ICENODE:
             self.node.publish(dronecan.uavcan.equipment.ahrs.RawIMU(integration_interval=0))
 
 def get_raw_command(res: dronecan.node.TransferEvent) -> None:
-    if len(res.message.cmd) < ICE_CMD_CHANNEL:
+    if len(res.message.cmd) < ICE_CMD_CHANNEL - 1:
         return
     cmd = res.message.cmd[ICE_CMD_CHANNEL]
     ICENODE.command = cmd
