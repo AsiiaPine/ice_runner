@@ -30,5 +30,5 @@ elif command.command == 'srv':
     start(command.log_dir, rem)
 
 elif command.command == 'pid_sim':
-    from ice_sim.pid_check import start
+    from ice_sim.pid_sim import start
     start(rem)

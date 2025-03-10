@@ -127,11 +127,13 @@ class ICECommander:
             logging.warning("%s\t-\tEngine disconnected", self.state_controller.prev_state.name)
             MqttClient.publish_stop_reason("Engine Disconnected!")
             self.stop()
+            self.send_log()
+            CanNode.start_dump()
 
         self.state_controller.update(CanNode.status.state)
         CanNode.status.start_attempts = self.state_controller.start_attempts
         if self.state_controller.state == RunnerState.STOPPED\
-            and self.state_controller.prev_state != RunnerState.STOPPED:
+            and self.state_controller.prev_state == RunnerState.STOPPING:
             CanNode.stop_dump()
             self.send_log()
             CanNode.start_dump()
