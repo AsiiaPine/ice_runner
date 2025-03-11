@@ -13,6 +13,7 @@ from aiogram.types import FSInputFile
 from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from bot.mqtt.client import MqttClient
+from bot.telegram.helper import send_media_group
 from common.RunnerState import RunnerState
 
 class Scheduler:
@@ -45,7 +46,7 @@ class Scheduler:
             if runner stops"""
         if runner_id not in MqttClient.rp_logs:
             return
-        await cls.send_log(runner_id=runner_id)
+        await cls._send_logs(runner_id=runner_id)
         MqttClient.rp_logs.pop(runner_id)
         if runner_id not in MqttClient.rp_stop_handlers:
             return
@@ -56,23 +57,37 @@ class Scheduler:
         MqttClient.rp_states.pop(runner_id)
 
     @classmethod
-    async def send_log(cls, runner_id):
+    async def _send_logs(cls, runner_id: int):
         """The function sends logs to the specified RPi"""
         log_files: Dict = MqttClient.rp_logs[runner_id]
         if not log_files:
             return
+
+        all_logs_are_good = True
+        for log_file in log_files.values():
+            if os.stat(log_file).st_size == 0:
+                all_logs_are_good = False
+                break
+
+        if all_logs_are_good:
+            caption = "Обкатка завершена успешно."
+        else:
+            caption = "Обкатка завершена. Запись следующих логов не удалась:\n"
+
+        files = []
         for name, log_file in log_files.items():
-            try:
-                if os.stat(log_file).st_size == 0:
-                    logging.warning("Empty log %s", name)
-                    await cls.bot.send_message(cls.CHAT_ID, f"Файл {name} пустой")
-                    continue
-                log = FSInputFile(log_file)
-                await cls.bot.send_document(cls.CHAT_ID, document=log, caption=name)
-            except Exception as e:
-                await cls.bot.send_message(cls.CHAT_ID, f"Ошибка при отправке лога {name}: {e}")
-                logging.error("Error sending log %s: %s", name, e)
-            await asyncio.sleep(1)
+            if os.stat(log_file).st_size > 0:
+                files.append(log_file)
+            else:
+                caption += f"- {name}\n"
+
+        send_media_group(
+            telegram_bot_token=os.getenv("BOT_TOKEN"),
+            telegram_chat_id=os.getenv("CHAT_ID"),
+            files=files,
+            caption=caption
+        )
+
         MqttClient.rp_logs[runner_id] = {}
 
     @classmethod
