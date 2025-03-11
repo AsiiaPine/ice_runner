@@ -258,8 +258,10 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     params_dict ={}
     for params in text.split("\n"):
         if not params:
+            logging.warning("Param change failed, %s no params", params)
             continue
         if ":" not in params:
+            logging.warning("Param change failed, wrond msg format %s", params)
             await message.answer("Неверный формат команды")
             return
         param_name, param_value = params.split(":")
@@ -267,6 +269,7 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
 
     for param_name, param_value in params_dict.items():
         if not is_float(param_value):
+            logging.warning("Wrong param value, %s is not a digit", param_value)
             await message.answer(
                 f"Неверное значение параметра {param_name}: {param_value} не является числом")
             return
@@ -280,6 +283,7 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     res: Dict[str, bool] = check_parameters_borders(params_dict, full_conf)
     for param_name, param_flag in res.items():
         if not param_flag:
+            logging.warning("Wrong param value %s", param_name)
             await message.answer(
                 f"Неверное значение параметра {param_name}:\
 min {full_conf[param_name]['min']}, max {full_conf[param_name]['max']}")
@@ -529,12 +533,12 @@ async def command_server(message: Message) -> None:
 async def unknown_message(msg: types.Message):
     """The function handles unknown messages"""
     message_text = 'Я не знаю, что с этим делать \nЯ просто напомню, что есть команда /help'
-    logging.warning(msg.text)
+    logging.warning("Unknown message send %s", msg.text)
     await msg.reply(message_text, parse_mode=ParseMode.HTML)
 
 @form_router.message(ChatIdFilter(invert=True))
 async def unknown_user(msg: types.Message):
     """The function handles messages from unknown chats"""
     message_text = 'Я вас не знаю, уходите'
-    logging.warning(msg.text)
+    logging.warning("Unknown user send %s", msg.text)
     await msg.reply(message_text, parse_mode=ParseMode.HTML)
