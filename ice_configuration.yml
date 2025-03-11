@@ -36,7 +36,7 @@ time:
 gas_throttle_pct:
   default: 0
   help: Положение дроссельной заслонки
-  value: 40
+  value: 15
   min: 0
   max: 100
   unit: '%'
@@ -86,7 +86,7 @@ report_period:
 
 control_pid_p:
   help: Коэффициент p для ПИД регулятора
-  value: 0.0
+  value: 0.1
   min: 0
   max: 999
   unit: ''
@@ -95,7 +95,7 @@ control_pid_p:
 
 control_pid_i:
   help: Коэффициент i для ПИД регулятора
-  value: 0.0
+  value: 0.1
   min: 0
   max: 999
   unit: ''
@@ -113,9 +113,9 @@ control_pid_d:
 
 max_temperature:
   help: Граничная температура двигателя, при достижении обкатка обрывается
-  value: 190
+  value: 463
   min: 0
-  max: 210
+  max: 483
   unit: sec
   type: int
   usage: flag
