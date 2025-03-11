@@ -86,6 +86,9 @@ class PIDMode(BaseMode):
         min_value = 8191 * configuration.min_gas_throttle_pct / 100
         self.pid_controller = PIDController(configuration.rpm, coeffs, max_value, min_value)
 
+    def get_zero_command(self):
+        return super().get_zero_command()
+
     def get_starting_command(self, rpm, engine_state: EngineState, **kwarg):
         self.pid_controller.prev_error = self.pid_controller.target_value - rpm
         self.pid_controller.prev_command = self.gas_throttle
@@ -99,10 +102,8 @@ class PIDMode(BaseMode):
         command[1] = self.air_throttle
         return command
 
-    def update_configuration(self, configuration):
-        self.pid_controller.target_value = configuration.rpm
-        self.pid_controller.max_value = 8191 * configuration.max_gas_throttle_pct / 100
-        self.pid_controller.min_value = 8191 * configuration.min_gas_throttle_pct / 100
+    def update_configuration(self, configuration:RunnerConfiguration):
+        self.pid_controller.update_configuration(configuration=configuration)
         return super().update_configuration(configuration)
 
 class RPMMode(BaseMode):
@@ -111,7 +112,7 @@ class RPMMode(BaseMode):
         super().__init__(configuration)
         self.rpm = configuration.rpm
 
-    def update_configuration(self, configuration):
+    def update_configuration(self, configuration: RunnerConfiguration):
         self.rpm = configuration.rpm
         return super().update_configuration(configuration)
 
@@ -162,11 +163,23 @@ class PIDController:
         command = self.prev_command + pos_part + diff_part + int_part
         command = min(self.max_value, max(self.min_value, command))
         self.prev_command = command
+        logging.debug("PID\t-\tCommand: prev %d current %d, %d pos, %d int, %d diff",
+                      self.prev_command, command, pos_part, int_part, diff_part)
         return command
 
     def update_configuration(self, configuration: RunnerConfiguration) -> None:
         """The function changes the coefficients of the PID controller"""
-        super().update_configuration(configuration)
         self.coeffs: Dict[str, float] = {"kp": configuration.control_pid_p,
                                          "ki": configuration.control_pid_i,
                                          "kd": configuration.control_pid_d}
+        self.max_value = 8191 * configuration.max_gas_throttle_pct / 100
+        self.min_value = 8191 * configuration.min_gas_throttle_pct / 100
+        self.target_value = configuration.rpm
+        logging.info(
+        f"PID\t-\tconfiguration updated: max value {self.max_value}, min value {self.min_value}, target {self.target_value}, coeffs {self.coeffs}")
+
+    def cleanup(self):
+        self.prev_error = 0
+        self.integral = 0
+        self.prev_time = 0
+        self.prev_command = -1

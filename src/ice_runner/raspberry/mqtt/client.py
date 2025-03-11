@@ -60,7 +60,12 @@ class MqttClient:
         MqttClient.state = state
         mes_info: MQTTMessageInfo = cls.client.publish(
             f"ice_runner/raspberry_pi/{cls.run_id}/state", state.value)
-        mes_info.wait_for_publish(timeout=1)
+        try:
+            mes_info.wait_for_publish(timeout=1)
+        except RuntimeError as e:
+            if "The client is not currently connected." in str(e):
+                logging.info("The client is not currently connected.")
+                cls.client.reconnect()
 
     @classmethod
     def publish_log(cls) -> None:
