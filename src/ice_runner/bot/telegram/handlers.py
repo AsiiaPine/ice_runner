@@ -360,6 +360,10 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
             return
         MqttClient.publish_start(rp_id)
         await asyncio.sleep(1)
+        if rp_id not in MqttClient.rp_states:
+            await message.answer("Ошибка\n\tRaspberry Pi отключился")
+            MqttClient.publish_stop(rp_id)
+            return
         rp_state = MqttClient.rp_states[rp_id].name
         if rp_state == "STARTING":
             await message.answer(f"Запущено")
@@ -367,9 +371,9 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         if rp_state == "RUNNING":
             await message.answer(f"Ошибка\n\t{rp_state}")
             MqttClient.publish_stop(rp_id)
-            break
+            return
         await message.answer(f"Ошибка\n\t{rp_state}")
-    logging.info("CMD START send to Raspberry Pi %d", rp_id)
+        logging.info("CMD START send to Raspberry Pi %d", rp_id)
 
 @dp.message(Command(commands=["help", "помощь"]))
 async def command_help_handler(message: Message) -> None:
