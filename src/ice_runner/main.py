@@ -9,7 +9,7 @@ import os.path
 script_dir = os.path.dirname(os.path.realpath(__file__))
 
 parser = argparse.ArgumentParser()
-parser.add_argument('command', choices=['bot', 'sim', 'client', 'srv'])
+parser.add_argument('command', choices=['bot', 'sim', 'client', 'srv', 'pid_sim'])
 parser.add_argument('--log_dir', default=script_dir)
 command, rem = parser.parse_known_args()
 
@@ -28,3 +28,7 @@ elif command.command == 'client':
 elif command.command == 'srv':
     from server.main import start
     start(command.log_dir, rem)
+
+elif command.command == 'pid_sim':
+    from ice_sim.pid_sim import start
+    start(rem)

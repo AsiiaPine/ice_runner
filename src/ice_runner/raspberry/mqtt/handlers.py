@@ -6,6 +6,8 @@
 
 import time
 import logging
+
+from common.algorithms import get_type_from_str
 from .client import MqttClient
 
 def handle_command(client, userdata, message):
@@ -57,7 +59,8 @@ def handle_change_config(client, userdata, message):
     logging.info("RECEIVED\t-\tparam value %s\t%s", param_name, param_value)
     try:
         MqttClient.conf_updated = True
-        type_of_param = type(getattr(MqttClient.configuration, param_name))
+        type_of_param = get_type_from_str(
+            MqttClient.configuration.original_dict[param_name]["type"])
         setattr(MqttClient.configuration, param_name, type_of_param(param_value))
     except AttributeError:
         logging.error("RECEIVED\t-\t%s\t%s\tERROR\tAttribute not found", param_name, param_value)

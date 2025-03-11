@@ -9,7 +9,6 @@
 import os
 import sys
 import time
-from pathlib import Path
 
 import asyncio
 import argparse
@@ -42,7 +41,7 @@ async def main(run_id: int, configuration: RunnerConfiguration) -> None:
     try:
         await asyncio.gather(*background_tasks)
     except asyncio.CancelledError:
-        ice_commander.stop(False)
+        ice_commander.stop()
         await asyncio.sleep(0.5)
         mqtt_task.cancel()
         ice_task.cancel()

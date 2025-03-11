@@ -258,15 +258,19 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     params_dict ={}
     for params in text.split("\n"):
         if not params:
+            logging.warning("Param change failed, %s no params", params)
             continue
         if ":" not in params:
+            logging.warning("Param change failed, wrond msg format %s", params)
             await message.answer("Неверный формат команды")
             return
         param_name, param_value = params.split(":")
+        logging.info("Param change %s %s", param_name, param_value)
         params_dict[param_name] = param_value
 
     for param_name, param_value in params_dict.items():
         if not is_float(param_value):
+            logging.warning("Wrong param value, %s is not a digit", param_value)
             await message.answer(
                 f"Неверное значение параметра {param_name}: {param_value} не является числом")
             return
@@ -280,6 +284,7 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     res: Dict[str, bool] = check_parameters_borders(params_dict, full_conf)
     for param_name, param_flag in res.items():
         if not param_flag:
+            logging.warning("Wrong param value %s", param_name)
             await message.answer(
                 f"Неверное значение параметра {param_name}:\
 min {full_conf[param_name]['min']}, max {full_conf[param_name]['max']}")
@@ -287,8 +292,8 @@ min {full_conf[param_name]['min']}, max {full_conf[param_name]['max']}")
 
     for param_name, param_value_str in params_dict.items():
         MqttClient.client.publish(
-            f"ice_runner/bot/usr_cmd/{runner_id}/change_config/{param_name}",param_value)
-        await message.answer(f"Новое значение параметра {param_name} отправлено")
+            f"ice_runner/bot/usr_cmd/{runner_id}/change_config/{param_name}", param_value_str)
+        await message.answer(f"Новое значение параметра {param_name} отправлено {param_value_str}")
     await asyncio.sleep(0.5)
     MqttClient.publish_config_request(runner_id)
     await asyncio.sleep(2)
@@ -355,6 +360,10 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
             return
         MqttClient.publish_start(rp_id)
         await asyncio.sleep(1)
+        if rp_id not in MqttClient.rp_states:
+            await message.answer("Ошибка\n\tRaspberry Pi отключился")
+            MqttClient.publish_stop(rp_id)
+            return
         rp_state = MqttClient.rp_states[rp_id].name
         if rp_state == "STARTING":
             await message.answer(f"Запущено")
@@ -362,9 +371,9 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         if rp_state == "RUNNING":
             await message.answer(f"Ошибка\n\t{rp_state}")
             MqttClient.publish_stop(rp_id)
-            break
+            return
         await message.answer(f"Ошибка\n\t{rp_state}")
-    logging.info("CMD START send to Raspberry Pi %d", rp_id)
+        logging.info("CMD START send to Raspberry Pi %d", rp_id)
 
 @dp.message(Command(commands=["help", "помощь"]))
 async def command_help_handler(message: Message) -> None:
@@ -529,12 +538,12 @@ async def command_server(message: Message) -> None:
 async def unknown_message(msg: types.Message):
     """The function handles unknown messages"""
     message_text = 'Я не знаю, что с этим делать \nЯ просто напомню, что есть команда /help'
-    logging.warning(msg.text)
+    logging.warning("Unknown message send %s", msg.text)
     await msg.reply(message_text, parse_mode=ParseMode.HTML)
 
 @form_router.message(ChatIdFilter(invert=True))
 async def unknown_user(msg: types.Message):
     """The function handles messages from unknown chats"""
     message_text = 'Я вас не знаю, уходите'
-    logging.warning(msg.text)
+    logging.warning("Unknown user send %s", msg.text)
     await msg.reply(message_text, parse_mode=ParseMode.HTML)

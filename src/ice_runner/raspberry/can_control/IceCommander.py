@@ -6,6 +6,7 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
 import asyncio
+import copy
 import datetime
 import os
 import time
@@ -50,9 +51,10 @@ class ICECommander:
         """The function starts the ICE runner"""
         CanNode.connect()
         start_dronecan_handlers()
-        CanNode.change_file()
-        CanNode.run_candump()
-        MqttClient.run_logs = CanNode.can_output_filenames
+
+        CanNode.start_dump()
+        MqttClient.run_logs = copy.deepcopy(CanNode.can_output_filenames)
+
         MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.publish_full_configuration(self.configuration.get_original_dict())
         while True:
@@ -60,6 +62,9 @@ class ICECommander:
                 await self.spin()
             except asyncio.CancelledError:
                 self.on_keyboard_interrupt()
+            except KeyboardInterrupt:
+                self.on_keyboard_interrupt()
+                raise asyncio.CancelledError
             except Exception as e:
                 logging.error(f"{e}\n{traceback.format_exc()}")
                 continue
@@ -89,7 +94,7 @@ class ICECommander:
         self.set_can_command()
         self.report_state()
         self.prev_state = self.state_controller
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.2)
 
     def on_keyboard_interrupt(self):
         """The function is called when KeyboardInterrupt is 
@@ -97,6 +102,7 @@ class ICECommander:
         self.stop()
         CanNode.stop_dump()
         MqttClient.publish_stop_reason("Received KeyboardInterrupt")
+        self.send_log()
         raise asyncio.CancelledError
 
     def check_conditions(self) -> int:
@@ -108,7 +114,10 @@ class ICECommander:
 
     def set_can_command(self) -> None:
         """The function sets the command to the ICE node according to the current mode"""
-        command = self.mode.get_command(self.state_controller.state, rpm=CanNode.status.rpm)
+
+        command = self.mode.get_command(self.state_controller.state,
+                                        rpm=CanNode.status.rpm,
+                                        engine_state=CanNode.status.state)
         CanNode.cmd.cmd[ICE_THR_CHANNEL] = command[0]
         CanNode.air_cmd.command_value = command[1]
 
@@ -127,11 +136,13 @@ class ICECommander:
             logging.warning("%s\t-\tEngine disconnected", self.state_controller.prev_state.name)
             MqttClient.publish_stop_reason("Engine Disconnected!")
             self.stop()
+            self.send_log()
+            CanNode.start_dump()
 
         self.state_controller.update(CanNode.status.state)
         CanNode.status.start_attempts = self.state_controller.start_attempts
         if self.state_controller.state == RunnerState.STOPPED\
-            and self.state_controller.prev_state != RunnerState.STOPPED:
+            and self.state_controller.prev_state == RunnerState.STOPPING:
             CanNode.stop_dump()
             self.send_log()
             CanNode.start_dump()
@@ -193,7 +204,7 @@ class ICECommander:
 
     def send_log(self) -> None:
         """The function starts new log files and sends logs to MQTT broker"""
-        MqttClient.run_logs = CanNode.can_output_filenames
+        MqttClient.run_logs = copy.deepcopy(CanNode.can_output_filenames)
         MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.publish_log()
         logging.info("SEND\t-\tlogs")
