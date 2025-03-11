@@ -29,21 +29,20 @@ from bot.telegram.filters import ChatIdFilter
 from common.algorithms import get_type_from_str, is_float, safe_literal_eval
 from common.RunnerState import RunnerState
 
-commands_discription : Dict[str, str] = {
-    "/cancel":      "Отменить последнее действие/\nCancel any action\n",
-    "/choose_rp":   "Выбрать ID обкатчика/\n Choose ID of the ICE runner\n",
-    "/config":      "Изменить настройки блока ДВС/\n\
-Change the configuration of the connected block\n",
-    "/log":         "Прислать логи блока ДВС/\nSend logs of the connected block\n",
-    "/run":         "Запустить автоматическую обкатку ДВС/\n\
-Start the automatic running using the last configuration\n",
-    "/server":      "Проверить работу сервера./\n Check server status\n",
-    "/show_all":    "Показать все состояния блоков ДВС/\nShow all states of connected blocks\n",
-    "/status":      "Получить статус подключенных блоков ДВС и текущие настройки/\n\
-Get the status of the connected blocks and current configuration\n",
-    "/stop":        "Остановить обкатку двигателей/\nStop the automatic running immediately\n",
-    "/help":        "Выдать список доступных команд/\nSend a list of available commands\n",
+COMMANDS_DESCRIPTION : Dict[str, str] = {
+    "/cancel":      "Отменить последнее действие.",
+    "/choose_rp":   "Выбрать ID обкатчика.",
+    "/config":      "Изменить настройки.",
+    "/log":         "Прислать логи.",
+    "/run":         "Запустить обкатку.",
+    "/server":      "Проверить работу сервера.",
+    "/show_all":    "Показать все состояния.",
+    "/status":      "Получить статус и настройки.",
+    "/stop":        "Остановить обкатку.",
+    "/help":        "Получить список команд.",
 }
+MAX_COMMAND_LENGTH = max(len(command) for command in COMMANDS_DESCRIPTION)
+print("MAX_COMMAND_LENGTH", MAX_COMMAND_LENGTH)
 
 dp = Dispatcher(storage=MemoryStorage(), fsm_strategy=FSMStrategy.CHAT)
 form_router = Router()
@@ -381,8 +380,10 @@ async def command_help_handler(message: Message) -> None:
     This handler receives messages with `/help` command
     """
     help_str = ''
-    for command, description in commands_discription.items():
-        help_str += f"<b>- {command}</b>:\n\t{description}\n"
+    for command, description in COMMANDS_DESCRIPTION.items():
+        # For some reasons we need 2 spaces in telegram to allign the command name
+        padding_spaces = "  " * (MAX_COMMAND_LENGTH - len(command))
+        help_str += f"<b>- {command}</b>{padding_spaces}: {description}\n"
     await message.answer(
         "Список команд:\n" + help_str, parse_mode=ParseMode.HTML)
 
@@ -534,7 +535,7 @@ async def command_server(message: Message) -> None:
         await message.answer("Сервер не подключен")
     MqttClient.server_connected = False
 
-@form_router.message(F.text.lower().not_in(commands_discription.keys()), ChatIdFilter())
+@form_router.message(F.text.lower().not_in(COMMANDS_DESCRIPTION.keys()), ChatIdFilter())
 async def unknown_message(msg: types.Message):
     """The function handles unknown messages"""
     message_text = 'Я не знаю, что с этим делать \nЯ просто напомню, что есть команда /help'
