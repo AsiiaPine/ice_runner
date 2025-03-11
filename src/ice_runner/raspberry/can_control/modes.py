@@ -4,6 +4,7 @@ from enum import IntEnum
 import time
 from typing import Any, Dict, List, Tuple, Type
 from common.RunnerState import RunnerState
+from raspberry.can_control.EngineState import EngineState
 from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 
 MAX_AIR_CMD = 2000
@@ -49,7 +50,7 @@ class BaseMode:
         if run_state == RunnerState.RUNNING:
             return self.get_running_command(**kwargs)
         if run_state == RunnerState.STARTING:
-            return self.get_starting_command()
+            return self.get_starting_command(**kwargs)
         return self.get_zero_command()
 
     def get_running_command(self, **kwargs) -> List[int]:
@@ -58,7 +59,7 @@ class BaseMode:
     def get_zero_command(self):
         return [-1, self.air_throttle]
 
-    def get_starting_command(self):
+    def get_starting_command(self, **kwargs):
         return [self.gas_throttle, self.air_throttle]
 
 class ConstMode(BaseMode):
@@ -80,19 +81,38 @@ class PIDMode(BaseMode):
                 configuration.control_pid_p,
                 configuration.control_pid_i,
                 configuration.control_pid_d)
-        self.pid_controller = PIDController(configuration.rpm, coeffs)
+        max_value = 8191 * configuration.max_gas_throttle_pct / 100
+        min_value = 8191 * configuration.min_gas_throttle_pct / 100
+        self.pid_controller = PIDController(configuration.rpm, coeffs, max_value, min_value)
 
-    def get_running_command(self, rpm) -> List[int]:
+    def get_starting_command(self, rpm, engine_state: EngineState, **kwarg):
+        self.pid_controller.prev_error = self.pid_controller.target_value - rpm
+        self.pid_controller.prev_command = self.gas_throttle
+        self.pid_controller.integral = 0
+        self.pid_controller.prev_time = time.time()
+        return [self.gas_throttle, self.air_throttle]
+
+    def get_running_command(self, rpm, **kwarg) -> List[int]:
         command = [0, 0]
         command[0] = int(self.pid_controller.get_pid_command(rpm))
         command[1] = self.air_throttle
         return command
+
+    def update_configuration(self, configuration):
+        self.pid_controller.target_value = configuration.rpm
+        self.pid_controller.max_value = 8191 * configuration.max_gas_throttle_pct / 100
+        self.pid_controller.min_value = 8191 * configuration.min_gas_throttle_pct / 100
+        return super().update_configuration(configuration)
 
 class RPMMode(BaseMode):
     name = ICERunnerMode.RPM
     def __init__(self, configuration: RunnerConfiguration):
         super().__init__(configuration)
         self.rpm = configuration.rpm
+
+    def update_configuration(self, configuration):
+        self.rpm = configuration.rpm
+        return super().update_configuration(configuration)
 
 class CheckMode(BaseMode):
     name = ICERunnerMode.CHECK
@@ -116,28 +136,34 @@ class FuelPumpMode(BaseMode):
 class PIDController:
     """Basic PID controller"""
 
-    def __init__(self, target_value: int, coeffs: Tuple[float, float, float]) -> None:
+    def __init__(self, target_value: int, coeffs: Tuple[float, float, float],
+                    max_value: int = 8000, min_value: int =0) -> None:
         self.target_value = target_value
         self.coeffs: Dict[str, float] = {"kp": coeffs[0], "ki": coeffs[1], "kd": coeffs[2]}
         self.prev_time = 0
         self.prev_error = 0
         self.integral = 0
+        self.prev_command = 0
+        self.max_value = max_value
+        self.min_value = min_value
 
     def get_pid_command(self, val: int) -> int:
-        """The function calculates PID command"""
+        """The function calculates PID command. Params: val - current value"""
         dt = time.time() - self.prev_time
-        print(dt)
         error = self.target_value - val
         drpm = (error - self.prev_error) / dt
         self.integral += self.coeffs["ki"] * error * (dt)
-
+        print(self.prev_error, error, val, self.target_value, "prev_command", self.prev_command)
         self.prev_time = time.time()
         self.prev_error = error
         diff_part = self.coeffs["kd"] * drpm
         int_part = self.coeffs["ki"] * self.integral
         pos_part = self.coeffs["kp"] * error
-        print(pos_part)
-        return self.target_value + pos_part + diff_part + int_part
+        print("int_part", int_part, "pos_part", pos_part, "diff_part", diff_part)
+        command = self.prev_command + pos_part + diff_part + int_part
+        command = min(self.max_value, max(self.min_value, command))
+        self.prev_command = command
+        return command
 
     def update_configuration(self, configuration: RunnerConfiguration) -> None:
         """The function changes the coefficients of the PID controller"""

@@ -36,15 +36,15 @@ def safely_write_to_file(filename: str) -> float:
 
 class CanNode:
     """The class is used to connect to dronecan node and send/receive messages"""
-    node = None
+    node: Node|None = None
     log_dir: str = None
-    can_output_filenames = {}
-    can_output_header_written = {}
+    can_output_filenames: Dict[str, str] = {}
+    can_output_header_written: Dict[str, bool] = {}
     messages: Dict[str, Any] = {}
-    candump_task: asyncio.Task = None
-    candump_filename: str = None
-    last_sync_time = 0
-    last_message_receive_time = 0
+    candump_task: asyncio.Task| None = None
+    candump_filename: str| None = None
+    last_sync_time: float = 0
+    last_message_receive_time: float = 0
 
     @classmethod
     def connect(cls) -> None:
@@ -62,7 +62,7 @@ class CanNode:
         cls.can_output_header_written = {}
         cls.messages: Dict[str, Any] = {}
         cls.can_output_dict_writers: Dict[str, csv.DictWriter] = {}
-        cls.change_file()
+        cls.change_files()
         cls.has_imu = False
 
     @classmethod
@@ -74,22 +74,22 @@ class CanNode:
             cls.node.broadcast(cls.cmd)
             cls.node.broadcast(dronecan.uavcan.equipment.actuator.ArrayCommand(
                                                                         commands = [cls.air_cmd]))
-            cls.save_file()
+            cls.save_files()
 
     @classmethod
     def start_dump(cls) -> None:
         """The function restarts dumping"""
-        cls.change_file()
+        cls.change_files()
         cls.run_candump()
 
     @classmethod
     def stop_dump(cls) -> None:
         """The function stops dumping"""
         cls.stop_candump()
-        cls.save_file()
+        cls.save_files()
 
     @classmethod
-    def save_file(cls) -> None:
+    def save_files(cls) -> None:
         """The function saves candump and humal-readable files"""
         try:
             if time.time() - cls.last_sync_time > 5:
@@ -103,7 +103,7 @@ class CanNode:
                 print(f"An error occurred: {e}")
 
     @classmethod
-    def change_file(cls) -> None:
+    def change_files(cls) -> None:
         """The function changes candump and human-readable files, called after stop of a run,
             so the new run will have separated logs"""
         crnt_time = datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')

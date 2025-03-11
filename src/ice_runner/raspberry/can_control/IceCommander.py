@@ -6,6 +6,7 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
 import asyncio
+import copy
 import datetime
 import os
 import time
@@ -50,9 +51,8 @@ class ICECommander:
         """The function starts the ICE runner"""
         CanNode.connect()
         start_dronecan_handlers()
-        CanNode.change_file()
-        CanNode.run_candump()
-        MqttClient.run_logs = CanNode.can_output_filenames
+        CanNode.start_dump()
+        MqttClient.run_logs = copy.deepcopy(CanNode.can_output_filenames)
         MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.publish_full_configuration(self.configuration.get_original_dict())
         while True:
@@ -92,7 +92,7 @@ class ICECommander:
         self.set_can_command()
         self.report_state()
         self.prev_state = self.state_controller
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.2)
 
     def on_keyboard_interrupt(self):
         """The function is called when KeyboardInterrupt is 
@@ -112,7 +112,9 @@ class ICECommander:
 
     def set_can_command(self) -> None:
         """The function sets the command to the ICE node according to the current mode"""
-        command = self.mode.get_command(self.state_controller.state, rpm=CanNode.status.rpm)
+        command = self.mode.get_command(self.state_controller.state,
+                                        rpm=CanNode.status.rpm,
+                                        engine_state=CanNode.status.state)
         CanNode.cmd.cmd[ICE_THR_CHANNEL] = command[0]
         CanNode.air_cmd.command_value = command[1]
 
@@ -199,7 +201,7 @@ class ICECommander:
 
     def send_log(self) -> None:
         """The function starts new log files and sends logs to MQTT broker"""
-        MqttClient.run_logs = CanNode.can_output_filenames
+        MqttClient.run_logs = copy.deepcopy(CanNode.can_output_filenames)
         MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.publish_log()
         logging.info("SEND\t-\tlogs")
