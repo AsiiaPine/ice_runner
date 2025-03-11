@@ -265,6 +265,7 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
             await message.answer("Неверный формат команды")
             return
         param_name, param_value = params.split(":")
+        logging.info("Param change %s %s", param_name, param_value)
         params_dict[param_name] = param_value
 
     for param_name, param_value in params_dict.items():
@@ -291,8 +292,8 @@ min {full_conf[param_name]['min']}, max {full_conf[param_name]['max']}")
 
     for param_name, param_value_str in params_dict.items():
         MqttClient.client.publish(
-            f"ice_runner/bot/usr_cmd/{runner_id}/change_config/{param_name}",param_value)
-        await message.answer(f"Новое значение параметра {param_name} отправлено")
+            f"ice_runner/bot/usr_cmd/{runner_id}/change_config/{param_name}", param_value_str)
+        await message.answer(f"Новое значение параметра {param_name} отправлено {param_value_str}")
     await asyncio.sleep(0.5)
     MqttClient.publish_config_request(runner_id)
     await asyncio.sleep(2)

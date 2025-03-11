@@ -211,7 +211,7 @@ def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     CanNode.messages['uavcan.equipment.ice.reciprocating.Status'] = yaml.load(
                                                 dronecan.to_yaml(msg.message), yaml.BaseLoader)
     dump_msg(msg, "uavcan.equipment.ice.reciprocating.Status")
-    logging.info("MES\t-\tReceived ICE reciprocating status")
+    logging.debug("MES\t-\tReceived ICE reciprocating status")
 
 def start_dronecan_handlers() -> None:
     """The function starts all handlers for dronecan messages"""
