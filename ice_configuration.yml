@@ -86,7 +86,7 @@ report_period:
 
 control_pid_p:
   help: Коэффициент p для ПИД регулятора
-  value: 0.1
+  value: 0.02
   min: 0
   max: 999
   unit: ''
@@ -95,7 +95,7 @@ control_pid_p:
 
 control_pid_i:
   help: Коэффициент i для ПИД регулятора
-  value: 0.1
+  value: 0.01
   min: 0
   max: 999
   unit: ''
