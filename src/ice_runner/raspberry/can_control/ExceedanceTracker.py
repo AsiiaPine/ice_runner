@@ -10,18 +10,26 @@ from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
 from raspberry.can_control.RunnerStateController import RunnerStateController
 from raspberry.can_control.modes import ICERunnerMode
 
+RPM_CONTROL_TOLERANCE = 500
+MAX_ALLOWED_RPM = 7500
 
 class ExceedanceTracker:
+    _latest_status = None
+    _latest_configurator = None
+    _latest_state_controller = None
     """The class is used to track the exceedance of the conditions"""
     def __init__(self) -> None:
+        # Fault flags:
         self.temp: bool = False
         self.vin: bool = False
-        self.vibration: bool = False
-        self.time: bool = False
         self.fuel_level: bool = False
-        self.start_attempts: bool = False
+        self.vibration: bool = False
         self.rpm: bool = False
         self.max_rpm: bool = False
+        self.start_attempts: bool = False
+
+        # Successful completion flags:
+        self.time: bool = False
 
     def check(self, state: EngineStatus,
                     configuration: RunnerConfiguration,
@@ -32,8 +40,12 @@ class ExceedanceTracker:
         if any Configuration parameters were exceeded. Returns 0 if no conditions were exceeded,
         1 if conditions were exceeded.
         """
-        self.vin = configuration.min_vin_voltage > state.voltage_in
+        ExceedanceTracker._latest_status = state
+        ExceedanceTracker._latest_configurator = configuration
+        ExceedanceTracker._latest_state_controller = state_controller
+
         self.temp = configuration.max_temperature < state.temp
+        self.vin = configuration.min_vin_voltage > state.voltage_in
         self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
         if state_controller.state == RunnerState.STOPPED:
             assert state_controller.start_attempts == 0, f"{state_controller.state.name}\
@@ -42,13 +54,53 @@ class ExceedanceTracker:
 
         return self.check_running(state, configuration, start_time, state_controller)
 
+    def get_text_description(self):
+        emergency_stop_reasons = ""
+
+        if self.temp:
+            actual_temperature_c = round(ExceedanceTracker._latest_status.temp - 273.15)
+            max_temperature_c = round(ExceedanceTracker._latest_configurator.max_temperature - 273.15)
+            emergency_stop_reasons += f"Temperature {actual_temperature_c}°C more than ({max_temperature_c}°C)\n"
+
+        if self.vin:
+            actual_vin = round(ExceedanceTracker._latest_status.voltage_in)
+            min_vin = round(ExceedanceTracker._latest_configurator.min_vin_voltage)
+            emergency_stop_reasons += f"Vin: {actual_vin} less than {min_vin}\n"
+
+        if self.fuel_level:
+            actual_fuel_level = round(ExceedanceTracker._latest_status.fuel_level_percent)
+            min_fuel_level = round(ExceedanceTracker._latest_configurator.min_fuel_volume)
+            emergency_stop_reasons += f"Fuel: {actual_fuel_level} less than {min_fuel_level}\n"
+
+        if self.vibration:
+            pass # not supported at the moment
+
+        if self.rpm:
+            actual_rpm = round(ExceedanceTracker._latest_status.rpm)
+            max_rpm = round(ExceedanceTracker._latest_configurator.rpm) + RPM_CONTROL_TOLERANCE
+            emergency_stop_reasons += f"RPM: {actual_rpm} exceed the control tolerance range ({max_rpm})\n"
+
+        if self.max_rpm:
+            actual_rpm = round(ExceedanceTracker._latest_status.rpm)
+            emergency_stop_reasons += f"RPM {actual_rpm} exceed max RPM ({MAX_ALLOWED_RPM})\n"
+
+        if self.start_attempts:
+            start_attemts = ExceedanceTracker._latest_configurator.start_attemts
+            emergency_stop_reasons += f"Start attems exceeded {start_attemts}\n"
+
+        if len(emergency_stop_reasons) > 0:
+            return "Аварийная остановка:\n" + emergency_stop_reasons
+
+        if not self.time:
+            return "Неизвестная причина остановки"
+
+        return "Обкатка успешно завершена по таймауту"
+
     def cleanup(self):
         """
         The function cleans up the ICE state
         """
-        dictionary = vars(self)
-        for key in dictionary:
-            dictionary[key] = False
+        self.__init__()
 
     def check_not_started(self, state: EngineStatus) -> bool:
         """The function checks conditions when the ICE is not started"""
@@ -70,8 +122,8 @@ class ExceedanceTracker:
                             start_time: float,
                             state_controller: RunnerStateController) -> bool:
         """The function checks conditions when the ICE is running"""
-        if state.rpm > 7500:
-            logging.warning(f"STATUS\t-\tRPM exceeded {state.rpm}, 7500")
+        if state.rpm > MAX_ALLOWED_RPM:
+            logging.warning(f"STATUS\t-\tRPM exceeded {state.rpm}, {MAX_ALLOWED_RPM}")
             self.max_rpm = True
 
         if state_controller.start_attempts > configuration.start_attemts:
@@ -121,7 +173,7 @@ class ExceedanceTracker:
 
         if configuration.mode == ICERunnerMode.PID:
             if state_controller.state == RunnerState.RUNNING and time.time() - start_time > 3:
-                self.rpm = state.rpm > configuration.rpm + 1000
+                self.rpm = state.rpm > configuration.rpm + RPM_CONTROL_TOLERANCE
             return
 
         if configuration.mode == ICERunnerMode.RPM:

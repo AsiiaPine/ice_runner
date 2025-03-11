@@ -126,7 +126,7 @@ class ICECommander:
             accordingly."""
         if cond_exceeded and (self.state_controller.state in
                                 (RunnerState.STARTING, RunnerState.RUNNING)):
-            MqttClient.publish_stop_reason(f"Conditions exceeded: {vars(self.exceedance_tracker)}")
+            MqttClient.publish_stop_reason(self.exceedance_tracker.get_text_description())
             logging.info("STOP\t-\tconditions exceeded")
             self.stop()
             return
