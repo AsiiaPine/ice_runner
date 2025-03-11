@@ -51,8 +51,10 @@ class ICECommander:
         """The function starts the ICE runner"""
         CanNode.connect()
         start_dronecan_handlers()
+
         CanNode.start_dump()
         MqttClient.run_logs = copy.deepcopy(CanNode.can_output_filenames)
+
         MqttClient.run_logs["candump"] = CanNode.candump_filename
         MqttClient.publish_full_configuration(self.configuration.get_original_dict())
         while True:
@@ -112,6 +114,7 @@ class ICECommander:
 
     def set_can_command(self) -> None:
         """The function sets the command to the ICE node according to the current mode"""
+
         command = self.mode.get_command(self.state_controller.state,
                                         rpm=CanNode.status.rpm,
                                         engine_state=CanNode.status.state)

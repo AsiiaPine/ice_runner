@@ -89,6 +89,7 @@ class CanNode:
         cls.save_files()
 
     @classmethod
+
     def save_files(cls) -> None:
         """The function saves candump and humal-readable files"""
         try:
