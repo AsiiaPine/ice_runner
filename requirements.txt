@@ -3,6 +3,8 @@ netifaces
 paho-mqtt
 python-dotenv
 PyYAML
+requests
+setuptools
 # bot
 aiogram>=3.16
 apscheduler
