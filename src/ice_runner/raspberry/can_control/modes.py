@@ -1,6 +1,7 @@
 """The module defines the modes of the ICE runner"""
 
 from enum import IntEnum
+import logging
 import time
 from typing import Any, Dict, List, Tuple, Type
 from common.RunnerState import RunnerState
@@ -153,13 +154,11 @@ class PIDController:
         error = self.target_value - val
         drpm = (error - self.prev_error) / dt
         self.integral += self.coeffs["ki"] * error * (dt)
-        print(self.prev_error, error, val, self.target_value, "prev_command", self.prev_command)
         self.prev_time = time.time()
         self.prev_error = error
         diff_part = self.coeffs["kd"] * drpm
         int_part = self.coeffs["ki"] * self.integral
         pos_part = self.coeffs["kp"] * error
-        print("int_part", int_part, "pos_part", pos_part, "diff_part", diff_part)
         command = self.prev_command + pos_part + diff_part + int_part
         command = min(self.max_value, max(self.min_value, command))
         self.prev_command = command

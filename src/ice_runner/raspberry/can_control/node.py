@@ -98,9 +98,9 @@ class CanNode:
                 safely_write_to_file(cls.candump_filename)
         except OSError as e:
             if e.errno == 9:  # Bad file descriptor
-                print("Error: Bad file descriptor.")
+                logging.error("Bad file descriptor.")
             else:
-                print(f"An error occurred: {e}")
+                logging.error(f"An error occurred: {e}")
 
     @classmethod
     def change_files(cls) -> None:

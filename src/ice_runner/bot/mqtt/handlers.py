@@ -18,7 +18,7 @@ def handle_commander_state(client, userdata, message):
     rp_pi_id = int(message.topic.split("/")[-2])
     if rp_pi_id not in Scheduler.jobs:
         Scheduler.guard_runner(rp_pi_id)
-        print("GUARDING\t| RP %d", rp_pi_id)
+        logging.debug("GUARDING\t| RP %d", rp_pi_id)
     state = RunnerState(int(message.payload.decode()))
     MqttClient.rp_states[rp_pi_id] = state
     logging.debug("received RP state from Raspberry Pi %d, state: %s", rp_pi_id, state.name)
@@ -70,6 +70,4 @@ def handle_commander_full_config(client, userdata, message):
     del client, userdata
     rp_pi_id = int(message.topic.split("/")[-2])
     logging.info("received FULL_CONFIG from Raspberry Pi %d", rp_pi_id)
-    print(message.payload.decode())
-    print(json.loads(message.payload.decode()))
     MqttClient.runner_full_configuration[rp_pi_id] = json.loads(message.payload.decode())
