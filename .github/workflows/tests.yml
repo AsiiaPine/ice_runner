@@ -34,7 +34,7 @@ jobs:
         pip install -e .
         pip install -r requirements.txt
     - name: Start vcan
-      run:
+      run: |
         modprobe vcan
         ip link add dev slcan0 type vcan
         ip link set up slcan0
