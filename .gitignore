@@ -8,3 +8,5 @@ logs/*
 *.yml
 .vscode
 build/*
+venv/*
+.python-version
