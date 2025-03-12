@@ -11,21 +11,23 @@ if [ -f /etc/lsb-release ]; then
     . /etc/lsb-release
     OS=$DISTRIB_ID
     VER=$DISTRIB_RELEASE
+    echo "OS: $OS"
 elif [ -f /etc/debian_version ]; then
     # Older Debian/Ubuntu/etc.
     OS=Debian
     VER=$(cat /etc/debian_version)
 else
-    echo "Unsupported OS"
-    exit 1
+    # Fall back to uname, e.g. "Linux <version>", also works for BSD, etc.
+    OS=$(uname -s)
+    VER=$(uname -r)
 fi
 
 echo "Installing MQTT server"
 if [ "$OS" = "Ubuntu" ]; then
-    apt update && apt upgrade -y
-    apt install -y mosquitto mosquitto-clients
-elif [ "$OS" = "Manjaro Linux" ]; then
-    pacman -S mosquitto
+    sudo apt update && apt upgrade -y
+    sudo apt install -y mosquitto mosquitto-clients
+elif [ "$OS" = "ManjaroLinux" ]; then
+    sudo pacman -S mosquitto
 else
     echo "Unsupported OS"
     exit 1
