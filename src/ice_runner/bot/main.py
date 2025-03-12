@@ -21,6 +21,7 @@ from bot.telegram.scheduler import Scheduler
 from common import logging_configurator
 
 async def start_bot() -> None:
+    os.environ.clear()
     load_dotenv()
     token = os.getenv("BOT_TOKEN")
     server_ip = os.getenv("SERVER_IP")
