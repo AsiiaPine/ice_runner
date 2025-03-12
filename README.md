@@ -44,7 +44,7 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
         ```bash
         ./scripts/install_mqtt.sh
         ```
-        To allow anonymous access to the server and setup the used port, edit the file `/etc/mosquitto/mosquitto.conf`:
+        To allow anonymous remote access to the server and setup the used port, edit the file `/etc/mosquitto/mosquitto.conf`:
         ```
         allow_anonymous true
         listener 1883 0.0.0.0
