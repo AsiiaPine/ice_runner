@@ -44,9 +44,9 @@ class BaseTest():
         self.node.node.mode = 0
 
     def setup_can_node(self, mocker):
-        mocker.patch("raspberry.can_control.node.CanNode.change_file")
+        mocker.patch("raspberry.can_control.node.CanNode.change_files")
         mocker.patch("raspberry.can_control.node.dump_msg")
-        mocker.patch("raspberry.can_control.node.CanNode.save_file")
+        mocker.patch("raspberry.can_control.node.CanNode.save_files")
 
         CanNode.connect()
         start_dronecan_handlers()

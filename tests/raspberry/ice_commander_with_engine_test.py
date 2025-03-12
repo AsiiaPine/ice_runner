@@ -129,7 +129,7 @@ class BaseTest():
         return res
 
     def setup_cannode(self, mocker, engine_status=EngineState.NOT_CONNECTED):
-        mocker.patch("raspberry.can_control.node.CanNode.change_file")
+        mocker.patch("raspberry.can_control.node.CanNode.change_files")
         mocker.patch("raspberry.can_control.node.CanNode.run_candump")
         mocker.patch("raspberry.can_control.node.CanNode.stop_candump")
         mocker.patch("raspberry.can_control.node.safely_write_to_file")

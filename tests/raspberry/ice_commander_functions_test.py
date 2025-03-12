@@ -54,8 +54,8 @@ class BaseTest():
         return False
 
     def mock_required(self, mocker):
-        mocker.patch('raspberry.can_control.node.CanNode.change_file')
-        mocker.patch('raspberry.can_control.node.CanNode.save_file')
+        mocker.patch('raspberry.can_control.node.CanNode.change_files')
+        mocker.patch('raspberry.can_control.node.CanNode.save_files')
         mocker.patch('raspberry.can_control.node.CanNode.stop_candump')
         mocker.patch('raspberry.can_control.node.CanNode.run_candump')
         mocker.patch('raspberry.can_control.IceCommander.ICECommander.send_log')
