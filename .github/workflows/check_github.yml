@@ -17,6 +17,18 @@ jobs:
     container: ${{matrix.container}}
 
     steps:
+      - name: Install Git and dependencies
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then 
+            exit 0
+          fi
+          if [[ -f /etc/os-release ]]; then
+            . /etc/lsb-release
+            OS=$DISTRIB_ID
+            if [[ "$OS" = "ManjaroLinux" ]]; then
+              pacman -Sy --noconfirm git
+            fi
+          fi
       - uses: actions/checkout@v4
         with:
           submodules: recursive
