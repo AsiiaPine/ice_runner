@@ -19,6 +19,7 @@ from aiogram.fsm.strategy import FSMStrategy
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
+from aiogram.methods.send_message import SendMessage
 from aiogram.types import (
     Message,
     ReplyKeyboardRemove,
@@ -26,7 +27,7 @@ from aiogram.types import (
 
 from bot.mqtt.client import MqttClient
 from bot.telegram.filters import ChatIdFilter
-from common.algorithms import get_type_from_str, is_float, safe_literal_eval
+from common.algorithms import get_type_from_str, is_float
 from common.RunnerState import RunnerState
 
 COMMANDS_DESCRIPTION : Dict[str, str] = {
@@ -42,12 +43,25 @@ COMMANDS_DESCRIPTION : Dict[str, str] = {
     "/help":        "Получить список команд.",
 }
 MAX_COMMAND_LENGTH = max(len(command) for command in COMMANDS_DESCRIPTION)
-print("MAX_COMMAND_LENGTH", MAX_COMMAND_LENGTH)
-
 dp = Dispatcher(storage=MemoryStorage(), fsm_strategy=FSMStrategy.CHAT)
 form_router = Router()
 dp.include_router(form_router)
 configuration_file_path: str = None
+
+async def set_report_period(rp_id: int, state: FSMContext):
+    """The function sets the report period for the Raspberry Pi,
+        returns the report period string and the state of the info was is updated"""
+    data = await state.get_data()
+    if "report_period" in data.keys():
+        return
+    report_period = 10
+    if rp_id in MqttClient.rp_configuration:
+        if "report_period" not in data:
+            if "report_period" in MqttClient.rp_configuration[int(rp_id)]:
+                report_period = int(MqttClient.rp_configuration[int(rp_id)]["report_period"])
+    data["report_period"] = report_period
+    await state.set_data(data)
+    return state
 
 async def get_configuration_str(rp_id: int) -> str:
     """The function returns the configuration string for the specified RP id
@@ -97,40 +111,28 @@ async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], 
         returns the status string and the state of the info was is updated"""
     await asyncio.sleep(0.4)
     data = await state.get_data()
-    report_period = 10
-    if "report_period" in data.keys():
-        report_period = data["report_period"]
-    last_status_update = time.time() - (report_period + 1)
-    if "last_status_update" not in data.keys():
-        data["last_status_update"] = last_status_update
-        await state.set_data(data)
-    elif data["last_status_update"] is not None:
-        last_status_update = int(data["last_status_update"])
-        if (time.time() - last_status_update) < report_period:
-            return "\tОбкатчик не обновил свой статус\n", False
 
     await asyncio.sleep(0.5)
     status = MqttClient.rp_status[rp_id]
     rp_state = MqttClient.rp_states[rp_id]
     MqttClient.rp_status[rp_id] = None
     MqttClient.rp_states[rp_id] = None
-    if rp_state is not None:
-        status_str = "\t\tСтатус: " + rp_state.name + get_emoji(rp_state) + '\n'
+    status_str = ""
+    if rp_state is None:
+        MqttClient.rp_status.pop(rp_id)
+        MqttClient.rp_states.pop(rp_id)
+        status_str = "\tОбкатчик молчит\n"
+    else:
         if status is None:
             status_str = "\tОбкатчик не шлет свой статус\n"
         else:
             for name, value in status.items():
-                status_str += f"\t\t\t{name}: {value}\n"
-    else:
-        MqttClient.rp_status.pop(rp_id)
-        MqttClient.rp_states.pop(rp_id)
-        status_str = "\tОбкатчик молчит\n"
-
+                status_str += f"{name}:\t{value}\n"
     last_status_update = time.time()
     data["last_status_update"] = last_status_update
     await state.update_data(data)
     update_time = datetime.fromtimestamp(last_status_update).strftime('%Y-%m-%d %H:%M:%S') + '\n'
-    return status_str + "\n\tвремя обновления: " + update_time, True
+    return status_str + "\nвремя обновления: " + update_time, True
 
 async def show_options(message: types.Message) -> None:
     """The function creates set of buttons of available RPis"""
@@ -183,9 +185,10 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
         await message.answer("Нет активных действий для отмены.",
                              reply_markup=ReplyKeyboardRemove())
         return
-
+    rp_id = (await state.get_data())["rp_id"]
     logging.info("Cancelling state %r", current_state)
     await state.clear()
+    await state.set_data({"rp_id": rp_id})
     await message.answer(
         "Отменено.",
         reply_markup=ReplyKeyboardRemove(),
@@ -408,7 +411,7 @@ async def command_show_all_handler(message: Message, state: FSMContext) -> None:
         logging.info("Sending status cmd for %d", rp_id)
         MqttClient.client.publish(f"ice_runner/bot/usr_cmd/status", str(rp_id))
         await asyncio.sleep(0.5)
-        header_str = html.bold(f"ID обкатчика: {rp_id}\n\tСтатус:\n" )
+        header_str = html.bold(f"ID обкатчика: {rp_id}\n\tСтатус:" )
         data = await state.get_data()
         logging.info("Send conf command to rpi %d", rp_id)
         MqttClient.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
@@ -441,49 +444,36 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     """
     await state.set_state(BotState.status_state)
     data = await state.get_data()
-    data["last_status_update"] = None
     if "rp_id" not in data.keys():
         await show_options(message)
         return
     rp_id = data["rp_id"]
-
     MqttClient.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
     MqttClient.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
     MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
     await asyncio.sleep(0.5)
+    upd_state = await set_report_period(rp_id, state)
 
-    header_str = html.bold(f"ICE Runner ID: {rp_id}\n\tСтатус:\n")
+    status_str, is_updated = await get_rp_status(rp_id, upd_state)
 
-    conf_str = ""
-    if rp_id not in MqttClient.rp_configuration:
-        conf_str = html.bold("\tНет настроек обкатки")
-    else:
-        conf_result = (await get_configuration_str(int(rp_id)))
-        if conf_result:
-            conf_str = html.bold("\tНастройки обкатки\n") + conf_result
-        if "report_period" not in data:
-            if "report_period" in MqttClient.rp_configuration[int(rp_id)]:
-                report_period = int(MqttClient.rp_configuration[int(rp_id)]["report_period"])
-            else:
-                report_period = 10
-            data["report_period"] = report_period
-    report_period = data["report_period"]
+    last_status_update = time.time()
+    data["last_status_update"] = last_status_update
+    data = await upd_state.get_data()
     await state.set_data(data)
-    status_str, is_updated = await get_rp_status(rp_id, state)
 
-    message_text = header_str + status_str + conf_str
-    res = await message.answer(message_text, parse_mode=ParseMode.HTML)
-    await asyncio.sleep(0.5)
+    res: SendMessage = await message.answer(status_str, parse_mode=ParseMode.MARKDOWN)
+    report_period = data["report_period"]
+    await asyncio.sleep(report_period)
+
     while ((await state.get_state()) == BotState.status_state):
         logging.info("Updating status")
         MqttClient.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
         MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
         status_str, is_updated = await get_rp_status(rp_id, state)
-        if not is_updated:
-            await asyncio.sleep(report_period)
-            continue
-        message_text = header_str + status_str + conf_str
-        await res.edit_text(message_text, parse_mode=ParseMode.HTML)
+        last_status_update = time.time()
+        data["last_status_update"] = last_status_update
+        await state.set_data(data)
+        await res.edit_text(status_str, parse_mode=ParseMode.MARKDOWN)
         await asyncio.sleep(report_period)
 
 @form_router.message(Command(commands=["log", "лог"]), ChatIdFilter())

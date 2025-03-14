@@ -157,17 +157,14 @@ class ICECommander:
     def report_status(self) -> None:
         """The function reports status to MQTT broker"""
         if self.prev_report_time + self.configuration.report_period < time.time():
-            state_dict = CanNode.status.to_dict()
+            status_dict = CanNode.status.get_description_dict()
             time_left = self.configuration.time + self.start_time - time.time()
             if self.start_time > 0:
-                state_dict["start_time"] = datetime.datetime.fromtimestamp(self.start_time)\
-                                                            .strftime('%Y-%m-%d %H:%M:%S')
-                state_dict["time_left"] = f"{int(time_left)} seconds"
+                status_dict["Time left"] = f"{round(time_left / 60, 1)} min"
             else:
-                state_dict["start_time"] = "not started"
-                state_dict["time_left"] = "not started"
+                status_dict["Time left"] = "not started"
             MqttClient.publish_state(self.state_controller.state)
-            MqttClient.publish_status(state_dict)
+            MqttClient.publish_status(status_dict)
             MqttClient.publish_messages(CanNode.messages)
             self.prev_report_time = time.time()
 

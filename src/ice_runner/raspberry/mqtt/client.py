@@ -51,7 +51,8 @@ class MqttClient:
         """The function publishes status to MQTT broker"""
         logging.debug("PUBLISH\t-\tstatus")
         MqttClient.status = status
-        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/status", json.dumps(status))
+        assert isinstance(status, dict)
+        cls.client.publish(f"ice_runner/raspberry_pi/{cls.run_id}/status", json.dumps(status).encode('utf8'))
 
     @classmethod
     def publish_state(cls, state: RunnerState) -> None:

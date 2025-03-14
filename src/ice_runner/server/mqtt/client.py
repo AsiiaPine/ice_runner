@@ -20,7 +20,7 @@ class ServerMqttClient:
     client: Client = Client(client_id="server",clean_session=False,
                             userdata=None, protocol=MQTTv311, reconnect_on_failure=True)
     rp_messages: Dict[int, Dict[str, Dict[str, Any]]] = {}
-    rp_status: Dict[int, Any] = {}
+    rp_status: Dict[int, str] = {}
     rp_states: Dict[int, str] = {}
     rp_cur_setpoint: Dict[int, float] = {}
     rp_logs: Dict[int, Dict[str, str]] = {}
@@ -57,7 +57,7 @@ class ServerMqttClient:
             logging.debug("Published\t| Raspberry Pi is not connected")
             return
         status = cls.rp_status[rp_id]
-        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", str(status))
+        cls.client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status", status)
         logging.debug("Published\t| Raspberry Pi %d status", rp_id)
         cls.rp_status[rp_id] = None
 
