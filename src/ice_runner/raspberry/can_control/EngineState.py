@@ -85,3 +85,11 @@ class EngineStatus:
         vars_dict["mode"] = self.mode.name
         vars_dict["health"] = self.health.name
         return vars_dict
+
+    def get_description_dict(self):
+        rpm = f"{self.rpm}"
+        gas_air = f"{self.gas_throttle}% {self.air_throttle}%"
+        temp = f"{round(self.temp - 273.15, 2)} °C"
+        fuel_level = f"{self.fuel_level_percent}%"
+
+        return {"RPM": rpm, "GAS/AIR": gas_air, "TEMP": temp, "FUEL level": fuel_level}
