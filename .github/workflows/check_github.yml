@@ -18,7 +18,7 @@ jobs:
             target: dronecan_v2
 
           - runs-on: ubuntu-22.04
-            container: manjaro:latest
+            container: manjaro/base:latest
             target: "all"
 
     runs-on: ${{ matrix.runs-on }}
@@ -39,6 +39,6 @@ jobs:
               echo "Linux OS detected but /etc/os-release not found"
             fi
           else
-            ver
+            [System.Environment]::OSVersion.Version
           fi
         shell: bash
