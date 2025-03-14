@@ -31,14 +31,10 @@ jobs:
 
       - name: Install dependencies (Ubuntu & Manjaro & Windows)
         run: |
-          if [[ "${{ runner.os }}" == "Linux" ]]; then
             if [[ -f /etc/os-release ]]; then
               . /etc/os-release
-              echo "Running on $NAME"
-            else
-              echo "Linux OS detected but /etc/os-release not found"
+            echo "OS: $NAME"
+            elif [[ "${{ runner.os }}" == "Windows" ]]; then
+              echo "OS: Windows"
             fi
-          else
-            [System.Environment]::OSVersion.Version
-          fi
         shell: bash
