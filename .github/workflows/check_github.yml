@@ -1,0 +1,42 @@
+name: build_and_deploy
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - '*'
+jobs:
+  build_and_deploy:
+    strategy:
+      matrix:
+        include:
+          - runs-on: ubuntu-22.04
+            container: "ubuntu:22.04"
+            target: all
+
+          - runs-on: windows-2022
+            container: ""  # Containers on Windows runners are not supported
+            target: dronecan_v2
+
+          - runs-on: ubuntu-22.04
+            container: "manjaro:latest"
+              image: manjaro:latest
+            target: "all"
+
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install dependencies (Ubuntu & Manjaro & Windows)
+        run: |
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            cat /etc/lsb-release
+          else
+            systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+          fi
+        shell: bash
