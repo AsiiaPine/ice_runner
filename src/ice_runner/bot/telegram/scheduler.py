@@ -4,17 +4,14 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import asyncio
 import logging
 import os
 from typing import Dict
 from aiogram import Bot
-from aiogram.types import FSInputFile
 from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from bot.mqtt.client import MqttClient
 from bot.telegram.helper import send_media_group
-from common.RunnerState import RunnerState
 
 class Scheduler:
     """The class is used to schedule tasks for the Telegram Bot"""
@@ -34,10 +31,10 @@ class Scheduler:
     @classmethod
     def guard_runner(cls, runner_id: int):
         """The function guards the RP state and waits until it stops"""
-        if runner_id in cls.jobs.keys():
+        if runner_id in cls.scheduler.get_jobs():
             return
         cls.jobs[runner_id] = cls.scheduler.add_job(cls.check_rp_state, 'interval',
-                                                seconds=1, kwargs={"runner_id": runner_id})
+                                                seconds=1, kwargs={"runner_id": runner_id}).id
         logging.info("Waiting for RP %d to stop", runner_id)
 
     @classmethod
@@ -51,8 +48,7 @@ class Scheduler:
         if runner_id not in MqttClient.rp_stop_handlers:
             return
         await cls.send_stop_reason(runner_id=runner_id)
-        cls.jobs[runner_id].pause()
-        cls.jobs[runner_id].remove()
+        cls.scheduler.remove_job(cls.jobs[runner_id])
         cls.jobs.pop(runner_id)
         MqttClient.rp_states.pop(runner_id)
 
