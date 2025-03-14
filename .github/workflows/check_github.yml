@@ -1,40 +1,29 @@
 name: check_github
-on:
-  push:
-    branches:
-    - main
-  pull_request:
-    branches:
-    - '*'
+on: [push, pull_request]
+
 jobs:
-  build_and_deploy:
+  multi_os_check:
     strategy:
       matrix:
         include:
           - runs-on: ubuntu-22.04
-            target: all
 
           - runs-on: windows-2022
-            target: dronecan_v2
 
           - runs-on: ubuntu-22.04
             container: manjaro/base:latest
-            target: "all"
-
     runs-on: ${{ matrix.runs-on }}
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
 
-      - name: Install dependencies (Ubuntu & Manjaro & Windows)
+      - name: Detect OS
         run: |
-            if [[ -f /etc/os-release ]]; then
-              . /etc/os-release
+          if [[ -f /etc/os-release ]]; then
+            . /etc/os-release
             echo "OS: $NAME"
-            elif [[ "${{ runner.os }}" == "Windows" ]]; then
-              echo "OS: Windows"
-            fi
+          elif [[ "${{ runner.os }}" == "Windows" ]]; then
+            echo "OS: Windows"
+          fi
         shell: bash
