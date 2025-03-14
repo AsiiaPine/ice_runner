@@ -19,16 +19,18 @@ jobs:
     steps:
       - name: Install Git and dependencies
         run: |
-          if [[ "${{ runner.os }}" == "Windows" ]]; then 
-            exit 0
-          fi
-          if [[ -f /etc/os-release ]]; then
-            . /etc/lsb-release
-            OS=$DISTRIB_ID
-            if [[ "$OS" = "ManjaroLinux" ]]; then
-              pacman -Sy --noconfirm git
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            # Linux-specific commands
+            if [[ -f /etc/os-release ]]; then
+              . /etc/os-release
+            echo "OS: $NAME"
+              if [[ "$NAME" == "Arch Linux" ]]; then
+                pacman -Sy --noconfirm git
+              fi
             fi
           fi
+        shell: bash
+
       - uses: actions/checkout@v4
         with:
           submodules: recursive
