@@ -43,6 +43,8 @@ COMMANDS_DESCRIPTION : Dict[str, str] = {
     "/help":        "Получить список команд.",
 }
 MAX_COMMAND_LENGTH = max(len(command) for command in COMMANDS_DESCRIPTION)
+WAIT_BEFORE_RUN_TIME = 5
+
 dp = Dispatcher(storage=MemoryStorage(), fsm_strategy=FSMStrategy.CHAT)
 form_router = Router()
 dp.include_router(form_router)
@@ -106,7 +108,7 @@ def get_emoji(state: RunnerState) -> str:
         return "⁉"
 
 
-async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[Dict[str, Any], bool]:
+async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[str, bool]:
     """The function sets the status of the Raspberry Pi,
         returns the status string and the state of the info was is updated"""
     await asyncio.sleep(0.4)
@@ -335,47 +337,57 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
         return
     rp_id = (await state.get_data())["rp_id"]
     rp_state = MqttClient.rp_states[rp_id].name
-    await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
-    await message.answer("Настройки обкатки:" + (await get_configuration_str(rp_id)))
-    await state.set_state(BotState.starting_state)
     if rp_state in ('RUNNING', 'STARTING'):
-        await message.answer("Ошибка\nОбкатка уже запущена")
+        await message.answer("Ошибка\nОбкатка уже запущена, отправьте /stop или /стоп чтобы остановить ее")
         return
     if rp_state == "NOT_CONNECTED":
         await message.answer("Ошибка\nОбкатчик не подключен")
         return
-    await message.answer("Отправьте /cancel или /отмена чтобы отменить запуск обкатки.\
-                         После запуска отправьте /stop или /стоп чтобы остановить ее")
-    i = 0
+    info_mes: str = "Настройки обкатки:\n" + (await get_configuration_str(rp_id) + "\n")
+    await state.set_state(BotState.starting_state)
+    info_mes += "Отправьте /cancel или /отмена чтобы отменить запуск обкатки.\
+                         После запуска отправьте /stop или /стоп чтобы остановить ее"
+    await message.answer(info_mes)
     logging.info("received CMD START from user %s", message.from_user.username)
-    while i < 5 and ((await state.get_state()) == BotState.starting_state):
-        await message.answer(f"Запуск через {5-i}")
-        i += 1
+    counter_message: str = f"Запуск через {WAIT_BEFORE_RUN_TIME}\n"
+    res: SendMessage = await message.answer(counter_message, parse_mode=ParseMode.MARKDOWN)
+
+    for i in range(1, WAIT_BEFORE_RUN_TIME):
         await asyncio.sleep(1)
+        if (await state.get_state()) != BotState.starting_state:
+            logging.info("CMD START aborted by user")
+            return
+        counter_message = f"Запуск через {WAIT_BEFORE_RUN_TIME-i}\n"
+        await res.edit_text(counter_message, parse_mode=ParseMode.MARKDOWN)
 
     if (await state.get_state()) != BotState.starting_state:
         logging.info("CMD START aborted by user")
         return
 
-    for i in range(5):
-        if (await state.get_state()) != BotState.starting_state:
-            return
-        MqttClient.publish_start(rp_id)
-        await asyncio.sleep(1)
-        if rp_id not in MqttClient.rp_states:
-            await message.answer("Ошибка\n\tRaspberry Pi отключился")
-            MqttClient.publish_stop(rp_id)
-            return
-        rp_state = MqttClient.rp_states[rp_id].name
-        if rp_state == "STARTING":
-            await message.answer(f"Запущено")
-            break
-        if rp_state == "RUNNING":
-            await message.answer(f"Ошибка\n\t{rp_state}")
-            MqttClient.publish_stop(rp_id)
-            return
-        await message.answer(f"Ошибка\n\t{rp_state}")
-        logging.info("CMD START send to Raspberry Pi %d", rp_id)
+    MqttClient.publish_start(rp_id)
+    await asyncio.sleep(1)
+    await state.set_state()
+
+    if rp_id not in MqttClient.rp_states:
+        await res.edit_text(counter_message+"Ошибка: Raspberry Pi отключился")
+        MqttClient.publish_stop(rp_id)
+        return
+    rp_state = MqttClient.rp_states[rp_id].name
+    if rp_state == "STARTING":
+        await res.edit_text(counter_message+"Запущено")
+        return
+    if rp_state == "RUNNING":
+        await res.edit_text(counter_message+"Ошибка: двигатель завелся слишком быстро, останавливаем его")
+    elif rp_state == "FAULT":
+        await res.edit_text(counter_message+"Фатальная ошибка, останавливаем двигатель")
+    elif rp_state == "NOT_CONNECTED":
+        await res.edit_text(counter_message+"Ошибка: Двигатель отключился")
+    elif rp_state == "STOPPED":
+        await res.edit_text(counter_message+"Ошибка: Двигатель не запустился")
+    else:
+        await res.edit_text(counter_message+"Ошибка: неизвестное состояние")
+    MqttClient.publish_stop(rp_id)
+    await res.edit_text(counter_message+f"Ошибка: {rp_state}")
 
 @dp.message(Command(commands=["help", "помощь"]))
 async def command_help_handler(message: Message) -> None:
