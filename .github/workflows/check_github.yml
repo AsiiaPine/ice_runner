@@ -1,4 +1,4 @@
-name: build_and_deploy
+name: check_github
 on:
   push:
     branches:
@@ -12,11 +12,11 @@ jobs:
       matrix:
         include:
           - runs-on: ubuntu-22.04
-            container: "ubuntu:22.04"
+            container: "no container"
             target: all
 
           - runs-on: windows-2022
-            container: ""  # Containers on Windows runners are not supported
+            container: "no container"  # Containers on Windows runners are not supported
             target: dronecan_v2
 
           - runs-on: ubuntu-22.04
