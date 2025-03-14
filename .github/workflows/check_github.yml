@@ -19,15 +19,9 @@ jobs:
     steps:
       - name: Install Git and dependencies
         run: |
-          if [[ "${{ runner.os }}" == "Linux" ]]; then
-            # Linux-specific commands
-            if [[ -f /etc/os-release ]]; then
-              . /etc/os-release
-            echo "OS: $NAME"
-              if [[ "$NAME" == "Arch Linux" ]]; then
-                pacman -Sy --noconfirm git
-              fi
-            fi
+          echo "OS: $NAME"
+          if [[ "$NAME" == "Arch Linux" ]]; then
+            pacman -Sy --noconfirm git
           fi
         shell: bash
 
