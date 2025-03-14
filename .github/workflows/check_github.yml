@@ -19,9 +19,12 @@ jobs:
     steps:
       - name: Install Git and dependencies
         run: |
-          echo "OS: $NAME"
-          if [[ "$NAME" == "Arch Linux" ]]; then
-            pacman -Sy --noconfirm git
+          if [[ -f /etc/os-release ]]; then
+            . /etc/os-release
+            echo "OS: $NAME"
+            if [[ "$NAME" == "Arch Linux" ]]; then
+              pacman -Sy --noconfirm git
+            fi
           fi
         shell: bash
 
