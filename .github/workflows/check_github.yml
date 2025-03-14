@@ -12,16 +12,13 @@ jobs:
       matrix:
         include:
           - runs-on: ubuntu-22.04
-            container: "no container"
             target: all
 
           - runs-on: windows-2022
-            container: "no container"  # Containers on Windows runners are not supported
             target: dronecan_v2
 
           - runs-on: ubuntu-22.04
-            container: "manjaro:latest"
-              image: manjaro:latest
+            container: manjaro:latest
             target: "all"
 
     runs-on: ${{ matrix.runs-on }}
