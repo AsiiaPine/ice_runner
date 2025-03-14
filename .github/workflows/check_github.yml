@@ -31,9 +31,14 @@ jobs:
 
       - name: Install dependencies (Ubuntu & Manjaro & Windows)
         run: |
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            cat /etc/lsb-release
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            if [[ -f /etc/os-release ]]; then
+              . /etc/os-release
+              echo "Running on $NAME"
+            else
+              echo "Linux OS detected but /etc/os-release not found"
+            fi
           else
-            systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+            ver
           fi
         shell: bash
