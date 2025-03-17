@@ -10,8 +10,6 @@ jobs:
 
   pytest:
     runs-on: ubuntu-latest
-    container:
-      image: debian:bookworm
     strategy:
       matrix:
         python-version: ["3.10"]
