@@ -19,7 +19,6 @@ import bot.mqtt.handlers as mqtt
 import bot.telegram.handlers as telegram
 from bot.telegram.scheduler import Scheduler
 from common import logging_configurator
-from aiogram.fsm.state import default_state
 
 async def start_bot() -> None:
     os.environ.clear()
