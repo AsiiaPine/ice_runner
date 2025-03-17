@@ -160,7 +160,11 @@ class ICECommander:
             status_dict = CanNode.status.get_description_dict()
             time_left = self.configuration.time + self.start_time - time.time()
             if self.start_time > 0:
-                status_dict["Time left"] = f"{round(time_left / 60, 1)} min"
+                if (time_left / 60) < 1:
+                    status_dict["Time left"] = f"{int(time_left)} sec"
+                else:
+                    status_dict["Time left"] =\
+                            f"{int(time_left / 60)} min {int(time_left % 60)} sec"
             else:
                 status_dict["Time left"] = "not started"
             MqttClient.publish_state(self.state_controller.state)
