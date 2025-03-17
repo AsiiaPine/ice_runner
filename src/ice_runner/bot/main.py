@@ -19,6 +19,7 @@ import bot.mqtt.handlers as mqtt
 import bot.telegram.handlers as telegram
 from bot.telegram.scheduler import Scheduler
 from common import logging_configurator
+from aiogram.fsm.state import default_state
 
 async def start_bot() -> None:
     os.environ.clear()
@@ -27,6 +28,7 @@ async def start_bot() -> None:
     server_ip = os.getenv("SERVER_IP")
     server_port = int(os.getenv("SERVER_PORT"))
     chat_id = int(os.getenv("CHAT_ID"))
+    telegram.RUNNER_ID = int(os.getenv("RUNNER_ID"))
     telegram.ChatIdFilter.chat_id = chat_id
     bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
