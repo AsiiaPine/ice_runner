@@ -18,9 +18,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install can-utils
-      run: sudo apt install -y net-tools can-utils iproute2
+      run:  apt-get update & apt-get install -y can-utils
     - name: Install mqtt
-      run: sudo ./scripts/install_mqtt.sh
+      run: ./scripts/install_mqtt.sh
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
