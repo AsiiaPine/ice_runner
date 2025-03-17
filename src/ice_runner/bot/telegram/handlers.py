@@ -8,6 +8,7 @@ import asyncio
 from copy import copy
 from dataclasses import dataclass
 import logging
+import os
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
@@ -44,117 +45,11 @@ COMMANDS_DESCRIPTION : Dict[str, str] = {
 }
 MAX_COMMAND_LENGTH = max(len(command) for command in COMMANDS_DESCRIPTION)
 WAIT_BEFORE_RUN_TIME = 5
-
+RUNNER_ID = None
 dp = Dispatcher(storage=MemoryStorage(), fsm_strategy=FSMStrategy.CHAT)
 form_router = Router()
 dp.include_router(form_router)
 configuration_file_path: str = None
-
-async def set_report_period(rp_id: int, state: FSMContext):
-    """The function sets the report period for the Raspberry Pi,
-        returns the report period string and the state of the info was is updated"""
-    data = await state.get_data()
-    if "report_period" in data.keys():
-        return
-    report_period = 10
-    if rp_id in MqttClient.rp_configuration:
-        if "report_period" not in data:
-            if "report_period" in MqttClient.rp_configuration[int(rp_id)]:
-                report_period = int(MqttClient.rp_configuration[int(rp_id)]["report_period"])
-    data["report_period"] = report_period
-    await state.set_data(data)
-    return state
-
-async def get_configuration_str(rp_id: int) -> str:
-    """The function returns the configuration string for the specified RP id
-        stored in MQTT client"""
-    MqttClient.publish_config_request(rp_id)
-    await asyncio.sleep(0.5)
-    if rp_id not in MqttClient.rp_configuration:
-        return "Нет настроек обкатки для обкатчика " + str(rp_id)
-    conf = MqttClient.rp_configuration[int(rp_id)]
-    conf_str = ""
-    if conf:
-        for name, value in conf.items():
-            conf_str += f"\t{name}: {value}\n"
-    return conf_str
-
-async def get_full_configuration(runner_id: int) -> Dict[str, Any]:
-    """The function returns the full configuration dictionary for the specified RPi
-        stored in MQTT client"""
-    i = 0
-    while runner_id not in MqttClient.runner_full_configuration:
-        MqttClient.publish_full_config_request(runner_id)
-        await asyncio.sleep(2)
-        i += 1
-        if i > 5:
-            logging.error("No configuration for %d", runner_id)
-            return None
-    return MqttClient.runner_full_configuration[runner_id]
-
-def get_emoji(state: RunnerState) -> str:
-    """The function returns the emoji for the specified state"""
-    if state == RunnerState.NOT_CONNECTED:
-        return "🚫"
-    if state == RunnerState.RUNNING:
-        return "🚀"
-    if state == RunnerState.STARTING:
-        return "🔵"
-    if state == RunnerState.STOPPED:
-        return "🛑"
-    if state == RunnerState.STOPPING:
-        return "🚩"
-    if state == RunnerState.FAULT:
-        return "⁉"
-
-
-async def get_rp_status(rp_id: int, state: FSMContext) -> Tuple[str, bool]:
-    """The function sets the status of the Raspberry Pi,
-        returns the status string and the state of the info was is updated"""
-    await asyncio.sleep(0.4)
-    data = await state.get_data()
-
-    await asyncio.sleep(0.5)
-    status = MqttClient.rp_status[rp_id]
-    rp_state = MqttClient.rp_states[rp_id]
-    MqttClient.rp_status[rp_id] = None
-    MqttClient.rp_states[rp_id] = None
-    status_str = ""
-    if rp_state is None:
-        MqttClient.rp_status.pop(rp_id)
-        MqttClient.rp_states.pop(rp_id)
-        status_str = "\tОбкатчик молчит\n"
-    else:
-        if status is None:
-            status_str = "\tОбкатчик не шлет свой статус\n"
-        else:
-            for name, value in status.items():
-                status_str += f"{name}:\t{value}\n"
-    last_status_update = time.time()
-    data["last_status_update"] = last_status_update
-    await state.update_data(data)
-    update_time = datetime.fromtimestamp(last_status_update).strftime('%Y-%m-%d %H:%M:%S') + '\n'
-    return status_str + "\nвремя обновления: " + update_time, True
-
-async def show_options(message: types.Message) -> None:
-    """The function creates set of buttons of available RPis"""
-    MqttClient.publish_who_alive()
-    await asyncio.sleep(0.5)
-    available_rps = list(MqttClient.rp_states.keys())
-    if len(available_rps) == 0:
-        await message.answer("Нет доступных обкатчиков")
-        return
-    builder = InlineKeyboardBuilder()
-
-    for rp_id in available_rps:
-        builder.add(types.InlineKeyboardButton(
-            text= f"{rp_id}\tStatus: { MqttClient.rp_states[rp_id].name}",
-            callback_data=str(rp_id))
-        )
-    await message.answer(
-        "Нажмите на кнопку, чтобы выбрать ID обкатчика",
-        reply_markup=builder.as_markup()
-    )
 
 @dataclass
 class BotState(StatesGroup):
@@ -165,66 +60,162 @@ class BotState(StatesGroup):
     config_change = State()
     param_change = State()
 
-@form_router.message(Command(commands=["choose_rp", "выбрать_ДВС"]), ChatIdFilter())
-async def choose_rp_id(message: types.Message) -> None:
-    """The function handles the command to choose RPi"""
-    await show_options(message)
+################################################################################
+# Handlers
+################################################################################
 
-@form_router.callback_query(F.data.isdigit())
-async def choose_rp_id_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
-    """The function handles callback query from RPi id selection buttons"""
-    rp_id_num = int(callback_query.data)
-    await callback_query.message.answer(f"ID выбранного обкатчика: {rp_id_num}")
-    await state.set_data({"rp_id": rp_id_num})
-
-@form_router.message(Command(commands=["cancel", "отмена"]), ChatIdFilter())
-async def cancel_handler(message: Message, state: FSMContext) -> None:
+@form_router.message(Command(commands=["stop", "стоп"]), ChatIdFilter())
+async def command_stop_handler(message: Message, state: FSMContext) -> None:
     """
-    Allow user to cancel any action
+    This handler receives messages with `/stop` command
     """
-    current_state = await state.get_state()
-    if current_state is None:
-        await message.answer("Нет активных действий для отмены.",
-                             reply_markup=ReplyKeyboardRemove())
+    await message.answer(f"Отправляем команду остановки")
+    if RUNNER_ID is None:
+        await show_options(message)
         return
-    rp_id = (await state.get_data())["rp_id"]
-    logging.info("Cancelling state %r", current_state)
-    await state.clear()
-    await state.set_data({"rp_id": rp_id})
-    await message.answer(
-        "Отменено.",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", str(RUNNER_ID))
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", str(RUNNER_ID))
+    while True:
+        rp_status = MqttClient.rp_states[RUNNER_ID]
+        if rp_status != RunnerState.RUNNING:
+            break
+        await message.answer(
+            f"Команда отправленна на обкатчик {RUNNER_ID}.\nТекущий статус: {rp_status.name}")
+        MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", str(RUNNER_ID))
+        await asyncio.sleep(1)
+    await message.answer(f"Остановлено")
+
+@form_router.message(Command(commands=["run", "запустить"], ignore_case=True), ChatIdFilter())
+async def command_run_handler(message: Message, state: FSMContext) -> None:
+    """
+    This handler receives messages with `/run` command
+    """
+    if RUNNER_ID is None:
+        await show_options(message)
+        return
+    runner_id = RUNNER_ID
+    rp_state = MqttClient.rp_states[runner_id].name
+    if rp_state in ('RUNNING', 'STARTING'):
+        await message.answer("Ошибка\nОбкатка уже запущена, отправьте /stop или /стоп чтобы остановить ее")
+        return
+    if rp_state == "NOT_CONNECTED":
+        await message.answer("Ошибка\nОбкатчик не подключен")
+        return
+    info_mes: str = "Настройки обкатки:\n" + (await get_configuration_str(runner_id) + "\n")
+    await state.set_state(BotState.starting_state)
+    info_mes += "Отправьте /cancel или /отмена чтобы отменить запуск обкатки.\
+                         После запуска отправьте /stop или /стоп чтобы остановить ее"
+    await message.answer(info_mes)
+    logging.info("received CMD START from user %s", message.from_user.username)
+    counter_message: str = f"Запуск через {WAIT_BEFORE_RUN_TIME}\n"
+    res: SendMessage = await message.answer(counter_message, parse_mode=ParseMode.MARKDOWN)
+
+    for i in range(1, WAIT_BEFORE_RUN_TIME):
+        await asyncio.sleep(1)
+        if (await state.get_state()) != BotState.starting_state:
+            logging.info("CMD START aborted by user")
+            return
+        counter_message = f"Запуск через {WAIT_BEFORE_RUN_TIME-i}\n"
+        await res.edit_text(counter_message, parse_mode=ParseMode.MARKDOWN)
+
+    if (await state.get_state()) != BotState.starting_state:
+        logging.info("CMD START aborted by user")
+        return
+
+    MqttClient.publish_start(runner_id)
+    await asyncio.sleep(1)
+    await state.set_state()
+
+    if runner_id not in MqttClient.rp_states:
+        await res.edit_text(counter_message+"Ошибка: Raspberry Pi отключился")
+        MqttClient.publish_stop(runner_id)
+        return
+    rp_state = MqttClient.rp_states[runner_id].name
+    if rp_state == "STARTING":
+        await res.edit_text(counter_message+"Запущено")
+        return
+    if rp_state == "RUNNING":
+        await res.edit_text(counter_message+"Ошибка: двигатель завелся слишком быстро, останавливаем его")
+    elif rp_state == "FAULT":
+        await res.edit_text(counter_message+"Фатальная ошибка, останавливаем двигатель")
+    elif rp_state == "NOT_CONNECTED":
+        await res.edit_text(counter_message+"Ошибка: Двигатель отключился")
+    elif rp_state == "STOPPED":
+        await res.edit_text(counter_message+"Ошибка: Двигатель не запустился")
+    else:
+        await res.edit_text(counter_message+"Ошибка: неизвестное состояние")
+    MqttClient.publish_stop(runner_id)
+    await res.edit_text(counter_message+f"Ошибка: {rp_state}")
+
+@form_router.message(Command(commands=["status", "статус"]), ChatIdFilter())
+async def command_status_handler(message: Message, state: FSMContext) -> None:
+    """
+    This handler receives messages with `/status` command
+    """
+    await state.set_state(BotState.status_state)
+    data = await state.get_data()
+    if RUNNER_ID is None:
+        await show_options(message)
+        return
+    runner_id = RUNNER_ID
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/config", str(runner_id))
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/state", str(runner_id))
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(runner_id))
+    await asyncio.sleep(0.5)
+    upd_state = await set_report_period(runner_id, state)
+
+    status_str, _ = await get_rp_status(runner_id, upd_state)
+
+    last_status_update = time.time()
+    data["last_status_update"] = last_status_update
+    data = await upd_state.get_data()
+    await state.set_data(data)
+
+    res: SendMessage = await message.answer(status_str, parse_mode=ParseMode.MARKDOWN)
+    report_period = data["report_period"]
+    await asyncio.sleep(report_period)
+
+    while ((await state.get_state()) == BotState.status_state):
+        logging.info("Updating status")
+        MqttClient.client.publish("ice_runner/bot/usr_cmd/state", str(runner_id))
+        MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(runner_id))
+        status_str, _ = await get_rp_status(runner_id, state)
+        last_status_update = time.time()
+        data["last_status_update"] = last_status_update
+        await state.set_data(data)
+        await res.edit_text(status_str, parse_mode=ParseMode.MARKDOWN)
+        await asyncio.sleep(report_period)
 
 @form_router.message(Command(commands=["config", "изменить_настройки"]), ChatIdFilter())
 async def change_config(message: types.Message, state: FSMContext) -> None:
     """The function handles the command to change the configuration"""
-    if "rp_id" not in (await state.get_data()):
+    if RUNNER_ID is None:
         await show_options(message)
         return
-    rp_id = (await state.get_data())["rp_id"]
-    logging.debug("Send conf command to rpi %d", rp_id)
-    MqttClient.publish_config_request(rp_id)
+    runner_id = RUNNER_ID
+    logging.debug("Send conf command to rpi %d", runner_id)
+    MqttClient.publish_config_request(runner_id)
     await asyncio.sleep(0.5)
-    rp_state = MqttClient.rp_states[rp_id].name
-    await message.answer(f"ID обкатчика: {rp_id}\nСтатус обкатчика: {rp_state}\n")
-    await message.answer("Настройки обкатки:\n" + (await get_configuration_str(rp_id)))
-    rp_config = MqttClient.rp_configuration[rp_id]
+    rp_state = MqttClient.rp_states[runner_id].name
+    await message.answer("Настройки обкатки:\n" + (await get_configuration_str(runner_id)))
+    rp_config = MqttClient.rp_configuration[runner_id]
     if len(rp_config) == 0:
         await message.answer("Ошибка, нет настроек обкатки")
-        logging.error("No configuration for %d", rp_id)
+        logging.error("No configuration for %d", runner_id)
         return
+    help_message = "Отправьте новые настройки в формате имя: значение.\n"
+    help_message += "Начните сообщение с '/'.\nНапример:\n"
+    help_message += "\n/rpm: 4000\ntime: 100\ngas_throttle: 0\n"
+    help_message += "Чтобы получить подсказку по командам, напишите /tip"
 
-    await message.answer("Отправьте новые настройки в формате имя: значение. Начните сообщение с '/'. Например:")
-    await message.answer("/rpm: 4000\ntime: 100\ngas_throttle: 0")
-    await message.answer("Чтобы получить подсказку по командам, напишите /tip")
+    await message.answer(help_message)
     await state.set_state(BotState.config_change)
 
 @form_router.message(Command(commands=["tip"]), ChatIdFilter(), BotState.config_change)
 async def config_tip_handler(message: Message, state: FSMContext) -> None:
     """The function handles tip message with configuration change"""
     data = await state.get_data()
-    runner_id = data["rp_id"]
+    runner_id = RUNNER_ID
     full_conf = await get_full_configuration(runner_id)
     base_params = [key for key, value in full_conf.items() if 'base' in value["usage"]]
     other_params = [key for key, value in full_conf.items() if 'other' in value["usage"]]
@@ -251,22 +242,24 @@ async def config_tip_handler(message: Message, state: FSMContext) -> None:
             string += f"\t{name}: {value}\n"
     await message.answer(string)
 
-@form_router.message(BotState.config_change)
+@form_router.message(F.text.lower().not_in(COMMANDS_DESCRIPTION.keys()), BotState.config_change)
 async def config_change_handler(message: Message, state: FSMContext) -> None:
     """The function handles messages with configuration change"""
+    await state.set_state()
     data = await state.get_data()
-    runner_id = data["rp_id"]
+    runner_id = RUNNER_ID
     text = copy(message.text)
     if ("@" in text ) or ( "/" in text):
-        text = text.split("@")[0].replace("/", "")
+        text = text.split("@")[0].replace("/", "").replace(" ", "")
     params_dict ={}
     for params in text.split("\n"):
         if not params:
+            message.reply(f"Параметры не указаны")
             logging.warning("Param change failed, %s no params", params)
             continue
         if ":" not in params:
             logging.warning("Param change failed, wrond msg format %s", params)
-            await message.answer("Неверный формат команды")
+            await message.reply("Неверный формат команды")
             return
         param_name, param_value = params.split(":")
         logging.info("Param change %s %s", param_name, param_value)
@@ -275,7 +268,7 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     for param_name, param_value in params_dict.items():
         if not is_float(param_value):
             logging.warning("Wrong param value, %s is not a digit", param_value)
-            await message.answer(
+            await message.reply(
                 f"Неверное значение параметра {param_name}: {param_value} не является числом")
             return
     full_conf = await get_full_configuration(runner_id)
@@ -289,105 +282,64 @@ async def config_change_handler(message: Message, state: FSMContext) -> None:
     for param_name, param_flag in res.items():
         if not param_flag:
             logging.warning("Wrong param value %s", param_name)
-            await message.answer(
-                f"Неверное значение параметра {param_name}:\
-min {full_conf[param_name]['min']}, max {full_conf[param_name]['max']}")
+            await message.reply(
+                f"Неверное значение параметра {param_name}:" +
+                f"min {full_conf[param_name]['min']}, max {full_conf[param_name]['max']}")
             return
 
+    reply_text = ""
     for param_name, param_value_str in params_dict.items():
         MqttClient.client.publish(
             f"ice_runner/bot/usr_cmd/{runner_id}/change_config/{param_name}", param_value_str)
-        await message.answer(f"Новое значение параметра {param_name} отправлено {param_value_str}")
+        reply_text += f"Новое значение параметра {param_name} отправлено {param_value_str}\n"
+    reply_message: Message = await message.answer(reply_text)
     await asyncio.sleep(0.5)
     MqttClient.publish_config_request(runner_id)
     await asyncio.sleep(2)
     if full_conf is None:
-        await message.answer("Ошибка, нет настроек обкатки")
+        reply_message.edit_text(reply_text + "Ошибка, нет настроек обкатки")
         return
     for param_name, param_value in params_dict.items():
         type_of_param = get_type_from_str(full_conf[param_name]["type"])
+        n_success = 0
         if MqttClient.rp_configuration[runner_id][param_name] == type_of_param(param_value):
-            await message.answer(f"Параметр {param_name} установлен в нужное значение")
+            reply_text += f"Параметр {param_name} установлен в нужное значение\n"
+            n_success += 1
         else:
-            await message.answer(f"Параметр {param_name} не установлен")
-    await message.answer("Конфигурация успешно изменена\n" +
+            reply_text += f"Параметр {param_name} не обновлен\n"
+        reply_message.edit_text(reply_text + "Ошибка, нет настроек обкатки")
+    await message.answer(f"{n_success} параметров успешно обновлено\n" +
                                 (await get_configuration_str(runner_id)))
-    await state.set_state()
 
-def check_parameters_borders(params: Dict[str, Any],
-                                   full_conf: Dict[str, Any]) -> Dict[str, bool]:
-    """The function checks if all parameters are set correctly"""
-    check_dict = {}
-    for param_name, param_value in params.items():
-        min_value = full_conf[param_name]["min"]
-        max_value = full_conf[param_name]["max"]
-        if min_value <= param_value <= max_value:
-            check_dict[param_name] = True
-        else:
-            check_dict[param_name] = False
-    return check_dict
-
-@form_router.message(Command(commands=["run", "запустить"], ignore_case=True), ChatIdFilter())
-async def command_run_handler(message: Message, state: FSMContext) -> None:
+@form_router.message(Command(commands=["log", "лог"]), ChatIdFilter())
+async def command_log_handler(message: Message, state: FSMContext) -> None:
     """
-    This handler receives messages with `/run` command
+    This handler receives messages with `/log` command
     """
-    if "rp_id" not in (await state.get_data()):
+    if RUNNER_ID is None:
         await show_options(message)
         return
-    rp_id = (await state.get_data())["rp_id"]
-    rp_state = MqttClient.rp_states[rp_id].name
-    if rp_state in ('RUNNING', 'STARTING'):
-        await message.answer("Ошибка\nОбкатка уже запущена, отправьте /stop или /стоп чтобы остановить ее")
-        return
-    if rp_state == "NOT_CONNECTED":
-        await message.answer("Ошибка\nОбкатчик не подключен")
-        return
-    info_mes: str = "Настройки обкатки:\n" + (await get_configuration_str(rp_id) + "\n")
-    await state.set_state(BotState.starting_state)
-    info_mes += "Отправьте /cancel или /отмена чтобы отменить запуск обкатки.\
-                         После запуска отправьте /stop или /стоп чтобы остановить ее"
-    await message.answer(info_mes)
-    logging.info("received CMD START from user %s", message.from_user.username)
-    counter_message: str = f"Запуск через {WAIT_BEFORE_RUN_TIME}\n"
-    res: SendMessage = await message.answer(counter_message, parse_mode=ParseMode.MARKDOWN)
+    runner_id = RUNNER_ID
+    logging.info("Getting logs for %d", runner_id)
+    MqttClient.client.publish("ice_runner/bot/usr_cmd/log", str(runner_id))
+    await message.answer("Пожалуйста, подождите")
 
-    for i in range(1, WAIT_BEFORE_RUN_TIME):
-        await asyncio.sleep(1)
-        if (await state.get_state()) != BotState.starting_state:
-            logging.info("CMD START aborted by user")
-            return
-        counter_message = f"Запуск через {WAIT_BEFORE_RUN_TIME-i}\n"
-        await res.edit_text(counter_message, parse_mode=ParseMode.MARKDOWN)
-
-    if (await state.get_state()) != BotState.starting_state:
-        logging.info("CMD START aborted by user")
+@form_router.message(Command(commands=["cancel", "отмена"]), ChatIdFilter())
+async def cancel_handler(message: Message, state: FSMContext) -> None:
+    """
+    Allow user to cancel any action
+    """
+    current_state = await state.get_state()
+    if current_state is None:
+        await message.answer("Нет активных действий для отмены.",
+                             reply_markup=ReplyKeyboardRemove())
         return
-
-    MqttClient.publish_start(rp_id)
-    await asyncio.sleep(1)
-    await state.set_state()
-
-    if rp_id not in MqttClient.rp_states:
-        await res.edit_text(counter_message+"Ошибка: Raspberry Pi отключился")
-        MqttClient.publish_stop(rp_id)
-        return
-    rp_state = MqttClient.rp_states[rp_id].name
-    if rp_state == "STARTING":
-        await res.edit_text(counter_message+"Запущено")
-        return
-    if rp_state == "RUNNING":
-        await res.edit_text(counter_message+"Ошибка: двигатель завелся слишком быстро, останавливаем его")
-    elif rp_state == "FAULT":
-        await res.edit_text(counter_message+"Фатальная ошибка, останавливаем двигатель")
-    elif rp_state == "NOT_CONNECTED":
-        await res.edit_text(counter_message+"Ошибка: Двигатель отключился")
-    elif rp_state == "STOPPED":
-        await res.edit_text(counter_message+"Ошибка: Двигатель не запустился")
-    else:
-        await res.edit_text(counter_message+"Ошибка: неизвестное состояние")
-    MqttClient.publish_stop(rp_id)
-    await res.edit_text(counter_message+f"Ошибка: {rp_state}")
+    logging.info("Cancelling state %r", current_state)
+    await state.clear()
+    await message.answer(
+        "Отменено.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
 
 @dp.message(Command(commands=["help", "помощь"]))
 async def command_help_handler(message: Message) -> None:
@@ -401,127 +353,6 @@ async def command_help_handler(message: Message) -> None:
         help_str += f"<b>- {command}</b>{padding_spaces}: {description}\n"
     await message.answer(
         "Список команд:\n" + help_str, parse_mode=ParseMode.HTML)
-
-@dp.message(Command(commands=["show_all", "показать_все"]), ChatIdFilter())
-async def command_show_all_handler(message: Message, state: FSMContext) -> None:
-    """
-    This handler receives messages with `/show_all` command
-    """
-    MqttClient.publish_who_alive()
-    await state.set_state(BotState.show_all_state)
-    await asyncio.sleep(1)
-    messages: List[Dict[str, Any]] = []
-    message_text = ""
-    connected_nodes = MqttClient.rp_status.keys()
-    await message.answer(f"Количество подключенных обкатчиков: {len(connected_nodes)}")
-    if len(connected_nodes) == 0:
-        return
-
-    for rp_id in list(MqttClient.rp_states.keys()):
-        conf_str = ""
-        report_period = 10
-        logging.info("Sending status cmd for %d", rp_id)
-        MqttClient.client.publish(f"ice_runner/bot/usr_cmd/status", str(rp_id))
-        await asyncio.sleep(0.5)
-        header_str = html.bold(f"ID обкатчика: {rp_id}\n\tСтатус:" )
-        data = await state.get_data()
-        logging.info("Send conf command to rpi %d", rp_id)
-        MqttClient.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
-        await asyncio.sleep(1)
-
-        logging.info("Config %s", MqttClient.rp_configuration)
-        if MqttClient.rp_configuration[int(rp_id)] is None:
-            conf_str = html.bold("\tНет настроек обкатки\n")
-        else:
-            report_period = int(MqttClient.rp_configuration[int(rp_id)]["report_period"])
-            conf_str = html.bold("\tНастройки обкатки:\n") + (await get_configuration_str(rp_id))
-        data["rp_id"] = rp_id
-        data["report_period"] = report_period
-        await state.set_data(data)
-        status_str, _ = await get_rp_status(int(rp_id), state)
-        message_text += (header_str + status_str + conf_str)
-
-        messages.append({"rp_id": rp_id,
-                         "header": header_str,
-                         "status": status_str,
-                         "conf": conf_str})
-        await asyncio.sleep(0.3)
-    await message.answer(message_text, parse_mode=ParseMode.HTML)
-    await state.set_data({})
-
-@form_router.message(Command(commands=["status", "статус"]), ChatIdFilter())
-async def command_status_handler(message: Message, state: FSMContext) -> None:
-    """
-    This handler receives messages with `/status` command
-    """
-    await state.set_state(BotState.status_state)
-    data = await state.get_data()
-    if "rp_id" not in data.keys():
-        await show_options(message)
-        return
-    rp_id = data["rp_id"]
-    MqttClient.client.publish("ice_runner/bot/usr_cmd/config", str(rp_id))
-    MqttClient.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
-    MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
-    await asyncio.sleep(0.5)
-    upd_state = await set_report_period(rp_id, state)
-
-    status_str, is_updated = await get_rp_status(rp_id, upd_state)
-
-    last_status_update = time.time()
-    data["last_status_update"] = last_status_update
-    data = await upd_state.get_data()
-    await state.set_data(data)
-
-    res: SendMessage = await message.answer(status_str, parse_mode=ParseMode.MARKDOWN)
-    report_period = data["report_period"]
-    await asyncio.sleep(report_period)
-
-    while ((await state.get_state()) == BotState.status_state):
-        logging.info("Updating status")
-        MqttClient.client.publish("ice_runner/bot/usr_cmd/state", str(rp_id))
-        MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(rp_id))
-        status_str, is_updated = await get_rp_status(rp_id, state)
-        last_status_update = time.time()
-        data["last_status_update"] = last_status_update
-        await state.set_data(data)
-        await res.edit_text(status_str, parse_mode=ParseMode.MARKDOWN)
-        await asyncio.sleep(report_period)
-
-@form_router.message(Command(commands=["log", "лог"]), ChatIdFilter())
-async def command_log_handler(message: Message, state: FSMContext) -> None:
-    """
-    This handler receives messages with `/log` command
-    """
-    if "rp_id" not in (await state.get_data()).keys():
-        await show_options(message)
-        return
-    rp_id = (await state.get_data())["rp_id"]
-    logging.info("Getting logs for %d", rp_id)
-    MqttClient.client.publish("ice_runner/bot/usr_cmd/log", str(rp_id))
-    await message.answer("Пожалуйста, подождите")
-
-@form_router.message(Command(commands=["stop", "стоп"]), ChatIdFilter())
-async def command_stop_handler(message: Message, state: FSMContext) -> None:
-    """
-    This handler receives messages with `/stop` command
-    """
-    await message.answer(f"Отправляем команду остановки")
-    if "rp_id" not in (await state.get_data()).keys():
-        await show_options(message)
-        return
-    rp_id = (await state.get_data())["rp_id"]
-    MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", str(rp_id))
-    MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", str(rp_id))
-    while True:
-        rp_status = MqttClient.rp_states[rp_id]
-        if rp_status != RunnerState.RUNNING:
-            break
-        await message.answer(
-            f"Команда отправленна на обкатчик {rp_id}.\nТекущий статус: {rp_status.name}")
-        MqttClient.client.publish("ice_runner/bot/usr_cmd/stop", str(rp_id))
-        await asyncio.sleep(1)
-    await message.answer(f"Остановлено")
 
 @form_router.message(Command(commands=["server", "сервер"]), ChatIdFilter())
 async def command_server(message: Message) -> None:
@@ -550,3 +381,166 @@ async def unknown_user(msg: types.Message):
     message_text = 'Я вас не знаю, уходите'
     logging.warning("Unknown user send %s", msg.text)
     await msg.reply(message_text, parse_mode=ParseMode.HTML)
+
+@form_router.message(Command(commands=["choose_rp", "выбрать_ДВС"]), ChatIdFilter())
+async def choose_rp_id(message: types.Message) -> None:
+    """The function handles the command to choose RPi"""
+    await show_options(message)
+
+@dp.message(Command(commands=["show_all", "показать_все"]), ChatIdFilter())
+async def command_show_all_handler(message: Message, state: FSMContext) -> None:
+    """
+    This handler receives messages with `/show_all` command
+    """
+    MqttClient.publish_who_alive()
+    await state.set_state(BotState.show_all_state)
+    await asyncio.sleep(1)
+    messages: List[Dict[str, Any]] = []
+    message_text = ""
+    connected_nodes = MqttClient.rp_status.keys()
+    await message.answer(f"Количество подключенных обкатчиков: {len(connected_nodes)}")
+    if len(connected_nodes) == 0:
+        return
+
+    for runner_id in list(MqttClient.rp_states.keys()):
+        conf_str = ""
+        logging.info("Sending status cmd for %d", runner_id)
+        MqttClient.client.publish(f"ice_runner/bot/usr_cmd/status", str(runner_id))
+        await asyncio.sleep(0.5)
+        header_str = html.bold(f"ID обкатчика: {runner_id}\n\tСтатус:" )
+        data = await state.get_data()
+        logging.info("Send conf command to rpi %d", runner_id)
+        MqttClient.client.publish("ice_runner/bot/usr_cmd/config", str(runner_id))
+        await asyncio.sleep(1)
+
+        logging.info("Config %s", MqttClient.rp_configuration)
+        if MqttClient.rp_configuration[int(runner_id)] is None:
+            conf_str = html.bold("\tНет настроек обкатки\n")
+        else:
+            conf_str = html.bold("\tНастройки обкатки:\n") +\
+                                        (await get_configuration_str(runner_id))
+        await state.set_data(data)
+        status_str, _ = await get_rp_status(int(runner_id), state)
+        message_text += (header_str + status_str + conf_str)
+
+        messages.append({"runner_id": runner_id,
+                         "header": header_str,
+                         "status": status_str,
+                         "conf": conf_str})
+        await asyncio.sleep(0.3)
+    await message.answer(message_text, parse_mode=ParseMode.HTML)
+    await state.set_data({})
+
+@form_router.callback_query(F.data.isdigit())
+async def choose_runner_id_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    """The function handles callback query from RPi id selection buttons"""
+    runner_id_num = int(callback_query.data)
+    await callback_query.message.answer(f"ID выбранного обкатчика: {runner_id_num}")
+    RUNNER_ID = runner_id_num
+
+################################################################################
+# Helper functions
+################################################################################
+
+async def set_report_period(runner_id: int, state: FSMContext):
+    """The function sets the report period for the Raspberry Pi,
+        returns the report period string and the state of the info was is updated"""
+    data = await state.get_data()
+    if "report_period" in data.keys():
+        return
+    report_period = 10
+    if runner_id in MqttClient.rp_configuration:
+        if "report_period" not in data:
+            if "report_period" in MqttClient.rp_configuration[int(runner_id)]:
+                report_period = int(MqttClient.rp_configuration[int(runner_id)]["report_period"])
+    data["report_period"] = report_period
+    await state.set_data(data)
+    return state
+
+async def get_configuration_str(runner_id: int) -> str:
+    """The function returns the configuration string for the specified RP id
+        stored in MQTT client"""
+    MqttClient.publish_config_request(runner_id)
+    await asyncio.sleep(0.5)
+    if runner_id not in MqttClient.rp_configuration:
+        return "Нет настроек обкатки для обкатчика " + str(runner_id)
+    conf = MqttClient.rp_configuration[int(runner_id)]
+    conf_str = ""
+    if conf:
+        for name, value in conf.items():
+            conf_str += f"\t{name}: {value}\n"
+    return conf_str
+
+async def get_full_configuration(runner_id: int) -> Dict[str, Any]:
+    """The function returns the full configuration dictionary for the specified RPi
+        stored in MQTT client"""
+    i = 0
+    while runner_id not in MqttClient.runner_full_configuration:
+        MqttClient.publish_full_config_request(runner_id)
+        await asyncio.sleep(2)
+        i += 1
+        if i > 5:
+            logging.error("No configuration for %d", runner_id)
+            return None
+    return MqttClient.runner_full_configuration[runner_id]
+
+async def get_rp_status(runner_id: int, state: FSMContext) -> Tuple[str, bool]:
+    """The function sets the status of the Raspberry Pi,
+        returns the status string and the state of the info was is updated"""
+    await asyncio.sleep(0.4)
+    data = await state.get_data()
+
+    await asyncio.sleep(0.5)
+    status = MqttClient.rp_status[runner_id]
+    rp_state = MqttClient.rp_states[runner_id]
+    MqttClient.rp_status[runner_id] = None
+    MqttClient.rp_states[runner_id] = None
+    status_str = ""
+    if rp_state is None:
+        MqttClient.rp_status.pop(runner_id)
+        MqttClient.rp_states.pop(runner_id)
+        status_str = "\tОбкатчик молчит\n"
+    else:
+        if status is None:
+            status_str = "\tОбкатчик не шлет свой статус\n"
+        else:
+            for name, value in status.items():
+                status_str += f"{name}:\t{value}\n"
+    last_status_update = time.time()
+    data["last_status_update"] = last_status_update
+    await state.update_data(data)
+    update_time = datetime.fromtimestamp(last_status_update).strftime('%Y-%m-%d %H:%M:%S') + '\n'
+    return status_str + "\nвремя обновления: " + update_time, True
+
+async def show_options(message: types.Message) -> None:
+    """The function creates set of buttons of available RPis"""
+    MqttClient.publish_who_alive()
+    await asyncio.sleep(0.5)
+    available_rps = list(MqttClient.rp_states.keys())
+    if len(available_rps) == 0:
+        await message.answer("Нет доступных обкатчиков")
+        return
+    builder = InlineKeyboardBuilder()
+
+    for runner_id in available_rps:
+        builder.add(types.InlineKeyboardButton(
+            text= f"{runner_id}\tStatus: { MqttClient.rp_states[runner_id].name}",
+            callback_data=str(runner_id))
+        )
+    await message.answer(
+        "Нажмите на кнопку, чтобы выбрать ID обкатчика",
+        reply_markup=builder.as_markup()
+    )
+
+def check_parameters_borders(params: Dict[str, Any],
+                                   full_conf: Dict[str, Any]) -> Dict[str, bool]:
+    """The function checks if all parameters are set correctly"""
+    check_dict = {}
+    for param_name, param_value in params.items():
+        min_value = full_conf[param_name]["min"]
+        max_value = full_conf[param_name]["max"]
+        if min_value <= param_value <= max_value:
+            check_dict[param_name] = True
+        else:
+            check_dict[param_name] = False
+    return check_dict
