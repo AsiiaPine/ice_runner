@@ -152,6 +152,7 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     """
     This handler receives messages with `/status` command
     """
+    await state.clear()
     await state.set_state(BotState.status_state)
     data = await state.get_data()
     if RUNNER_ID is None:
@@ -163,7 +164,6 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(runner_id))
     await asyncio.sleep(0.5)
     upd_state = await set_report_period(runner_id, state)
-
     status_str, _ = await get_rp_status(runner_id, upd_state)
 
     last_status_update = time.time()
@@ -383,7 +383,7 @@ async def unknown_user(msg: types.Message):
     await msg.reply(message_text, parse_mode=ParseMode.HTML)
 
 @form_router.message(Command(commands=["choose_rp", "выбрать_ДВС"]), ChatIdFilter())
-async def choose_rp_id(message: types.Message) -> None:
+async def choose_runner_id(message: types.Message) -> None:
     """The function handles the command to choose RPi"""
     await show_options(message)
 
@@ -489,7 +489,6 @@ async def get_rp_status(runner_id: int, state: FSMContext) -> Tuple[str, bool]:
         returns the status string and the state of the info was is updated"""
     await asyncio.sleep(0.4)
     data = await state.get_data()
-
     await asyncio.sleep(0.5)
     status = MqttClient.rp_status[runner_id]
     rp_state = MqttClient.rp_states[runner_id]
@@ -503,8 +502,10 @@ async def get_rp_status(runner_id: int, state: FSMContext) -> Tuple[str, bool]:
     else:
         if status is None:
             status_str = "\tОбкатчик не шлет свой статус\n"
+            print("status is None")
         else:
             for name, value in status.items():
+                print(name, value)
                 status_str += f"{name}:\t{value}\n"
     last_status_update = time.time()
     data["last_status_update"] = last_status_update
