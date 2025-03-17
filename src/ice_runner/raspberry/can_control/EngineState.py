@@ -32,12 +32,12 @@ class EngineState(IntEnum):
 class EngineStatus:
     def __init__(self) -> None:
         self.state: EngineState = EngineState.NOT_CONNECTED
-        self.rpm: int = 0
-        self.temp: int = 0
+        self.rpm: int = -1
+        self.temp: int = -1
         self.fuel_level: int = 0
         self.fuel_level_percent: int = 0
-        self.gas_throttle: int = 0
-        self.air_throttle: int = 0
+        self.gas_throttle: int = -1
+        self.air_throttle: int = -1
 
         self.current: float = 0
 
@@ -87,9 +87,11 @@ class EngineStatus:
         return vars_dict
 
     def get_description_dict(self):
-        rpm = f"{self.rpm}" if self.temp is not None else "N/A"
-        gas_air = f"{self.gas_throttle}% {self.air_throttle}%" if self.temp is not None else "N/A"
-        temp = f"{round(self.temp - 273.15, 2)} °C" if self.temp is not None else "N/A"
-        fuel_level = f"{self.fuel_level_percent}%" if self.temp is not None else "N/A"
+        if self.state == EngineState.NOT_CONNECTED:
+            return {"RPM": "N/A", "GAS/AIR": "N/A", "TEMP": "N/A", "FUEL level": "N/A"}
+        rpm = f"{self.rpm}"
+        gas_air = f"{self.gas_throttle}% {self.air_throttle}%"
+        temp = f"{round(self.temp - 273.15, 2)} °C"
+        fuel_level = f"{self.fuel_level_percent}%"
 
         return {"RPM": rpm, "GAS/AIR": gas_air, "TEMP": temp, "FUEL level": fuel_level}
