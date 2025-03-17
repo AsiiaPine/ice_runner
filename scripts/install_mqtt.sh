@@ -32,6 +32,3 @@ else
     echo "Unsupported OS"
     exit 1
 fi
-
-systemctl enable mosquitto.service
-systemctl restart mosquitto
