@@ -9,7 +9,6 @@ import logging
 from bot.mqtt.client import MqttClient
 from bot.telegram.scheduler import Scheduler
 from common.RunnerState import RunnerState
-from common.algorithms import safe_literal_eval
 
 @MqttClient.client.topic_callback("ice_runner/server/bot_commander/rp_states/+/state")
 def handle_commander_state(client, userdata, message):
@@ -28,7 +27,7 @@ def handle_commander_status(client, userdata, message):
     """The function stores status from Raspberry Pi to Bot mqtt client storage"""
     del client, userdata
     rp_pi_id = int(message.topic.split("/")[-2])
-    status = json.loads(message.payload.decode())
+    status = json.loads(message.payload.decode("UTF-8"))
     if status is not None:
         MqttClient.rp_status[rp_pi_id] = status
         logging.debug("received RP status from Raspberry Pi %d", rp_pi_id)

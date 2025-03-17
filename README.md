@@ -18,6 +18,7 @@ One can control the ICE runners using the telegram bot. The bot can send command
     SERVER_PORT = 1883
     SERVER_IP=localhost
     CHAT_ID=*** # the bot will be awailable in this chat only
+    RUNNER_ID=1 # the id of the raspberry pi (if you have more than one raspberry pi, you can specify the id of the raspberry pi you want to control)
     ```
     - Setup the virtual environment
     ```bash

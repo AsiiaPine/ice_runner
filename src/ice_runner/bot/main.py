@@ -27,6 +27,7 @@ async def start_bot() -> None:
     server_ip = os.getenv("SERVER_IP")
     server_port = int(os.getenv("SERVER_PORT"))
     chat_id = int(os.getenv("CHAT_ID"))
+    telegram.RUNNER_ID = int(os.getenv("RUNNER_ID"))
     telegram.ChatIdFilter.chat_id = chat_id
     bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 

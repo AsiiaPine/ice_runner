@@ -28,9 +28,9 @@ def handle_raspberry_pi_status(client: Client, userdata,  msg):
     del userdata
     rp_id = int(msg.topic.split("/")[2])
     logging.debug("Recieved\t| Raspberry Pi %d status", rp_id)
-    ServerMqttClient.rp_status[rp_id] = json.loads(msg.payload.decode())
+    ServerMqttClient.rp_status[rp_id] = msg.payload.decode()
     client.publish(f"ice_runner/server/bot_commander/rp_states/{rp_id}/status",
-                   json.dumps(ServerMqttClient.rp_status[rp_id]))
+                   ServerMqttClient.rp_status[rp_id])
 
 @ServerMqttClient.client.topic_callback("ice_runner/raspberry_pi/+/state")
 def handle_raspberry_pi_state(client: Client, userdata,  msg):
