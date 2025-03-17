@@ -87,9 +87,9 @@ class EngineStatus:
         return vars_dict
 
     def get_description_dict(self):
-        rpm = f"{self.rpm}"
-        gas_air = f"{self.gas_throttle}% {self.air_throttle}%"
-        temp = f"{round(self.temp - 273.15, 2)} °C"
-        fuel_level = f"{self.fuel_level_percent}%"
+        rpm = f"{self.rpm}" if self.temp is not None else "N/A"
+        gas_air = f"{self.gas_throttle}% {self.air_throttle}%" if self.temp is not None else "N/A"
+        temp = f"{round(self.temp - 273.15, 2)} °C" if self.temp is not None else "N/A"
+        fuel_level = f"{self.fuel_level_percent}%" if self.temp is not None else "N/A"
 
         return {"RPM": rpm, "GAS/AIR": gas_air, "TEMP": temp, "FUEL level": fuel_level}
