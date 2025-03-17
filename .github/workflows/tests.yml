@@ -18,8 +18,13 @@ jobs:
     - name: Install can-utils
       run:  |
         sudo apt-get update & sudo apt-get install -y can-utils
-        # sudo apt-get install -y linux-modules-extra-
+        sudo apt-get install -y linux-modules-extra-6.8.0-1021-azure
         sudo depmod
+    - name: Start vcan
+      run: |
+        modprobe vcan
+        ip link add dev slcan0 type vcan
+        ip link set up slcan0
     - name: Install mqtt
       run: ./scripts/install_mqtt.sh
     - name: Set up Python ${{ matrix.python-version }}
@@ -34,11 +39,7 @@ jobs:
         pip install pylint
         pip install -e .
         pip install -r requirements.txt
-    - name: Start vcan
-      run: |
-        modprobe vcan
-        ip link add dev slcan0 type vcan
-        ip link set up slcan0
+
 
     - name: Analyzing the code with pylint
       run: |
