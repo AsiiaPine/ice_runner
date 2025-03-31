@@ -107,15 +107,15 @@ class ExceedanceTracker:
         eng_time_ex = False
         if state.engaged_time is not None:
             eng_time_ex = state.engaged_time > 40 * 60 * 60 # 40 hours
-            if eng_time_ex:
-                logging.warning("STATUS\t-\tEngaged time %d is exeeded", state.engaged_time)
+
         if self.vin or self.temp or eng_time_ex:
             logging.warning(f"STATUS\t-\tFlags exceeded:\n\
                             vin {self.vin}\n\
                             temp {self.temp} ({state.temp})\n\
                             engaged time {eng_time_ex}\n\
-                            fuel level {self.fuel_level}")
-        return bool(sum([self.vin, self.temp, eng_time_ex, self.fuel_level]))
+                            fuel level {self.fuel_level}\n\
+                            start attempts {self.start_attempts}")
+        return bool(sum([self.vin, self.temp, eng_time_ex, self.fuel_level, self.start_attempts]))
 
     def check_running(self, state: EngineStatus,
                             configuration: RunnerConfiguration,
@@ -125,13 +125,6 @@ class ExceedanceTracker:
         if state.rpm > MAX_ALLOWED_RPM:
             logging.warning(f"STATUS\t-\tRPM exceeded {state.rpm}, {MAX_ALLOWED_RPM}")
             self.max_rpm = True
-
-        if state_controller.start_attempts > configuration.start_attemts:
-            logging.warning(
-                f"STATUS\t-\tStart attempts exceeded {state_controller.start_attempts},\
-                {configuration.start_attemts}")
-            self.start_attempts = True
-            return True
 
         self.check_mode_specialized(state, configuration, start_time, state_controller)
         self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
@@ -150,17 +143,24 @@ class ExceedanceTracker:
                                      state_controller: RunnerStateController) -> None:
         """The function checks conditions when the ICE is in specialized mode"""
 
+        if configuration.mode == ICERunnerMode.FUEL_PUMPTING:
+            #   last 30 seconds
+            self.time = start_time > 0 and\
+                                    30 < time.time() - start_time
+            return
+
+        if state_controller.start_attempts > configuration.start_attemts:
+            logging.warning(
+                f"STATUS\t-\tStart attempts exceeded {state_controller.start_attempts},\
+                {configuration.start_attemts}")
+            self.start_attempts = True
+
         if configuration.mode == ICERunnerMode.CHECK:
             #   last 12 seconds
             self.time = start_time > 0 and\
                                     12 < time.time() - start_time
             return
 
-        if configuration.mode == ICERunnerMode.FUEL_PUMPTING:
-            #   last 30 seconds
-            self.time = start_time > 0 and\
-                                    30 < time.time() - start_time
-            return
 
         self.time = start_time > 0 and time.time() - start_time > configuration.time
 
