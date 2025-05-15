@@ -299,6 +299,7 @@ class TestFuelPumpMode(BaseTest):
             self.state, self.config, self.runner_state, self.start_time)
 
     def test_start_attempts(self):
+        """Start attempts does not affect fuel pumping"""
         self.runner_state.state = RunnerState.RUNNING
         self.start_time = time.time()
         self.runner_state.start_attempts = 1
