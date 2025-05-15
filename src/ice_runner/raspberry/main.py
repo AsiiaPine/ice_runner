@@ -55,20 +55,20 @@ def start(log_dir: str, args: list['str'] = None) -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description='Raspberry Pi CAN node for automatic ICE runner')
     parser.add_argument("--id",
-                        default='None',
+                        default='-1',
                         type=int,
                         help="Raspberry Pi ID used for MQTT communication")
-    parser.add_argument("--config", default="../../config/ice_configuration.yml",
+    parser.add_argument("--config", default="ice_configuration.yml",
                         help="Path to ICE runner configuration file")
 
     # This is disgusting
     CanNode.log_dir = log_dir
 
     args: argparse.Namespace = parser.parse_args(args)
-    if args.id is None:
+    if args.id == -1:
         print("RP\t-\tNo ID provided, reading from environment variable")
-        args.id = int(os.getenv("RASPBERRY_ID"))
-    if args.id is None:
+        args.id = int(os.getenv("RUNNER_ID"))
+    if args.id == -1:
         print("RP\t-\tNo ID provided, exiting")
         sys.exit(-1)
     config = RunnerConfiguration(file_path=args.config)

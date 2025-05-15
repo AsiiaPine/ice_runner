@@ -108,7 +108,7 @@ class ICECommander:
         """The function analyzes the conditions of the ICE runner
             and returns if any Configuration parameters were exceeded.
             Returns 0 if no conditions were exceeded, 1 if conditions were exceeded."""
-        return self.exceedance_tracker.check(CanNode.status, self.configuration,
+        return self.exceedance_tracker.is_exceeded_check(CanNode.status, self.configuration,
                                      self.state_controller, self.start_time)
 
     def set_can_command(self) -> None:
