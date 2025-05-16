@@ -3,6 +3,7 @@ __py*
 *.log*
 *.csv
 *.txt
+*.out
 logs/*
 *.egg-info
 *.yml

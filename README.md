@@ -26,7 +26,12 @@ One can control the ICE runners using the telegram bot. The bot can send command
     source venv/bin/activate
     pip install -r requirements.txt
     ```
+### Simple run with system check once per minute (default)
+```bash
+./scripts/start_all.sh venv 60
+```
 
+### Running all jobs separately
 1. Raspberry Pi ICE controller
     - Install mqtt broker
         ```bash
@@ -60,12 +65,15 @@ Use the [guide](https://www.atlantic.net/dedicated-server-hosting/how-to-install
         ```bash
          ./src/ice_runner/main.py bot
         ```
-
+### Simulator
 To start a simulator of the ICE start can interface (e.g. slcan/vcan), run the following script:
 
 ```bash
-./src/ice_runner/main.py sim
+./src/ice_runner/main.py sim --n_tries=3 --log_dir=logs --vcan=can0
 ```
+One can specify the number of tries to start the engine with the `--n_tries` parameter. The default value is 3.
+Also, one can specify the interface to use with the `--vcan` parameter. If the parameter is not specified, the script will use the first available can interface.
+
 
 ## Project structure
 Server is the main controller of the project.
