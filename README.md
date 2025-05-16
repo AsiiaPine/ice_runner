@@ -26,7 +26,12 @@ One can control the ICE runners using the telegram bot. The bot can send command
     source venv/bin/activate
     pip install -r requirements.txt
     ```
+### Simple run with system check once per minute (default)
+```bash
+./scripts/start_all.sh venv 60
+```
 
+### Running all jobs separately
 1. Raspberry Pi ICE controller
     - Install mqtt broker
         ```bash
