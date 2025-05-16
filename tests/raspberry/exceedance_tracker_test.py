@@ -47,28 +47,28 @@ class BaseTest():
     def check_fuel_level(self):
         self.config.min_fuel_volume = 10
         self.state.fuel_level_percent = 100
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.state.fuel_level_percent = 0
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
     def check_vin(self):
         self.config.min_vin_voltage = 40
         self.state.voltage_in = 40
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.state.voltage_in = 0
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
     def check_temp(self):
         self.config.max_temperature = 100
         self.state.temp = 100
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.state.temp = 200
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
 class TestNotStarted(BaseTest):
@@ -76,12 +76,12 @@ class TestNotStarted(BaseTest):
 
         candump_task = mocker.patch(
             'raspberry.can_control.IceCommander.ExceedanceTracker.check_not_started')
-        self.ex_tracker.check(self.state, self.config, self.runner_state, self.start_time)
+        self.ex_tracker.is_exceeded_check(self.state, self.config, self.runner_state, self.start_time)
         candump_task.assert_called_once()
 
     def test_not_started(self):
         self.state.state = EngineState.STOPPED
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
     def test_fuel_level(self):
@@ -94,17 +94,17 @@ class TestNotStarted(BaseTest):
         self.check_temp()
 
     def test_eng_time(self):
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
         self.state.engaged_time = 40 * 60 * 60 # 40 hours
 
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
         self.state.engaged_time = 40 * 60 * 60  + 1 # 40 hours + 1 sec
 
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
 class TestStarting(BaseTest):
@@ -120,7 +120,7 @@ class TestStarting(BaseTest):
         """ExceedanceTracker should use check_running method if the state is STARTING"""
         candump_task = mocker.patch(
             'raspberry.can_control.IceCommander.ExceedanceTracker.check_running')
-        self.ex_tracker.check(self.state, self.config, self.runner_state, self.start_time)
+        self.ex_tracker.is_exceeded_check(self.state, self.config, self.runner_state, self.start_time)
         candump_task.assert_called_once()
 
     def test_fuel_level(self):
@@ -138,47 +138,47 @@ class TestStarting(BaseTest):
     def test_eng_time(self):
         """ExceedanceTracker should not check engaged time if the state is STARTING"""
         self.runner_state.prev_state = RunnerState.STARTING
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
         self.state.engaged_time = 40 * 60 * 60 # 40 hours
 
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
         self.state.engaged_time = 40 * 60 * 60  + 1 # 40 hours + 1 sec
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
     def test_start_attempts(self):
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.runner_state.start_attempts = 2
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
     def test_time_exceeded(self):
         """ExceedanceTracker should check engaged time if the state is STARTING"""
         self.runner_state.prev_state = RunnerState.STARTING
         self.config.time = 10
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.config.time = 1
         self.start_time = time.time() - 1
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
     def test_rpm_exceeded(self):
         """ExceedanceTracker should ignore RPM if the state is STARTING"""
         self.runner_state.prev_state = RunnerState.STARTING
         self.state.rpm = 1000
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.state.rpm = 7500
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.state.rpm = 7501
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
 class TestCONSTMode(BaseTest):
@@ -198,10 +198,10 @@ class TestCONSTMode(BaseTest):
     def test_time_exceeded(self):
         self.config.time = 3
         self.runner_state.state = RunnerState.RUNNING
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.start_time = time.time() - 4
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
 class TestPIDMode(BaseTest):
@@ -224,21 +224,21 @@ class TestPIDMode(BaseTest):
     def test_time_exceeded(self):
         self.config.time = 3
         self.runner_state.state = RunnerState.RUNNING
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.start_time = time.time() - 4
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
     def test_rpm_exceeded(self):
         self.config.rpm = secrets.randbelow(1000)
         self.state.rpm = self.config.rpm
         self.runner_state.state = RunnerState.RUNNING
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
         self.state.rpm = self.config.rpm + 1000
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
 class TestCheckMode(BaseTest):
@@ -259,13 +259,13 @@ class TestCheckMode(BaseTest):
         """Constant value for time 12, so config does not influence the state"""
         self.runner_state.state = RunnerState.RUNNING
         self.start_time = time.time()
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.start_time = time.time() - 4
-        assert not self.ex_tracker.check(
+        assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.start_time = time.time() - 12
-        assert self.ex_tracker.check(
+        assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
 class TestFuelPumpMode(BaseTest):
@@ -283,17 +283,27 @@ class TestFuelPumpMode(BaseTest):
         self.check_temp()
 
     def test_time_exceeded(self):
-        """Constant value for time 8, so config does not influence the state"""
+        """Fuel pumping lasts for 30 second"""
+        self.runner_state.state = RunnerState.RUNNING
+        # 0 seconds - should run
+        self.start_time = time.time()
+        assert not self.ex_tracker.is_exceeded_check(
+            self.state, self.config, self.runner_state, self.start_time)
+        # 10 seconds - should run
+        self.start_time = time.time() - 10
+        assert not self.ex_tracker.is_exceeded_check(
+            self.state, self.config, self.runner_state, self.start_time)
+        # 30 seconds - should stop
+        self.start_time = time.time() - 30
+        assert self.ex_tracker.is_exceeded_check(
+            self.state, self.config, self.runner_state, self.start_time)
+
+    def test_start_attempts(self):
+        """Start attempts does not affect fuel pumping"""
         self.runner_state.state = RunnerState.RUNNING
         self.start_time = time.time()
-        assert not self.ex_tracker.check(
-            self.state, self.config, self.runner_state, self.start_time)
-        self.start_time = time.time() - 10
-        assert not self.ex_tracker.check(
-            self.state, self.config, self.runner_state, self.start_time)
-        self.start_time = time.time() - 30
-        assert self.ex_tracker.check(
-            self.state, self.config, self.runner_state, self.start_time)
+        self.runner_state.start_attempts = 1
+        assert not self.ex_tracker.is_exceeded_check(self.state, self.config, self.runner_state, self.start_time)
 
 
 def main():

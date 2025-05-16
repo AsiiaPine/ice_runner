@@ -31,7 +31,7 @@ class ExceedanceTracker:
         # Successful completion flags:
         self.time: bool = False
 
-    def check(self, state: EngineStatus,
+    def is_exceeded_check(self, state: EngineStatus,
                     configuration: RunnerConfiguration,
                     state_controller: RunnerStateController,
                     start_time: float) -> bool:

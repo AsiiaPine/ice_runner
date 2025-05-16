@@ -45,6 +45,8 @@ class ICECommander:
         self.prev_state_report_time: float = 0
         self.prev_report_time: float = 0
         self.state_controller = RunnerStateController()
+        self.start_bad_state_time: float = 0
+        self.bad_cond_flag = False
 
     async def run(self) -> None:
         """The function starts the ICE runner"""
@@ -90,6 +92,8 @@ class ICECommander:
             return
         if self.state_controller.state == RunnerState.STOPPED:
             self.exceedance_tracker.cleanup()
+            self.start_bad_state_time = 0
+
         self.set_can_command()
         self.report_state()
         self.prev_state = self.state_controller
@@ -106,10 +110,23 @@ class ICECommander:
 
     def check_conditions(self) -> int:
         """The function analyzes the conditions of the ICE runner
-            and returns if any Configuration parameters were exceeded.
+            and returns if any Configuration parameters are exceeded for 2 seconds.
             Returns 0 if no conditions were exceeded, 1 if conditions were exceeded."""
-        return self.exceedance_tracker.check(CanNode.status, self.configuration,
-                                     self.state_controller, self.start_time)
+        cond_exceeded = self.exceedance_tracker.is_exceeded_check(CanNode.status,
+                                                                  self.configuration,
+                                                                  self.state_controller,
+                                                                  self.start_time)
+        if not cond_exceeded:
+            self.start_bad_state_time = 0
+
+        if cond_exceeded and self.start_bad_state_time == 0:
+            self.start_bad_state_time = time.time()
+            logging.warning("BAD\t-\tConditions exceeded")
+
+        if time.time() - self.start_bad_state_time > 2\
+                and self.start_bad_state_time > 0:
+            return True
+        return False
 
     def set_can_command(self) -> None:
         """The function sets the command to the ICE node according to the current mode"""
