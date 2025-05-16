@@ -6,12 +6,13 @@
 '''The script is used to simulate the ICE node'''
 
 import argparse
+import os
+import pathlib
+import sys
 import time
 import dronecan
-import numpy as np
 from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raspberry.can_control.node import ICE_AIR_CHANNEL
-from raspberry.can_control.modes import MAX_AIR_CMD, MIN_AIR_CMD
 from raspberry.can_control.EngineState import Health, Mode, EngineState
 
 class Engine:
@@ -129,13 +130,32 @@ def get_air_cmd(res: dronecan.node.TransferEvent) -> None:
 
 def start(args: list['str'] = None) -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        description='Raspberry Pi CAN node which simulates combustion engine')
+        description='Simple ice simulator. It emulates ice node.')
     parser.add_argument("--n_tries",
                         default=3,
                         type=int,
                         help="number of tries to start the engine")
 
+    parser.add_argument("--log_dir",
+                        default=None,
+                        type=str,
+                        help="Path to log directory")
+
+    parser.add_argument("--vcan",
+                        default=None,
+                        type=str,
+                        help="If vcan creatino is needed, pass the vcan interface name")
     args: argparse.Namespace = parser.parse_args(args)
+
+    if args.vcan is not None:
+        filepath = pathlib.Path(__file__).resolve().parent.parent.parent.parent
+        dirname = os.path.join(filepath, "scripts").replace(os.getcwd(), "")
+        res = os.system(f"sudo .{dirname}/create_vcan.sh {args.vcan}")
+        if res != 0:
+            print(f"VCAN\t-\tError creating vcan interface {args.vcan}")
+            sys.exit(1)
+        print(f"VCAN\t-\tInterface {args.vcan} created")
+
     node = ICENODE(max_n_tries=args.n_tries)
     node.node.node.add_handler(dronecan.uavcan.equipment.esc.RawCommand, get_raw_command)
     node.node.node.add_handler(dronecan.uavcan.equipment.actuator.ArrayCommand, get_air_cmd)
