@@ -1,8 +1,15 @@
 #!/bin/bash
 
+venv_dir=$1
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <path_to_venv>"
+    exit 1
+fi
+
 JOB2="src/ice_runner/main.py"
 JOB1="src/ice_runner/main.py"
 JOB3="src/ice_runner/main.py"
+
 
 JOB1_PARAMS="--log_dir=logs srv"
 JOB2_PARAMS="--id=1 --config=ice_configuration.yml --log_dir=logs client"
@@ -29,6 +36,18 @@ fi
 # Telegram bot setup: Replace with your actual credentials
 TELEGRAM_API="https://api.telegram.org/bot$BOT_TOKEN/sendMessage"
 
+# trying to acrivate a venv:
+if [ ! -d "$venv_dir" ]; then
+    echo "venv not found! Exiting..."
+    exit 1
+else 
+    file="$venv_dir/bin/activate"
+    if [ ! -f "$file" ]; then
+        echo "venv not found! Exiting..."
+        exit 1
+    fi
+fi
+
 # Function to send a message to a Telegram chat
 send_telegram_message() {
     MESSAGE=$1
@@ -41,13 +60,13 @@ send_telegram_message() {
 
 # Function to start a job in the background
 start_job() {
-    local JOB_NAME=$1
+    local JOB_CALL=$1
     local JOB_PARAMS=$2
-    # echo "Starting job: $JOB_NAME $JOB_PARAMS"
-    nohup python $JOB_NAME $JOB_PARAMS > /dev/null
-    local PID=$!
-    echo "$JOB_NAME started with PID: $PID"
-    echo $PID
+    local JOB_NAME=$3
+    output_file="logs/$JOB_NAME.log"
+    source $venv_dir/bin/activate
+    nohup python $JOB_CALL $JOB_PARAMS > $output_file 2>&1 &
+    echo $!
 }
 
 # Trap EXIT signal to ensure processes are stopped when the script exits
@@ -62,9 +81,10 @@ cleanup() {
 trap "cleanup" EXIT
 
 # Start the jobs
-JOB1_PID=$(start_job "$JOB1" "$JOB1_PARAMS")
-JOB2_PID=$(start_job "$JOB2" "$JOB2_PARAMS")
-JOB3_PID=$(start_job "$JOB3" "$JOB3_PARAMS")
+JOB1_PID=$(start_job "$JOB1" "$JOB1_PARAMS" "$JOB1_NAME")
+JOB2_PID=$(start_job "$JOB2" "$JOB2_PARAMS" "$JOB2_NAME")
+JOB3_PID=$(start_job "$JOB3" "$JOB3_PARAMS" "$JOB3_NAME")
+
 
 # Send initial Telegram message
 send_telegram_message "Куку запущено.
@@ -75,7 +95,7 @@ PID задачи Bot: $JOB3_PID
 
 # Continuously check if jobs are still running
 while true; do
-    sleep 60  # Check every 60 seconds
+    sleep 30  # Check every 60 seconds
 
     # Check if each job is still running
     if ! kill -0 $JOB1_PID 2>/dev/null; then
