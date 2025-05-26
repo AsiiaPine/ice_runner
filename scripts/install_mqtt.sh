@@ -5,13 +5,23 @@
 # used pipeline from https://santoshk.dev/posts/2023/mqtt-basics-and-how-to-get-started-on-ubuntu/
 
 
+check_mosquitto() {
+    mosquitto_str=$(which mosquitto)
+
+    if [[ $mosquitto_str == *"bin/mosquitto"* ]]; then
+        echo "MQTT installed"
+        exit 0
+    fi
+}
+
+check_mosquitto
+
 #check OS version
 if [ -f /etc/lsb-release ]; then
     # For some versions of Debian/Ubuntu without lsb_release command
     . /etc/lsb-release
     OS=$DISTRIB_ID
     VER=$DISTRIB_RELEASE
-    echo "OS: $OS"
 elif [ -f /etc/debian_version ]; then
     # Older Debian/Ubuntu/etc.
     OS=Debian
@@ -22,13 +32,18 @@ else
     VER=$(uname -r)
 fi
 
-echo "Installing MQTT server"
-if [ "$OS" = "Ubuntu" ]; then
+echo "Installing MQTT"
+
+if [[ "$OS" == *Ubuntu* ]]; then
     sudo apt update && apt upgrade -y
     sudo apt install -y mosquitto mosquitto-clients
-elif [ "$OS" = "ManjaroLinux" ]; then
+elif [[ "$OS" == *Linux* ]]; then
     sudo pacman -S mosquitto
 else
     echo "Unsupported OS"
     exit 1
 fi
+
+check_mosquitto
+
+exit 1
