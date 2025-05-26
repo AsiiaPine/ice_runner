@@ -1,32 +1,86 @@
 #!/bin/bash
-script_name=`basename "$0"`
+# This software is distributed under the terms of the MIT License.
+# Copyright (c) 2024 Anastasiia Stepanova.
+# Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-venv_dir=$1
+SCRIPT_NAME=$(basename $BASH_SOURCE)
+
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
+venv_dir="venv"
 check_interval=60
 
 print_help() {
-    echo "usage: $script_name [-h] <path_to_venv> <check_interval>"
-    echo "example: $script_name venv 60"
+    echo "Usage: $SCRIPT_NAME [-h] [-v <venv_dir>] [-i <check_interval_sec>] [-e <env_file>]
+This utility facilitates the automatic background initialization of server, client, and bot processes. It monitors these processes at set intervals and restarts them if they are found to be inactive. All actions carried out by this script are logged via the associated Telegram bot. It is imperative that the BOT_TOKEN and CHAT_ID variables are defined, either as environment variables or within the specified .env file.
+
+Options:
+    -i, --interval                  The interval, in seconds, between process status checks (default: 60).
+    -e, --env                       File path to the .env file containing BOT_TOKEN and CHAT_ID (default: .env).
+    -v, --venv                      File path to the Python virtual environment (default: venv).
+    -h, --help                      Display this help message and terminate.
+    
+Example: ./$SCRIPT_NAME -v venv -i 60 -e .env"
 }
 
-if [ "$1" = "--help" ]; then
-    print_help
-    [[ "${BASH_SOURCE[0]}" -ef "$0" ]] && exit 0 || return
-elif [ $# -lt 1 ]; then
-    print_help
-    echo "$script_name: error: the following arguments are required: path_to_venv"
-    [[ "${BASH_SOURCE[0]}" -ef "$0" ]] && exit 0 || return
-fi
+function log_error() {
+    lineno=($(caller))
+    printf "$RED$SCRIPT_NAME ERROR on line ${lineno}: $1!$NC\n"
+}
 
-re='^[0-9]+$'
-if [ $# -eq 2  ]; then
-    if ! [[ $2 =~ $re ]] ; then
-        echo "error: Not a number" >&2; exit 1
-    else
-        check_interval=$2
-        echo "Check interval set to $check_interval"
-    fi
-fi
+function log_warn() {
+    lineno=($(caller))
+    printf "$YELLOW$SCRIPT_NAME WARN on line ${lineno}: $1.$NC\n"
+}
+
+function log_info() {
+    printf "$SCRIPT_NAME INFO: $1.\n"
+}
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        -v|--venv)
+            venv_dir=$2
+            if [ ! -d "$venv_dir" ]; then
+                echo "$venv_dir no such directory! Exiting..."
+                exit 1
+            fi
+            shift
+            ;;
+        -e|--env)
+            if [ -f $2 ]; then
+                source $2
+            else
+                echo ".env file not found! Exiting..."
+                exit 1
+            fi
+            shift
+            ;;
+        -i|--interval)
+            re='^[0-9]+$'
+            if ! [[ $2 =~ $re ]] ; then
+                log_error "i option error: $2 is not a number" >&2; exit 1
+            else
+                check_interval=$2
+                echo "Check interval set to $check_interval"
+            fi
+            shift
+            ;;
+        *)
+        log_error "Unknown option: $1"
+        echo "$HELP"
+        [[ "${BASH_SOURCE[0]}" -ef "$0" ]] && exit 1 || return 1
+        ;;
+    esac
+    shift
+done
+
 
 JOB2="src/ice_runner/main.py"
 JOB1="src/ice_runner/main.py"
@@ -37,17 +91,9 @@ JOB1_PARAMS="--log_dir=logs srv"
 JOB2_PARAMS="--id=1 --config=ice_configuration.yml --log_dir=logs client"
 JOB3_PARAMS="--log_dir=logs bot"
 
-JOB1_NAME="Server"
-JOB2_NAME="Client"
-JOB3_NAME="Bot"
-
-# Check if .env file exists and source it
-if [ -f .env ]; then
-    source .env
-else
-    echo ".env file not found! Exiting..."
-    exit 1
-fi
+JOB1_NAME="Сервер"
+JOB2_NAME="Обкатчик"
+JOB3_NAME="Бот"
 
 # Telegram bot setup: 
 if [[ -z "$BOT_TOKEN" || -z "$CHAT_ID" ]]; then
@@ -59,15 +105,10 @@ fi
 TELEGRAM_API="https://api.telegram.org/bot$BOT_TOKEN/sendMessage"
 
 # trying to acrivate a venv:
-if [ ! -d "$venv_dir" ]; then
-    echo "venv not found! Exiting..."
+file="$venv_dir/bin/activate"
+if [ ! -f "$file" ]; then
+    echo "venv activate script not found! Exiting..."
     exit 1
-else 
-    file="$venv_dir/bin/activate"
-    if [ ! -f "$file" ]; then
-        echo "venv not found! Exiting..."
-        exit 1
-    fi
 fi
 
 # Function to send a message to a Telegram chat
@@ -101,11 +142,10 @@ start_job() {
 
 # Trap EXIT signal to ensure processes are stopped when the script exits
 cleanup() {
-    send_telegram_message "Stopping all jobs..."
     kill $JOB1_PID
     kill $JOB2_PID
     kill $JOB3_PID
-    send_telegram_message "All jobs stopped."
+    send_telegram_message "Все запущенные процессы остановлены."
 }
 
 trap "cleanup" EXIT
@@ -125,20 +165,20 @@ while true; do
 
     # Check if each job is still running
     if ! kill -0 $JOB1_PID 2>/dev/null; then
-        send_telegram_message "$JOB1 остановленн. Перезапуск."
+        log_warn "$JOB1_NAME остановленн. Перезапуск."
         JOB1_PID=$(start_job $JOB1 $JOB1_PARAMS)
-        send_telegram_message "$JOB1 перезапущена, новый PID $JOB1_PID."
+        send_telegram_message "$JOB1_NAME перезапущен, новый PID $JOB1_PID."
     fi
 
     if ! kill -0 $JOB2_PID 2>/dev/null; then
-        send_telegram_message "$JOB2 остановленн. Перезапуск."
+        log_warn "$JOB2_NAME остановленн. Перезапуск."
         JOB2_PID=$(start_job $JOB2 $JOB2_PARAMS)
-        send_telegram_message "$JOB2 перезапущена, новый PID $JOB2_PID."
+        send_telegram_message "$JOB2_NAME перезапущен, новый PID $JOB2_PID."
     fi
 
     if ! kill -0 $JOB3_PID 2>/dev/null; then
-        send_telegram_message "$JOB3 остановленн. Перезапуск."
+        log_warn "$JOB3_NAME остановленн. Перезапуск."
         JOB3_PID=$(start_job $JOB3 $JOB3_PARAMS)
-        send_telegram_message "$JOB3 перезапущена, новый PID $JOB3_PID."
+        send_telegram_message "$JOB3_NAME перезапущен, новый PID $JOB3_PID."
     fi
 done
