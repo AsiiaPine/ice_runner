@@ -13,13 +13,14 @@ venv_dir="venv"
 check_interval=60
 
 print_help() {
-    echo "Usage: $SCRIPT_NAME [-h] [-v <venv_dir>] [-i <check_interval_sec>] [-e <env_file>]
+    echo "Usage: $SCRIPT_NAME [-h] [-v <venv_dir>] [-i <check_interval_sec>] [-e <env_file>] [-l <log_dir>]
 This utility facilitates the automatic background initialization of server, client, and bot processes. It monitors these processes at set intervals and restarts them if they are found to be inactive. All actions carried out by this script are logged via the associated Telegram bot. It is imperative that the BOT_TOKEN and CHAT_ID variables are defined, either as environment variables or within the specified .env file.
 
 Options:
     -i, --interval                  The interval, in seconds, between process status checks (default: 60).
     -e, --env                       File path to the .env file containing BOT_TOKEN and CHAT_ID (default: .env).
     -v, --venv                      File path to the Python virtual environment (default: venv).
+    -l, --log_dir                   Path to the log directory (default: logs).
     -h, --help                      Display this help message and terminate.
     
 Example: ./$SCRIPT_NAME -v venv -i 60 -e .env"
@@ -72,6 +73,10 @@ while [[ $# -gt 0 ]]; do
             fi
             shift
             ;;
+        --l|--log_dir)
+            log_dir=$2
+            shift
+            ;;
         *)
         log_error "Unknown option: $1"
         echo "$HELP"
@@ -87,9 +92,9 @@ JOB1="src/ice_runner/main.py"
 JOB3="src/ice_runner/main.py"
 
 
-JOB1_PARAMS="--log_dir=logs srv"
-JOB2_PARAMS="--id=1 --config=ice_configuration.yml --log_dir=logs client"
-JOB3_PARAMS="--log_dir=logs bot"
+JOB1_PARAMS="--log_dir=$log_dir srv"
+JOB2_PARAMS="--id=1 --config=ice_configuration.yml --log_dir=$log_dir client"
+JOB3_PARAMS="--log_dir=$log_dir bot"
 
 JOB1_NAME="Сервер"
 JOB2_NAME="Обкатчик"
@@ -134,7 +139,7 @@ start_job() {
     local JOB_CALL=$1
     local JOB_PARAMS=$2
     local JOB_NAME=$3
-    output_file="logs/$JOB_NAME.log"
+    output_file="$log_dir/$JOB_NAME.log"
     source $venv_dir/bin/activate
     nohup python $JOB_CALL $JOB_PARAMS > $output_file 2>&1 &
     echo $!

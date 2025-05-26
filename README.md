@@ -56,7 +56,7 @@ Choose one of the following setup methods:
 ### Quick Start
 Launch all components with a system check every minute (default):
 ```bash
-./scripts/start.sh -v venv -i 60 -e .env
+./scripts/start.sh -v venv -i 60 -e .env -l logs
 ```
 - Monitors and restarts server, client, and bot processes when needed. Logs actions via Telegram. Ensure `BOT_TOKEN` and `CHAT_ID` are set in the environment or `.env` file.
 
