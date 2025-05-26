@@ -39,7 +39,7 @@ Choose one of the following setup methods:
 
 1. **Automated Setup**: 
    ```bash
-   ./scripts/install_all.sh
+   ./scripts/setup.sh
    ```
    Installs all necessary packages and creates a python virtual environment in venv folder.
 
@@ -56,7 +56,7 @@ Choose one of the following setup methods:
 ### Quick Start
 Launch all components with a system check every minute (default):
 ```bash
-./scripts/start_all.sh -v venv -i 60 -e .env
+./scripts/start.sh -v venv -i 60 -e .env
 ```
 - Monitors and restarts server, client, and bot processes when needed. Logs actions via Telegram. Ensure `BOT_TOKEN` and `CHAT_ID` are set in the environment or `.env` file.
 
