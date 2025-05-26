@@ -107,7 +107,7 @@ To simulate ICE using a CAN interface (e.g., slcan/vcan):
 ```bash
 ./src/ice_runner/main.py sim --n_tries=3 --log_dir=logs --vcan=can0
 ```
-- `--n_tries`: Number of attempts to start the engine (default: 3).
+- `--n_tries`: Number of times the simulation will restart the engine at startup (default: 3).
 - `--vcan`: CAN interface to use; defaults to the first available.
 
 ## Testing and Future Enhancements
