@@ -28,8 +28,10 @@ One can control the ICE runners using the telegram bot. The bot can send command
     ```
 ### Simple run with system check once per minute (default)
 ```bash
-./scripts/start_all.sh venv 60
+./scripts/start_all.sh -v venv -i 60 -e .env
 ```
+This utility facilitates the automatic background initialization of server, client, and bot processes. It monitors these processes at set intervals and restarts them if they are found to be inactive. All actions carried out by this script are logged via the associated Telegram bot. It is imperative that the BOT_TOKEN and CHAT_ID variables are defined, either as environment variables or within the specified .env file.
+
 
 ### Running all jobs separately
 1. Raspberry Pi ICE controller
