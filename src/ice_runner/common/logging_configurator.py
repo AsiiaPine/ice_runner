@@ -4,38 +4,37 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
-import datetime
-import logging.config
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
 from os import path
 import os
-import yaml
 
-def get_logger(script_part: str, log_dir: str) -> logging.Logger:
-    for _, parent_logger in logging.root.manager.loggerDict.items():
-        parent_logger.disabled = True
-        parent_logger.propagate = False
+def get_logger(file_name: str, log_dir: str) -> logging.Logger:
+    folder, name = path.split(file_name)
+    name = name.split('.py')[0]
 
-    # open the file in read mode
-    absolute_path = path.dirname(path.abspath(__file__))
-
-    with open(os.path.join(absolute_path, path.normpath('logg_config.yml')), 'r') as file:
-        log_conf_file = yaml.safe_load(file)
-
-    # Get full path of the script
-    folder, name = path.split(script_part)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
     module = path.split(folder)[-1]
     log_directory = path.join(log_dir, module)
-    log_filename = datetime.datetime.now().strftime(f"{name}_%Y_%m_%d-%H_%M_%S.log")
+    full_name = path.join(log_directory, name)
 
     if not os.path.exists(log_directory):
         os.makedirs(log_directory)
-    full_log_path = path.join(log_directory, log_filename)
-    print(full_log_path)
 
-    # Update the filename in the logging configuration
-    log_conf_file['handlers']['fileHandler']['filename'] = full_log_path
-    # Apply the modified logging configuration
-    logging.config.dictConfig(log_conf_file)
-    logger = logging.getLogger(name)
+    # new file every minute
+    rotation_logging_handler = TimedRotatingFileHandler(full_name, 
+                                when='h', 
+                                interval=1, 
+                                backupCount=5)
+    rotation_logging_handler.setLevel(logging.DEBUG)
+
+    format = u'%(asctime)s\t%(levelname)s\t%(filename)s:%(lineno)d\t%(message)s'
+    rotation_logging_handler.setFormatter(logging.Formatter(format))
+    rotation_logging_handler.suffix = '%Y-%m-%d_%H-%M-%S'
+
+    logger = logging.getLogger()
+    logger.addHandler(rotation_logging_handler)
 
     return logger
