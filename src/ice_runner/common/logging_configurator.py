@@ -20,15 +20,17 @@ def get_logger(script_part: str, log_dir: str) -> logging.Logger:
 
     with open(os.path.join(absolute_path, path.normpath('logg_config.yml')), 'r') as file:
         log_conf_file = yaml.safe_load(file)
+
     # Get full path of the script
     folder, name = path.split(script_part)
     module = path.split(folder)[-1]
-    log_directory = path.join(log_dir, 'logs', module)
+    log_directory = path.join(log_dir, module)
     log_filename = datetime.datetime.now().strftime(f"{name}_%Y_%m_%d-%H_%M_%S.log")
-    directory = path.join(path.split(__file__)[0], log_directory)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    full_log_path = path.join(directory, log_filename)
+
+    if not os.path.exists(log_directory):
+        os.makedirs(log_directory)
+    full_log_path = path.join(log_directory, log_filename)
+    print(full_log_path)
 
     # Update the filename in the logging configuration
     log_conf_file['handlers']['fileHandler']['filename'] = full_log_path

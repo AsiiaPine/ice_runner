@@ -20,7 +20,7 @@ import yaml
 
 from raspberry.can_control.EngineState import Health, EngineStatus, Mode
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 ICE_THR_CHANNEL = 7
 ICE_AIR_CHANNEL = 10
@@ -28,7 +28,7 @@ MAX_AIR_OPEN = 8191
 
 def safely_write_to_file(filename: str) -> float:
     """The function writes to file and syncs it with disk"""
-    logger.debug("LOGGER\t Saving data to %s", filename)
+    logging.debug("LOGGER\t Saving data to %s", filename)
     with open(filename, "a") as output:
         output.flush()
         os.fsync(output.fileno())
@@ -37,7 +37,7 @@ def safely_write_to_file(filename: str) -> float:
 class CanNode:
     """The class is used to connect to dronecan node and send/receive messages"""
     node: Node|None = None
-    log_dir: str = None
+    log_dir: str = "logs"
     can_output_filenames: Dict[str, str] = {}
     can_output_header_written: Dict[str, bool] = {}
     messages: Dict[str, Any] = {}
@@ -66,6 +66,10 @@ class CanNode:
         cls.has_imu = False
 
     @classmethod
+    def set_log_dir(cls, value: str) -> None:
+        cls._log_dir = value
+
+    @classmethod
     def spin(cls) -> None:
         """The function spins dronecan node and broadcasts commands"""
         cls.node.spin(timeout=0)
@@ -89,7 +93,6 @@ class CanNode:
         cls.save_files()
 
     @classmethod
-
     def save_files(cls) -> None:
         """The function saves candump and humal-readable files"""
         try:
@@ -108,7 +111,7 @@ class CanNode:
         """The function changes candump and human-readable files, called after stop of a run,
             so the new run will have separated logs"""
         crnt_time = datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')
-        log_base = os.path.join(cls.log_dir, "logs", "raspberry")
+        log_base = os.path.join(cls.log_dir, "raspberry")
         os.makedirs(log_base, exist_ok=True)
         for can_type in cls.can_output_filenames:
             cls.can_output_filenames[can_type] = os.path.join(log_base,

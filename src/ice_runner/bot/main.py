@@ -44,7 +44,6 @@ def start(log_dir: str, args: list['str'] = None) -> None:
     parser = argparse.ArgumentParser()
     # Should just trip on non-empty arg and do nothing otherwise
     parser.parse_args(args)
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(start_bot())
 
 if __name__ == "__main__":
