@@ -4,13 +4,16 @@
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
 SCRIPT_NAME=$(basename $BASH_SOURCE)
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-venv_dir="venv"
-check_interval=60
+VENV_DIR="venv"
+CHECK_INTERVAL=60
+MEMORY_TRESHOLD=3000
+LOG_DIR="logs"
 
 print_help() {
     echo "Usage: $SCRIPT_NAME [-h] [-v <venv_dir>] [-i <check_interval_sec>] [-e <env_file>] [-l <log_dir>]
@@ -21,6 +24,7 @@ Options:
     -e, --env                       File path to the .env file containing BOT_TOKEN and CHAT_ID (default: .env).
     -v, --venv                      File path to the Python virtual environment (default: venv).
     -l, --log_dir                   Path to the log directory (default: logs).
+    -m, --memory_threshold          The memory threshold in MB (default: 3000).
     -h, --help                      Display this help message and terminate.
     
 Example: ./$SCRIPT_NAME -v venv -i 60 -e .env"
@@ -47,9 +51,9 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         -v|--venv)
-            venv_dir=$2
-            if [ ! -d "$venv_dir" ]; then
-                echo "$venv_dir no such directory! Exiting..."
+            VENV_DIR=$2
+            if [ ! -d "$VENV_DIR" ]; then
+                echo "$VENV_DIR no such directory! Exiting..."
                 exit 1
             fi
             shift
@@ -68,13 +72,23 @@ while [[ $# -gt 0 ]]; do
             if ! [[ $2 =~ $re ]] ; then
                 log_error "i option error: $2 is not a number" >&2; exit 1
             else
-                check_interval=$2
-                echo "Check interval set to $check_interval"
+                CHECK_INTERVAL=$2
+                echo "Check interval set to $CHECK_INTERVAL"
             fi
             shift
             ;;
-        --l|--log_dir)
-            log_dir=$2
+        -m|--memory_threshold)
+            re='^[0-9]+$'
+            if ! [[ $2 =~ $re ]] ; then
+                log_error "m option error: $2 is not a number" >&2; exit 1
+            else
+                MEMORY_TRESHOLD=$2
+                echo "Memory threshold set to $MEMORY_TRESHOLD"
+            fi
+            shift
+            ;;
+        -l|--log_dir)
+            LOG_DIR=$2
             shift
             ;;
         *)
@@ -92,13 +106,13 @@ JOB1="src/ice_runner/main.py"
 JOB3="src/ice_runner/main.py"
 
 
-JOB1_PARAMS="--log_dir=$log_dir srv"
-JOB2_PARAMS="--id=1 --config=ice_configuration.yml --log_dir=$log_dir client"
-JOB3_PARAMS="--log_dir=$log_dir bot"
+JOB1_PARAMS="--log_dir=$LOG_DIR srv"
+JOB2_PARAMS="--id=1 --config=ice_configuration.yml --log_dir=$LOG_DIR client"
+JOB3_PARAMS="--log_dir=$LOG_DIR bot"
 
-JOB1_NAME="Сервер"
-JOB2_NAME="Обкатчик"
-JOB3_NAME="Бот"
+JOB1_NAME="server"
+JOB2_NAME="raspberry"
+JOB3_NAME="bot"
 
 # Telegram bot setup: 
 if [[ -z "$BOT_TOKEN" || -z "$CHAT_ID" ]]; then
@@ -110,7 +124,7 @@ fi
 TELEGRAM_API="https://api.telegram.org/bot$BOT_TOKEN/sendMessage"
 
 # trying to acrivate a venv:
-file="$venv_dir/bin/activate"
+file="$VENV_DIR/bin/activate"
 if [ ! -f "$file" ]; then
     echo "venv activate script not found! Exiting..."
     exit 1
@@ -139,10 +153,16 @@ start_job() {
     local JOB_CALL=$1
     local JOB_PARAMS=$2
     local JOB_NAME=$3
-    output_file="$log_dir/$JOB_NAME.log"
-    source $venv_dir/bin/activate
+    output_file="$LOG_DIR/$JOB_NAME.log"
+    source $VENV_DIR/bin/activate
     nohup python $JOB_CALL $JOB_PARAMS > $output_file 2>&1 &
     echo $!
+}
+
+check_memory() {
+    local JOB_NAME=$1
+    echo "check_memory called with $JOB_NAME"
+    source $SCRIPT_DIR/check_memory.sh --memory $MEMORY_TRESHOLD --dir "${LOG_DIR}/${JOB_NAME}" --telegram_bot_token $BOT_TOKEN --telegram_chat_id $CHAT_ID --log_file $LOG_DIR/check_memory.log
 }
 
 # Trap EXIT signal to ensure processes are stopped when the script exits
@@ -166,7 +186,10 @@ send_telegram_message "Усе запущено!"
 
 # Continuously check if jobs are still running
 while true; do
-    sleep $check_interval  # Check every 60 seconds
+    sleep $CHECK_INTERVAL  # Check every n seconds
+    echo "$(check_memory $JOB1_NAME)"
+    echo "$(check_memory $JOB2_NAME)"
+    echo "$(check_memory $JOB3_NAME)"
 
     # Check if each job is still running
     if ! kill -0 $JOB1_PID 2>/dev/null; then
