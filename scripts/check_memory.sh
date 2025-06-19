@@ -74,6 +74,18 @@ send_to_telegram() {
     -d chat_id=$CHAT_ID -d text="$TEXT" > /dev/null
 }
 
+send_media_group_to_telegram() {
+    local TEXT="$1"
+    media_command="media=["
+    for FILE in $TEXT; do
+        media_command+='{"type"="document", "media"="'$FILE'"},'
+    done
+    media_command=${media_command%?}
+    media_command+=']'
+    
+    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"\
+    -d chat_id=$CHAT_ID -d text="$TEXT" -d $media_command > /dev/null
+}
 # Function to send a file with file to Telegram
 send_file_to_telegram() {
     local TEXT="$1"
@@ -109,9 +121,9 @@ process_files() {
         # PREFIX=$(echo "$FILE_NAME" | sed 's/\([a-zA-Z0-9._]*\)_2025_.*/\1/')  # Adjust pattern as needed
         # PREFIX=$(echo "$FILE_NAME" | sed 's/\([a-zA-Z0-9._]*\)_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_.*//')  # Adjust pattern as needed
         # PREFIX=$(echo "$FILE_NAME" | sed -E 's/(.*)_[0-9]{4}-[0-9]{2}-[0-9]{2}_.*/\1/')
-        PREFIX=$(echo "$FILE_NAME" | sed -E 's/([^.]+)\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\..*$/\1/')
+        # PREFIX=$(echo "$FILE_NAME" | sed -E 's/([^.]+)\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\..*$/\1/')
+        PREFIX=$(echo "$FILE_NAME" | sed -E 's/(.*)_[0-9]{4}-[0-9]{2}-[0-9]{2}_.*/\1/')
         echo "PREFIX: $PREFIX"
-        # PREFIX=$(echo "$FILE_NAME" | sed 's/\([a-zA-Z0-9._]*\)_[2-9][0-9][0-9][0-9]_.*/\1/')
         FILE_GROUPS["$PREFIX"]+="$FILE_PATH "
     done
 
@@ -121,23 +133,27 @@ process_files() {
         if [[ ${#FILES[@]} -gt 2 ]]; then
             # Sort by timestamp (assumes the part after the prefix is sortable)
             SORTED_FILES=($(printf "%s\n" "${FILES[@]}" | sort))
-
+            echo "SORTED_FILES: ${SORTED_FILES[@]}"
             # Delete only the oldest file in the group
-            OLDEST_FILE=${SORTED_FILES[0]}
+            if [ ${SORTED_FILES[0]} == ${PREFIX} ]; then
+                OLDEST_FILE=${SORTED_FILES[1]}
+            else
+                OLDEST_FILE=${SORTED_FILES[0]}
+            fi
             echo "Deleting oldest file in group '$PREFIX': $OLDEST_FILE"
             if [ ! -s $OLDEST_FILE ]; then
                 echo "The file is empty.";
-                rm "$FILE_PATH"
-                log "File deleted: $FILE_PATH"
+                rm "$OLDEST_FILE"
+                log "File deleted: $OLDEST_FILE"
             else
                 res=$(send_file_to_telegram $OLDEST_FILE)
                 # Parse the JSON to see if sending the file was successful
                 if [[ $(echo $res | jq '.ok') == "true" ]]; then
-                    log "File sent successfully: $FILE_PATH"
-                    rm "$FILE_PATH"
-                    log "File deleted: $FILE_PATH"
+                    log "File sent successfully: $OLDEST_FILE"
+                    rm "$OLDEST_FILE"
+                    log "File deleted: $OLDEST_FILE"
                 else
-                    log "Failed to send file: $FILE_PATH, HTTP response code: $res"
+                    log "Failed to send file: $OLDEST_FILE, HTTP response code: $res"
                 fi
             fi
         fi

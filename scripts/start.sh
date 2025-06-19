@@ -105,6 +105,10 @@ JOB2="src/ice_runner/main.py"
 JOB1="src/ice_runner/main.py"
 JOB3="src/ice_runner/main.py"
 
+#check if logdir exists
+if [ ! -d "$LOG_DIR" ]; then
+    mkdir $LOG_DIR
+fi
 
 JOB1_PARAMS="--log_dir=$LOG_DIR srv"
 JOB2_PARAMS="--id=1 --config=ice_configuration.yml --log_dir=$LOG_DIR client"
