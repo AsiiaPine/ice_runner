@@ -110,7 +110,7 @@ class CanNode:
     def change_files(cls) -> None:
         """The function changes candump and human-readable files, called after stop of a run,
             so the new run will have separated logs"""
-        crnt_time = datetime.datetime.now().strftime('%Y_%m-%d_%H_%M_%S')
+        crnt_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         log_base = os.path.join(cls.log_dir, "raspberry")
         os.makedirs(log_base, exist_ok=True)
         for can_type in cls.can_output_filenames:

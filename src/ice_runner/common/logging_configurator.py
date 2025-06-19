@@ -32,7 +32,7 @@ def get_logger(file_name: str, log_dir: str) -> logging.Logger:
 
     format = u'%(asctime)s\t%(levelname)s\t%(filename)s:%(lineno)d\t%(message)s'
     rotation_logging_handler.setFormatter(logging.Formatter(format))
-    rotation_logging_handler.suffix = '%Y-%m-%d_%H-%M-%S'
+    rotation_logging_handler.suffix = '_%Y-%m-%d_%H-%M-%S.log'
 
     logger = logging.getLogger()
     logger.addHandler(rotation_logging_handler)
