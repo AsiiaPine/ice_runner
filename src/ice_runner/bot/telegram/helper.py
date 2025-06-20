@@ -6,6 +6,8 @@
 Auxialliary helper functions
 """
 
+import argparse
+import sys
 import requests
 
 def send_media_group(telegram_bot_token: str, telegram_chat_id: str, files: list, caption: str) -> None:
@@ -19,7 +21,7 @@ def send_media_group(telegram_bot_token: str, telegram_chat_id: str, files: list
     assert isinstance(caption, str)
 
     if len(files) == 0:
-        return # Nothing to send
+        return {"ok": False, "error": "Nothing to send"} # Nothing to send
 
     media_json_array = [None] * len(files)
 
@@ -44,3 +46,19 @@ def send_media_group(telegram_bot_token: str, telegram_chat_id: str, files: list
         file.close()
 
     return response.json()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('bot_token', type=str)
+    parser.add_argument('chat_id', type=str)
+    parser.add_argument('files', nargs='+')
+    parser.add_argument('caption', type=str)
+
+    args = parser.parse_args()
+    res = send_media_group(args.bot_token, args.chat_id, args.files, args.caption)
+
+    if res['ok']:
+        print(0)
+    else:
+        print(1)
