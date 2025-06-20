@@ -103,7 +103,7 @@ async def command_run_handler(message: Message, state: FSMContext) -> None:
     info_mes: str = "Настройки обкатки:\n" + (await get_configuration_str(runner_id) + "\n")
     await state.set_state(BotState.starting_state)
     info_mes += "Отправьте /cancel или /отмена чтобы отменить запуск обкатки.\
-                         После запуска отправьте /stop или /стоп чтобы остановить ее"
+ После запуска отправьте /stop или /стоп чтобы остановить ее"
     await message.answer(info_mes)
     logging.info("received CMD START from user %s", message.from_user.username)
     counter_message: str = f"Запуск через {WAIT_BEFORE_RUN_TIME}\n"
