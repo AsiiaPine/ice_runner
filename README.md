@@ -36,7 +36,6 @@ RUNNER_ID=1
 
 ### Installation
 Choose one of the following setup methods:
-
 1. **Automated Setup**: 
    ```bash
    ./scripts/setup.sh
@@ -113,6 +112,11 @@ To simulate ICE using a CAN interface (e.g., slcan/vcan):
 ## Testing and Future Enhancements
 - **To Do:**
   - [ ] Split `ExceedanceTracker` into separate modes.
+=======
+./src/ice_runner/main.py sim --n_tries=3 --log_dir=logs --vcan=can0
+```
+One can specify the number of tries to start the engine with the `--n_tries` parameter. The default value is 3.
+Also, one can specify the interface to use with the `--vcan` parameter. If the parameter is not specified, the script will use the first available can interface.
 
 - **Tests:**
   - [ ] Add tests for the bot.
