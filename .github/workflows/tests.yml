@@ -19,7 +19,7 @@ jobs:
     - name: Install can-utils
       run:  |
         sudo apt-get update & sudo apt-get install -y can-utils
-        sudo apt-get install -y linux-modules-extra-6.8.0-1021-azure
+        sudo apt-get install -y linux-modules-extra-6.11.0-1015-azure
         sudo depmod
 
     - name: Start vcan
