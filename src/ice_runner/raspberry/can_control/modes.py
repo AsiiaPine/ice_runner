@@ -6,7 +6,7 @@ import time
 from typing import Any, Dict, List, Tuple, Type
 from common.RunnerState import RunnerState
 from raspberry.can_control.EngineState import EngineState
-from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from raspberry.RunnerConfiguration import RunnerConfiguration
 
 MAX_AIR_CMD = 2000
 MIN_AIR_CMD = 1000

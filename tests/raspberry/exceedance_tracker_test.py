@@ -5,7 +5,7 @@ import time
 
 import pytest
 from raspberry.can_control.EngineState import EngineStatus, EngineState
-from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from raspberry.RunnerConfiguration import RunnerConfiguration
 from common.RunnerState import RunnerState
 from raspberry.can_control.RunnerStateController import RunnerStateController
 from raspberry.can_control.IceCommander import ExceedanceTracker, ICERunnerMode

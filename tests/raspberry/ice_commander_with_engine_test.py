@@ -11,7 +11,7 @@ from raccoonlab_tools.dronecan.global_node import DronecanNode
 from raccoonlab_tools.common.device_manager import DeviceManager
 
 from common.RunnerState import RunnerState
-from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from raspberry.RunnerConfiguration import RunnerConfiguration
 from raspberry.can_control.node import (CanNode, start_dronecan_handlers,
                                                    stop_dronecan_handlers)
 from raspberry.can_control.IceCommander import ICECommander
