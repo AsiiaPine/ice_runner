@@ -7,7 +7,6 @@
 
 import asyncio
 import os
-import sys
 import time
 import logging
 
@@ -37,15 +36,20 @@ async def main() -> None:
     logging.info("Started")
 
     while True:
-        await ping_rpis()
-        await asyncio.sleep(1)
+        try:
+            await ping_rpis()
+            await asyncio.sleep(1)
+        except RuntimeError as e:
+            logging.error(e)
+            ServerMqttClient.connect(server_ip, server_port)
+            await ServerMqttClient.start()
+            logging.info("Reconnected")
 
 def start(log_dir: str, args: list['str'] = None) -> None:
-    logging_configurator.get_logger(__file__, log_dir)
     parser = argparse.ArgumentParser()
     # Should just trip on non-empty arg and do nothing otherwise
     parser.parse_args(args)
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    logging_configurator.get_logger(__file__, log_dir)
     asyncio.run(main())
 
 if __name__ == "__main__":

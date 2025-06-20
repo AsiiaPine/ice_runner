@@ -4,9 +4,11 @@ version: 1
 
 handlers:
   fileHandler:
-    class: logging.FileHandler  # Change to FileHandler programmatically
-    formatter: brief
+    class: logging.TimedRotatingFileHandler  # Change to FileHandler programmatically
     filename: placeholder.log  # Placeholder to be replaced programmatically
+    when: h
+    interval: 1
+    backupCount: 10
     level: DEBUG
 
   consoleHandler:

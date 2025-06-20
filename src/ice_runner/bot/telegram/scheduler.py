@@ -4,6 +4,7 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import asyncio
 import logging
 import os
 from typing import Dict
@@ -21,12 +22,14 @@ class Scheduler:
     jobs: Dict[int, Job] = {}
 
     @classmethod
-    def start(cls, bot: Bot, chat_id: int):
+    async def start(cls, bot: Bot, chat_id: int):
         """The function starts the scheduler"""
         cls.bot: Bot = bot
         cls.scheduler: AsyncIOScheduler = AsyncIOScheduler(timezone='Europe/Moscow')
         cls.CHAT_ID = chat_id
         cls.scheduler.start()
+        while True:
+            await asyncio.sleep(1)
 
     @classmethod
     def guard_runner(cls, runner_id: int):
@@ -95,3 +98,18 @@ class Scheduler:
         stop_reason = MqttClient.rp_stop_handlers[runner_id]
         await cls.bot.send_message(cls.CHAT_ID, f"Остановлено по причине: {stop_reason}")
         MqttClient.rp_stop_handlers[runner_id] = {}
+
+    @classmethod
+    def on_keyboard_interrupt(cls, task: asyncio.Task):
+        """The function is called when KeyboardInterrupt is received"""
+        logging.info("Scheduler shutting down...")
+        cls.scheduler.shutdown()
+
+        # Try to send exit message, but don't fail if bot is already down
+        for job in cls.jobs.values():
+            try:
+                cls.scheduler.remove_job(job)
+                logging.info(f"Removed job {job.id}")
+            except Exception as e:
+                logging.debug(f"Error removing job: {e}")
+        cls.jobs.clear()

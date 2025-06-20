@@ -21,7 +21,7 @@ from common import logging_configurator
 
 last_sync_time = time.time()
 
-async def main(run_id: int, configuration: RunnerConfiguration) -> None:
+async def main(run_id: int, configuration: RunnerConfiguration, log_dir: str) -> None:
     """The function starts the ICE runner"""
     print(f"RP\t-\tStarting raspberry {run_id}")
     load_dotenv()
@@ -51,7 +51,7 @@ async def main(run_id: int, configuration: RunnerConfiguration) -> None:
         background_tasks.clear()
 
 def start(log_dir: str, args: list['str'] = None) -> None:
-    logging_configurator.get_logger(__file__, log_dir)
+    # logging_configurator.get_logger(__file__, log_dir)
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description='Raspberry Pi CAN node for automatic ICE runner')
     parser.add_argument("--id",
@@ -62,7 +62,8 @@ def start(log_dir: str, args: list['str'] = None) -> None:
                         help="Path to ICE runner configuration file")
 
     # This is disgusting
-    CanNode.log_dir = log_dir
+    CanNode.set_log_dir(log_dir)
+    logging_configurator.get_logger(__file__, log_dir)
 
     args: argparse.Namespace = parser.parse_args(args)
     if args.id == -1:
@@ -74,7 +75,7 @@ def start(log_dir: str, args: list['str'] = None) -> None:
     config = RunnerConfiguration(file_path=args.config)
     MqttClient.configuration = config
     try:
-        asyncio.run(main(args.id, config))
+        asyncio.run(main(args.id, config, log_dir))
     except KeyboardInterrupt:
         print("Received KeyboardInterrupt")
         sys.exit(0)
