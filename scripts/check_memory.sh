@@ -67,34 +67,15 @@ if [[ -z "$BOT_TOKEN" || -z "$CHAT_ID" ]]; then
     exit 1
 fi
 
-# Function to send a message to Telegram
-send_to_telegram() {
-    local TEXT="$1"
-    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"\
-    -d chat_id=$CHAT_ID -d text="$TEXT" > /dev/null
-}
-
 FILES_ARRAY=()
 send_media_group_to_telegram() {
-    echo $(python src/ice_runner/bot/telegram/helper.py $BOT_TOKEN $CHAT_ID $FILES_ARRAY "Logs backup from ${DIR_TO_WATCH}")
+    output=$(python src/ice_runner/bot/telegram/helper.py $BOT_TOKEN $CHAT_ID $FILES_ARRAY "Logs backup from ${DIR_TO_WATCH}")
+    echo $output
 }
-
 
 add_file_to_media_group() {
     local FILE="$1"
     echo "Added $FILE to media group"
-}
-
-# Function to send a file with file to Telegram
-send_file_to_telegram() {
-    local TEXT="$1"
-        local RESPONSE
-
-    # Send the file and capture the HTTP response status code
-    # RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null -F "chat_id=${CHAT_ID}" -F document=@"${FILE_PATH}" -F caption="Бэкап файла, удаляем его" \
-    # https://api.telegram.org/bot${BOT_TOKEN}/sendDocument)
-    RESPONSE=$(curl -s -F "chat_id=${CHAT_ID}" -F document=@${TEXT} -F caption="Бэкап файла, удаляем его" https://api.telegram.org/bot${BOT_TOKEN}/sendDocument)
-    echo $RESPONSE
 }
 
 # Logging function
@@ -125,37 +106,46 @@ process_files() {
     # Iterate over grouped files
     for PREFIX in "${!FILE_GROUPS[@]}"; do
         FILES=(${FILE_GROUPS[$PREFIX]})
-        if [[ ${#FILES[@]} -gt 2 ]]; then
+        if [[ ${#FILES[@]} -gt 1 ]]; then
             # Sort by timestamp (assumes the part after the prefix is sortable)
             SORTED_FILES=($(printf "%s\n" "${FILES[@]}" | sort))
-            # Delete only the oldest file in the group
-            if [ ${SORTED_FILES[0]} == ${PREFIX} ]; then
-                OLDEST_FILE=${SORTED_FILES[1]}
-            else
-                OLDEST_FILE=${SORTED_FILES[0]}
-            fi
-            FILES_ARRAY+="$OLDEST_FILE,"
+            for FILE in ${SORTED_FILES[*]}; do
+                # Check if the file is empty
+                if [ -s "$FILE" ]; then
+                    if lsof "$FILE" >/dev/null 2>&1; then
+                        echo "File $FILE is locked"
+                        continue
+                    fi
+                    FILES_ARRAY+=("$FILE")
+                    break
+                else
+                    echo "File $FILE is empty, deleting"
+                    rm "$FILE"
+                    log "File deleted: $FILE"
+                fi
+            done
+
         fi
     done
 
     echo "Sending media group ${DIR_TO_WATCH}"
     if [ ${#FILES_ARRAY[@]} -eq 0 ]; then
-        log "No files to send"
+        log "No files to send\n"
         return
     fi
+    echo "Files to send: ${FILES_ARRAY[*]}"
     res=$(send_media_group_to_telegram)
-    if [ "$res" != "Done" ]; then
-        log "Failed to send media group: $res"
+    echo "res $res"
+    if [ $res -ne 1 ]; then
+        sleep 2
+        echo "Deleting oldest file in group '$PREFIX': $OLDEST_FILE"
+        for FILE in ${FILES_ARRAY[*]}; do
+            rm "$FILE"
+            log "File deleted: $FILE"
+        done
         return
     fi
     log "Failed to send media group: $res"
-    sleep 2
-    echo "Deleting oldest file in group '$PREFIX': $OLDEST_FILE"
-    for FILE in ${FILES_ARRAY[@]}; do
-        echo "Deleting file $FILE"
-        rm "$FILE"
-        log "File deleted: $FILE"
-    done
 }
 
 # Main script logic
