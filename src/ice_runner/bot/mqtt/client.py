@@ -4,7 +4,9 @@
 # Copyright (c) 2024 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+import asyncio
 import logging
+import sys
 from typing import Any, Dict
 from paho.mqtt.client import MQTTv311, Client
 from common.RunnerState import RunnerState
@@ -22,7 +24,7 @@ class MqttClient:
     server_connected = False
 
     @classmethod
-    async def connect(cls, server_ip: str = "localhost", port: int = 1883) -> None:
+    def connect(cls, server_ip: str = "localhost", port: int = 1883) -> None:
         """The function connects client to MQTT server"""
         cls.client.connect(server_ip, port, 60)
         cls.client.publish("ice_runner/bot", "ready")
@@ -34,6 +36,15 @@ class MqttClient:
             and starts new thread to process network traffic"""
         cls.client.subscribe("ice_runner/server/bot_commander/#")
         cls.client.loop_start()
+
+        # Keep the MQTT client running until cancelled
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            cls.client.loop_stop()
+            cls.client.disconnect()
+            raise
 
     @classmethod
     def publish_who_alive(cls) -> None:
@@ -81,3 +92,9 @@ class MqttClient:
     def publish_status_request(cls, runner_id: int) -> None:
         cls.client.publish(f"ice_runner/bot/usr_cmd/status", str(runner_id))
         logging.info("Published\t| Status request for Runner %d", runner_id)
+
+    @classmethod
+    def on_keyboard_interrupt(cls, *args: Any) -> None:
+        """The function is called when KeyboardInterrupt is received"""
+        cls.client.disconnect()
+        sys.exit(0)
