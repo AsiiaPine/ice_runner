@@ -74,18 +74,17 @@ send_to_telegram() {
     -d chat_id=$CHAT_ID -d text="$TEXT" > /dev/null
 }
 
+FILES_ARRAY=()
 send_media_group_to_telegram() {
-    local TEXT="$1"
-    media_command="media=["
-    for FILE in $TEXT; do
-        media_command+='{"type"="document", "media"="'$FILE'"},'
-    done
-    media_command=${media_command%?}
-    media_command+=']'
-    
-    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"\
-    -d chat_id=$CHAT_ID -d text="$TEXT" -d $media_command > /dev/null
+    echo $(python src/ice_runner/bot/telegram/helper.py $BOT_TOKEN $CHAT_ID $FILES_ARRAY "Logs backup from ${DIR_TO_WATCH}")
 }
+
+
+add_file_to_media_group() {
+    local FILE="$1"
+    echo "Added $FILE to media group"
+}
+
 # Function to send a file with file to Telegram
 send_file_to_telegram() {
     local TEXT="$1"
@@ -118,12 +117,8 @@ process_files() {
     for FILE_PATH in "$DIR_TO_WATCH"/*; do
         FILE_NAME=$(basename "$FILE_PATH")
         # should delete files for any date from 2000 to 9999th
-        # PREFIX=$(echo "$FILE_NAME" | sed 's/\([a-zA-Z0-9._]*\)_2025_.*/\1/')  # Adjust pattern as needed
-        # PREFIX=$(echo "$FILE_NAME" | sed 's/\([a-zA-Z0-9._]*\)_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_.*//')  # Adjust pattern as needed
-        # PREFIX=$(echo "$FILE_NAME" | sed -E 's/(.*)_[0-9]{4}-[0-9]{2}-[0-9]{2}_.*/\1/')
-        # PREFIX=$(echo "$FILE_NAME" | sed -E 's/([^.]+)\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\..*$/\1/')
         PREFIX=$(echo "$FILE_NAME" | sed -E 's/(.*)_[0-9]{4}-[0-9]{2}-[0-9]{2}_.*/\1/')
-        echo "PREFIX: $PREFIX"
+        # echo "PREFIX: $PREFIX"
         FILE_GROUPS["$PREFIX"]+="$FILE_PATH "
     done
 
@@ -133,30 +128,33 @@ process_files() {
         if [[ ${#FILES[@]} -gt 2 ]]; then
             # Sort by timestamp (assumes the part after the prefix is sortable)
             SORTED_FILES=($(printf "%s\n" "${FILES[@]}" | sort))
-            echo "SORTED_FILES: ${SORTED_FILES[@]}"
             # Delete only the oldest file in the group
             if [ ${SORTED_FILES[0]} == ${PREFIX} ]; then
                 OLDEST_FILE=${SORTED_FILES[1]}
             else
                 OLDEST_FILE=${SORTED_FILES[0]}
             fi
-            echo "Deleting oldest file in group '$PREFIX': $OLDEST_FILE"
-            if [ ! -s $OLDEST_FILE ]; then
-                echo "The file is empty.";
-                rm "$OLDEST_FILE"
-                log "File deleted: $OLDEST_FILE"
-            else
-                res=$(send_file_to_telegram $OLDEST_FILE)
-                # Parse the JSON to see if sending the file was successful
-                if [[ $(echo $res | jq '.ok') == "true" ]]; then
-                    log "File sent successfully: $OLDEST_FILE"
-                    rm "$OLDEST_FILE"
-                    log "File deleted: $OLDEST_FILE"
-                else
-                    log "Failed to send file: $OLDEST_FILE, HTTP response code: $res"
-                fi
-            fi
+            FILES_ARRAY+="$OLDEST_FILE,"
         fi
+    done
+
+    echo "Sending media group ${DIR_TO_WATCH}"
+    if [ ${#FILES_ARRAY[@]} -eq 0 ]; then
+        log "No files to send"
+        return
+    fi
+    res=$(send_media_group_to_telegram)
+    if [ "$res" != "Done" ]; then
+        log "Failed to send media group: $res"
+        return
+    fi
+    log "Failed to send media group: $res"
+    sleep 2
+    echo "Deleting oldest file in group '$PREFIX': $OLDEST_FILE"
+    for FILE in ${FILES_ARRAY[@]}; do
+        echo "Deleting file $FILE"
+        rm "$FILE"
+        log "File deleted: $FILE"
     done
 }
 
