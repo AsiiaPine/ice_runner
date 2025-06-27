@@ -10,7 +10,7 @@ import logging
 from typing import Any, Dict
 from paho.mqtt.client import MQTTv311, Client, MQTTMessageInfo
 from paho.mqtt.enums import CallbackAPIVersion
-from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from raspberry.RunnerConfiguration import RunnerConfiguration
 from common.RunnerState import RunnerState
 
 class MqttClient:

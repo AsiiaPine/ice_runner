@@ -184,9 +184,10 @@ JOB1_PID=$(start_job "$JOB1" "$JOB1_PARAMS" "$JOB1_NAME")
 JOB2_PID=$(start_job "$JOB2" "$JOB2_PARAMS" "$JOB2_NAME")
 JOB3_PID=$(start_job "$JOB3" "$JOB3_PARAMS" "$JOB3_NAME")
 
+sleep 5
 
 # Send initial Telegram message
-send_telegram_message "Усе запущено!"
+send_telegram_message "Работаем!"
 
 # Continuously check if jobs are still running
 while true; do

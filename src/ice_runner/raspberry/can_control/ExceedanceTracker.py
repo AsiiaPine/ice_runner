@@ -6,7 +6,7 @@ import logging
 import time
 from common.RunnerState import RunnerState
 from raspberry.can_control.EngineState import EngineStatus
-from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from raspberry.RunnerConfiguration import RunnerConfiguration
 from raspberry.can_control.RunnerStateController import RunnerStateController
 from raspberry.can_control.modes import ICERunnerMode
 

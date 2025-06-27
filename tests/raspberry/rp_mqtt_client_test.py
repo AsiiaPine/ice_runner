@@ -8,7 +8,7 @@ from functools import partial
 from threading import Event
 from paho.mqtt.enums import CallbackAPIVersion
 from paho.mqtt.client import Client
-from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from raspberry.RunnerConfiguration import RunnerConfiguration
 from raspberry.mqtt.handlers import MqttClient, add_handlers
 
 

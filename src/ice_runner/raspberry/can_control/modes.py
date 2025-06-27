@@ -2,11 +2,12 @@
 
 from enum import IntEnum
 import logging
+import random
 import time
 from typing import Any, Dict, List, Tuple, Type
 from common.RunnerState import RunnerState
 from raspberry.can_control.EngineState import EngineState
-from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from raspberry.RunnerConfiguration import RunnerConfiguration
 
 MAX_AIR_CMD = 2000
 MIN_AIR_CMD = 1000
@@ -20,6 +21,7 @@ class ICERunnerMode(IntEnum):
                 # на стороне скрипта - все на стороне платы.
     CHECK = 3 # Запуск на 8 секунд, проверка сартера
     FUEL_PUMPTING = 4 # Запуск на 60 секунд
+    RANDOM = 5 # Запуск с рандомными командам в промежутке между max_gas_throttle_pct и max_gas_throttle_pct
 
     def get_mode_class(self, configuration: RunnerConfiguration) -> Type["BaseMode"]:
         if self == ICERunnerMode.CONST:
@@ -32,6 +34,8 @@ class ICERunnerMode(IntEnum):
             return CheckMode(configuration=configuration)
         if self == ICERunnerMode.FUEL_PUMPTING:
             return FuelPumpMode(configuration=configuration)
+        if self == ICERunnerMode.RANDOM:
+            return RandonMode(configuration=configuration)
         raise ValueError(f"Unknown mode {self}")
 
 
@@ -183,3 +187,18 @@ class PIDController:
         self.integral = 0
         self.prev_time = 0
         self.prev_command = -1
+
+class RandonMode(BaseMode):
+    name = ICERunnerMode.RANDOM
+    def __init__(self, configuration: RunnerConfiguration):
+        super().__init__(configuration)
+        self.update_configuration(configuration)
+
+    def get_running_command(self, **kwargs) -> List[int]:
+        return [random.randint(self.min_gas_throttle, self.max_gas_throttle), self.air_throttle]
+
+    def update_configuration(self, configuration: RunnerConfiguration) -> None:
+        """The function changes the coefficients of the PID controller"""
+        self.min_gas_throttle = int(configuration.min_gas_throttle_pct * 8191 / 100)
+        self.max_gas_throttle = int(configuration.max_gas_throttle_pct * 8191 / 100)
+        logging.info("RANDOM\t-\tconfiguration updated: min value %d, max value %d", self.min_gas_throttle, self.max_gas_throttle)

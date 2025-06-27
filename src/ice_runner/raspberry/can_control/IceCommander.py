@@ -19,7 +19,7 @@ from raspberry.can_control.modes import BaseMode, ICERunnerMode
 from raspberry.can_control.EngineState import EngineState
 from raspberry.can_control.RunnerStateController import RunnerStateController
 from common.RunnerState import RunnerState
-from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from raspberry.RunnerConfiguration import RunnerConfiguration
 if os.path.exists("/proc/device-tree/model"):
     from RPi import GPIO # Import Raspberry Pi GPIO library
 

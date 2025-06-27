@@ -8,7 +8,7 @@ from typing import Callable
 import dronecan
 
 from common.RunnerState import RunnerState
-from raspberry.can_control.RunnerConfiguration import RunnerConfiguration
+from raspberry.RunnerConfiguration import RunnerConfiguration
 import raspberry
 from raspberry.can_control.modes import MAX_AIR_CMD, MIN_AIR_CMD
 from raspberry.can_control.node import ICE_AIR_CHANNEL, CanNode
