@@ -3,6 +3,40 @@
 # Copyright (c) 2025 Anastasiia Stepanova.
 # Author: Anastasiia Stepanova <asiiapine@gmail.com>
 
+PY_VERSION=3.10.16
+
+print_help() {
+    echo "usage: $script_name [-h] <version>"
+    echo "The script will create new python environment with provided python version using pyenv.
+    If python or pyenv are not installed, the script will suggest the installation."
+    echo "example: $script_name 3.10.16"
+}
+
+
+function log_error() {
+    lineno=($(caller))
+    printf "$RED$SCRIPT_NAME ERROR on line ${lineno}: $1!$NC\n"
+}
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        -v|--version)
+            PY_VERSION=$2
+            shift
+            ;;
+            *)
+        log_error "Unknown option: $1"
+        echo "$HELP"
+        [[ "${BASH_SOURCE[0]}" -ef "$0" ]] && exit 1 || return 1
+        ;;
+    esac
+    shift
+done
+
 function yes_or_no {
     while true; do
         read -p "$* [Y/n]: " yn
@@ -54,14 +88,16 @@ function check_virtual_env() {
 }
 
 function check_python_version() {
-    if [ "$(python -V | grep -o 'Python 3.10')" != "Python 3.10" ]; then
+    data=$(python -V | grep -o "Python ${PY_VERSION}")
+    echo $data
+    if [ "${data}" != "Python ${PY_VERSION}" ]; then
         echo "You are not using Python 3.10."
         switch_python=$(yes_or_no "Do you want to switch to it?")
         if [ "$switch_python" == 1 ]; then
-            echo "Switching to Python 3.10..."
             pyenv=$(which pyenv 2>&1)
             echo "Checking if pyenv is installed..."
-            if [[ $pyenv == *"no pyenv"* ]]; then
+            # if [[ $pyenv == *"no pyenv"* ]]; then
+            if [ -z "$pyenv" ]; then
                 echo "Pyenv is a tool that allows you to easily switch between multiple versions of Python. It is recommended to use pyenv to manage your Python versions."
                 install_pyenv=$(yes_or_no "Do you want to install pyenv?")
 
@@ -71,16 +107,16 @@ function check_python_version() {
                     sudo $installer_command pyenv
                     echo "Done."
                 fi
-
                     echo "pyenv is not installed."
-                    installer_command=$(get_installer_command)
-                    echo "Installing pyenv..."
-                    $installer_command pyenv
-                    echo "Done."
-                fi
-
+                    echo "Exiting..."
+                    exit 1
+            fi
             echo "Switching to Python 3.10..."
-            pyenv local 3.10.16
+            is_there_needed_version=$(pyenv local 3.10.16 2>&1)
+            if [[ $is_there_needed_version == *"not installed"* ]]; then
+                pyenv install 3.10.16
+                pyenv local 3.10.16
+            fi
             echo "Done."
         else
             echo "Exiting..."

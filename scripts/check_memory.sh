@@ -21,6 +21,11 @@ Options:
 "
 }
 
+function log_error() {
+    lineno=($(caller))
+    printf "$RED$SCRIPT_NAME ERROR on line ${lineno}: $1!$NC\n"
+}
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)
