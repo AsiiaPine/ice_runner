@@ -171,6 +171,7 @@ class TestStarting(BaseTest):
     def test_rpm_exceeded(self):
         """ExceedanceTracker should ignore RPM if the state is STARTING"""
         self.runner_state.prev_state = RunnerState.STARTING
+        self.config.max_rpm = 7500
         self.state.rpm = 1000
         assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
@@ -233,6 +234,7 @@ class TestPIDMode(BaseTest):
     def test_rpm_exceeded(self):
         self.config.rpm = secrets.randbelow(1000)
         self.state.rpm = self.config.rpm
+        self.config.max_rpm = 2000
         self.runner_state.state = RunnerState.RUNNING
         assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
@@ -240,6 +242,12 @@ class TestPIDMode(BaseTest):
         self.state.rpm = self.config.rpm + 1000
         assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
+
+        self.config.rpm = 3000
+        self.state.rpm = 2500
+        assert self.ex_tracker.is_exceeded_check(
+            self.state, self.config, self.runner_state, self.start_time)
+
 
 class TestCheckMode(BaseTest):
     def setup_method(self, test_method):
