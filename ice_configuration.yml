@@ -121,6 +121,15 @@ max_temperature:
   type: int
   usage: flag
 
+max_rpm:
+  help: Граничные обороты двигателя, при их достижения, обкатка обрывается
+  value: 7500
+  min: 0
+  max: 10000
+  unit: rpm
+  type: int
+  usage: flag
+
 min_fuel_volume:
   help: Граничный уровень топлива, при достижении обкатка обрывается
   value: 0

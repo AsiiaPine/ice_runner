@@ -23,7 +23,7 @@ class RunnerConfiguration:
     """The class is used to define the configuration of the ICE runner"""
     attribute_names = ["mode", "rpm", "time", "gas_throttle_pct", "air_throttle_pct",
                        "min_gas_throttle_pct", "max_gas_throttle_pct", "report_period", "control_pid_p",
-                       "control_pid_i", "control_pid_d", "max_temperature",
+                       "control_pid_i", "control_pid_d", "max_temperature", "max_rpm",
                        "min_fuel_volume", "min_vin_voltage", "start_attemts",
                        "max_vibration"]
     components = ["default", "help", "type", "value", "min", "max", "unit", "usage"]

@@ -11,7 +11,6 @@ from raspberry.can_control.RunnerStateController import RunnerStateController
 from raspberry.can_control.modes import ICERunnerMode
 
 RPM_CONTROL_TOLERANCE = 500
-MAX_ALLOWED_RPM = 7500
 
 class ExceedanceTracker:
     _latest_status = None
@@ -82,7 +81,7 @@ class ExceedanceTracker:
 
         if self.max_rpm:
             actual_rpm = round(ExceedanceTracker._latest_status.rpm)
-            emergency_stop_reasons += f"RPM {actual_rpm} exceed max RPM ({MAX_ALLOWED_RPM})\n"
+            emergency_stop_reasons += f"RPM {actual_rpm} exceed max RPM ({ExceedanceTracker._latest_configurator.max_rpm})\n"
 
         if self.start_attempts:
             start_attemts = ExceedanceTracker._latest_configurator.start_attemts
@@ -122,8 +121,9 @@ class ExceedanceTracker:
                             start_time: float,
                             state_controller: RunnerStateController) -> bool:
         """The function checks conditions when the ICE is running"""
-        if state.rpm > MAX_ALLOWED_RPM:
-            logging.warning(f"STATUS\t-\tRPM exceeded {state.rpm}, {MAX_ALLOWED_RPM}")
+        if state.rpm > configuration.max_rpm:
+            logging.warning(
+                    f"STATUS\t-\tRPM exceeded rpm_max value {state.rpm}, {configuration.max_rpm}")
             self.max_rpm = True
 
         self.check_mode_specialized(state, configuration, start_time, state_controller)
