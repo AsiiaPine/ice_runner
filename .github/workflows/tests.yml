@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install can-utils
       run:  |
-        ./scripts/install_can.sh
+        sudo ./scripts/install_can.sh
         sudo depmod
 
     - name: Start vcan
