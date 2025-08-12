@@ -54,7 +54,7 @@ class CanNode:
         cls.transport = DeviceManager.get_device_port()
         cls.air_cmd = dronecan.uavcan.equipment.actuator.Command(
                                             actuator_id=ICE_AIR_CHANNEL, command_value=0)
-        cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
+        cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_THR_CHANNEL + 1))
         cls.prev_broadcast_time: float = 0
         cls.node.health = Health.HEALTH_OK
         cls.node.mode = Mode.MODE_OPERATIONAL
