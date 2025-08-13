@@ -128,7 +128,8 @@ class ExceedanceTracker:
 
         self.check_mode_specialized(state, configuration, start_time, state_controller)
         self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
-        self.temp = configuration.max_temperature < state.temp
+        if configuration.max_temperature != 0:
+            self.temp = configuration.max_temperature < state.temp
 
         self.vibration = state.rec_imu and\
                                     configuration.max_vibration < state.vibration
