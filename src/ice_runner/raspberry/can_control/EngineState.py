@@ -78,6 +78,9 @@ class EngineStatus:
         self.fuel_level = msg.message.available_fuel_volume_cm3
         self.fuel_level_percent = msg.message.available_fuel_volume_percent
 
+    def update_with_esc_status(self, msg) -> None:
+        pass
+
     def to_dict(self) -> Dict[str, Any]:
         vars_dict = copy.deepcopy(vars(self))
 

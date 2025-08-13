@@ -54,7 +54,7 @@ class CanNode:
         cls.transport = DeviceManager.get_device_port()
         cls.air_cmd = dronecan.uavcan.equipment.actuator.Command(
                                             actuator_id=ICE_AIR_CHANNEL, command_value=0)
-        cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_AIR_CHANNEL + 1))
+        cls.cmd = dronecan.uavcan.equipment.esc.RawCommand(cmd=[0]*(ICE_THR_CHANNEL + 1))
         cls.prev_broadcast_time: float = 0
         cls.node.health = Health.HEALTH_OK
         cls.node.mode = Mode.MODE_OPERATIONAL
@@ -216,6 +216,14 @@ def ice_reciprocating_status_handler(msg: dronecan.node.TransferEvent) -> None:
     dump_msg(msg, "uavcan.equipment.ice.reciprocating.Status")
     logging.debug("MES\t-\tReceived ICE reciprocating status")
 
+def esc_status_handler(msg: dronecan.node.TransferEvent) -> None:
+    """The function handles uavcan.equipment.esc.Status"""
+    CanNode.status.update_with_esc_status(msg)
+    CanNode.messages['uavcan.equipment.esc.Status'] = yaml.load(dronecan.to_yaml(msg.message),
+                                                                yaml.BaseLoader)
+    dump_msg(msg, "uavcan.equipment.esc.Status")
+    logging.debug("MES\t-\tReceived esc status")
+
 def start_dronecan_handlers() -> None:
     """The function starts all handlers for dronecan messages"""
     CanNode.node.add_handler(dronecan.uavcan.equipment.ice.reciprocating.Status,
@@ -223,10 +231,12 @@ def start_dronecan_handlers() -> None:
     CanNode.node.add_handler(dronecan.uavcan.equipment.ahrs.RawIMU, raw_imu_handler)
     CanNode.node.add_handler(dronecan.uavcan.protocol.NodeStatus, node_status_handler)
     CanNode.node.add_handler(dronecan.uavcan.equipment.ice.FuelTankStatus, fuel_tank_status_handler)
+    CanNode.node.add_handler(dronecan.uavcan.equipment.esc.Status, esc_status_handler)
     CanNode.can_output_filenames["uavcan.equipment.ice.reciprocating.Status"] = None
     CanNode.can_output_filenames["uavcan.equipment.ahrs.RawIMU"] = None
     CanNode.can_output_filenames["uavcan.protocol.NodeStatus"] = None
     CanNode.can_output_filenames["uavcan.equipment.ice.FuelTankStatus"] = None
+    CanNode.can_output_filenames["uavcan.equipment.esc.Status"] = None
 
 def stop_dronecan_handlers() -> None:
     """The function stops all handlers for dronecan messages"""
@@ -234,3 +244,4 @@ def stop_dronecan_handlers() -> None:
     CanNode.node.remove_handlers(dronecan.uavcan.equipment.ahrs.RawIMU)
     CanNode.node.remove_handlers(dronecan.uavcan.equipment.ice.reciprocating.Status)
     CanNode.node.remove_handlers(dronecan.uavcan.equipment.ice.FuelTankStatus)
+    CanNode.node.remove_handlers(dronecan.uavcan.equipment.esc.Status)

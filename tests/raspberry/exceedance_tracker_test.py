@@ -71,6 +71,13 @@ class BaseTest():
         assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 
+    def check_temp_is_disabled(self):
+        self.config.max_temperature = 0
+        self.state.temp = 10000
+        assert not self.ex_tracker.is_exceeded_check(
+            self.state, self.config, self.runner_state, self.start_time)
+
+
 class TestNotStarted(BaseTest):
     def test_not_started_call(self, mocker):
 
