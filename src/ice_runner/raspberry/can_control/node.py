@@ -244,3 +244,4 @@ def stop_dronecan_handlers() -> None:
     CanNode.node.remove_handlers(dronecan.uavcan.equipment.ahrs.RawIMU)
     CanNode.node.remove_handlers(dronecan.uavcan.equipment.ice.reciprocating.Status)
     CanNode.node.remove_handlers(dronecan.uavcan.equipment.ice.FuelTankStatus)
+    CanNode.node.remove_handlers(dronecan.uavcan.equipment.esc.Status)
