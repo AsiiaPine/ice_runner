@@ -43,7 +43,8 @@ class ExceedanceTracker:
         ExceedanceTracker._latest_configurator = configuration
         ExceedanceTracker._latest_state_controller = state_controller
 
-        self.temp = configuration.max_temperature < state.temp
+        if configuration.max_temperature != 0:
+            self.temp = configuration.max_temperature < state.temp
         self.vin = configuration.min_vin_voltage > state.voltage_in
         self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
         if state_controller.state == RunnerState.STOPPED:
