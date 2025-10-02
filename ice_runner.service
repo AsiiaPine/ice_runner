@@ -9,9 +9,6 @@ ExecStart=/bin/bash /home/asiia/Documents/work/ice_runner/start.sh -m 10000 -i 3
 WorkingDirectory=/home/pi/ice_runner
 Restart=on-failure
 RestartSec=5
-EnvironmentFile=/home/pi/ice_runner/.env
-RemainAfterExit=true
-Type=oneshot
 
 KillMode=control-group
 SendSIGKILL=yes
