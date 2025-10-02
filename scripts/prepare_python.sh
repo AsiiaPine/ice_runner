@@ -79,10 +79,12 @@ function get_installer_command() {
 
 # check if python use virtual environment
 function check_virtual_env() {
-    python_str=$(which python3)
-    if [[ $python_str == *"bin"* ]]; then
+    python_str=$(which python)
+    if [[ $python_str == *"/usr/bin"* ]]; then
+        echo 0
+    elif [[ $python_str == *"bin"* ]]; then
         echo 1
-        else
+    else
         echo 0
     fi
 }
