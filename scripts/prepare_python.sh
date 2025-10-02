@@ -66,14 +66,12 @@ function get_installer_command() {
         OS="Debian"
         VER=$(cat /etc/debian_version)
     fi
-    if [ "$OS" = "Ubuntu" ]; then
-        installer_command="apt install"
-    elif [ "$OS" = "Debian" ]; then
+    if [ "$OS" = "Ubuntu" ] || [[ "$OS" == *"Debian"* ]] || [[ "$OS" == *"Raspbian"* ]]; then
         installer_command="apt install"
     elif [ "$OS" = "Manjaro Linux" ]; then
         installer_command="pacman -S"
     else
-        echo "Unsupported OS"
+        echo "Unsupported OS {$OS}"
         exit 1
     fi
     echo $installer_command
@@ -81,10 +79,12 @@ function get_installer_command() {
 
 # check if python use virtual environment
 function check_virtual_env() {
-    python_str=$(which python3)
-    if [[ $python_str == *"bin"* ]]; then
+    python_str=$(which python)
+    if [[ $python_str == *"/usr/bin"* ]]; then
+        echo 0
+    elif [[ $python_str == *"bin"* ]]; then
         echo 1
-        else
+    else
         echo 0
     fi
 }
