@@ -37,6 +37,9 @@ echo "Installing MQTT"
 if [[ "$OS" == *Ubuntu* ]]; then
     sudo apt update && apt upgrade -y
     sudo apt install -y mosquitto mosquitto-clients
+if [[ "$OS" == *Debian* ]]; then
+    sudo apt update && apt upgrade -y
+    sudo apt install -y mosquitto mosquitto-clients
 elif [[ "$OS" == *Linux* ]]; then
     sudo pacman -S mosquitto
 else
