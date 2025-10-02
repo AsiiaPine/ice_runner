@@ -13,17 +13,7 @@ fi
 
 $SCRIPT_DIR/prepare_python.sh
 
-if [[ $? -eq 1 ]]; then
-    echo "Error installing python dependencies"
-    exit 1
-fi
-
 $SCRIPT_DIR/install_can.sh
-
-if [[ $? -eq 1 ]]; then
-    echo "Error installing CAN server"
-    exit 1
-fi
 
 echo "Do you want to create a systemd service for ice_runner? ([Y]/n)"
 read -r answer

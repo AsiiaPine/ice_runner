@@ -1,20 +1,18 @@
-[Unit]
-Description=ICE runner Lauch Autostart
-After=network.target
+Description=Ice Runner service Autostart
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-ExecStartPre=/bin/sh -c 'until ping -c1 10.8.0.1; do sleep 1; done;'
-ExecStart=/bin/bash /home/asiia/Documents/work/ice_runner/start.sh -m 3000000 -i 3600 -e .env -v /home/pi/venv/
-WorkingDirectory=/home/pi/ice_runner
+Type=simple
+WorkingDirectory=/home/pi/ice_runner/
+ExecStartPre=/bin/sleep 5
+ExecStart=/home/pi/ice_runner/scripts/start.sh -e .env -m 10000
 Restart=on-failure
 RestartSec=5
-EnvironmentFile=/home/pi/ice_runner/.env
-RemainAfterExit=true
-Type=oneshot
 
 KillMode=control-group
 SendSIGKILL=yes
 TimeoutStopSec=10
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
