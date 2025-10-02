@@ -68,7 +68,7 @@ function get_installer_command() {
     fi
     if [ "$OS" = "Ubuntu" ]; then
         installer_command="apt install"
-    if [ "$OS" = "Debian" ]; then
+    elif [ "$OS" = "Debian" ]; then
         installer_command="apt install"
     elif [ "$OS" = "Manjaro Linux" ]; then
         installer_command="pacman -S"
