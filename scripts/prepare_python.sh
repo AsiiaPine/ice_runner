@@ -73,7 +73,7 @@ function get_installer_command() {
     elif [ "$OS" = "Manjaro Linux" ]; then
         installer_command="pacman -S"
     else
-        echo "Unsupported OS"
+        echo "Unsupported OS {$OS}"
         exit 1
     fi
     echo $installer_command
