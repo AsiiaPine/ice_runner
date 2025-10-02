@@ -13,7 +13,7 @@ echo $(cat $PARENT_DIR/ice_runner.service)
 
 echo "Creating systemd service..."
 
-sudo cp $PARENT_DIR/ice_runner.service ~/.config/systemd/user/ice_runner.service
+sudo cp $PARENT_DIR/ice_runner.service /etc/systemd/system/ice_runner.service
 systemctl daemon-reload
 systemctl --user enable ice_runner.service
 systemctl --user start ice_runner.service
