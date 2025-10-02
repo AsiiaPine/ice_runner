@@ -66,7 +66,7 @@ function get_installer_command() {
         OS="Debian"
         VER=$(cat /etc/debian_version)
     fi
-    f [ "$OS" = "Ubuntu" ] || [ "$OS" = *"Debian"* ] ||  [ "$OS" = *"Raspbian"* ]; then
+    if [[ "$OS" = "Ubuntu" ] || [ "$OS" = *"Debian"* ] ||  [ "$OS" = *"Raspbian"* ]]; then
         installer_command="apt install"
     elif [ "$OS" = "Manjaro Linux" ]; then
         installer_command="pacman -S"
