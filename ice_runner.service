@@ -1,0 +1,18 @@
+Description=Ice Runner service Autostart
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/ice_runner/
+ExecStartPre=/bin/sleep 5
+ExecStart=/home/pi/ice_runner/scripts/start.sh -e .env -m 10000
+Restart=on-failure
+RestartSec=5
+
+KillMode=control-group
+SendSIGKILL=yes
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

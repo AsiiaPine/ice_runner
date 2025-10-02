@@ -40,7 +40,7 @@ Choose one of the following setup methods:
    ```bash
    ./scripts/setup.sh
    ```
-   Installs all necessary packages and creates a python virtual environment in venv folder.
+   Installs all necessary packages and creates a python virtual environment in venv folder and creates a systemd service.
 
 2. **Manual Setup**: 
    ```bash

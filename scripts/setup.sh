@@ -13,9 +13,19 @@ fi
 
 $SCRIPT_DIR/prepare_python.sh
 
-if [[ $? -eq 1 ]]; then
-    echo "Error installing python dependencies"
-    exit 1
-fi
+$SCRIPT_DIR/install_can.sh
+
+echo "Do you want to create a systemd service for ice_runner? ([Y]/n)"
+read -r answer
+answer=${yn:-Y}
+case $answer in
+    [Yy]* ) sudo $SCRIPT_DIR/create_service.sh
+            if [[ $? -eq 1 ]]; then
+                echo "Error creating systemd service"
+                exit 1
+            fi;;
+    [Nn]* ) echo "Skipping systemd service";;
+    * ) echo "Invalid input";;
+esac
 
 echo "Done!"
