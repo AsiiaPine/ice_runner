@@ -63,7 +63,7 @@ function get_installer_command() {
         VER=$DISTRIB_RELEASE
     elif [ -f /etc/debian_version ]; then
         # Older Debian/Ubuntu/etc.
-        OS=Debian
+        OS="Debian"
         VER=$(cat /etc/debian_version)
     fi
     if [ "$OS" = "Ubuntu" ]; then
@@ -106,6 +106,10 @@ function check_python_version() {
                 if [ "$install_pyenv" == 1 ]; then
                     echo "Installing pyenv..."
                     installer_command=$(get_installer_command)
+                    if [[ $installer_command == *"Unsupported"* ]]; then
+                        echo $installer_command
+                        exit 1
+                    fi
                     sudo $installer_command pyenv
                     echo "Done."
                 fi
