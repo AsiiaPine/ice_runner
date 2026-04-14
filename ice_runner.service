@@ -4,11 +4,9 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=simple
-WorkingDirectory=/home/pi/ice_runner/
-ExecStartPre=/bin/sleep 5
-ExecStart=/home/pi/ice_runner/scripts/start.sh -e .env -m 3000
-EnvironmentFile=/home/pi/ice_runner/.env
+ExecStartPre=/bin/sh -c 'until ping -c1 1.1.1.1; do sleep 1; done;'
+ExecStart=/bin/bash /home/asiia/Documents/work/ice_runner/start.sh -m 3000 -i 3600 -e .env -v /home/pi/venv/
+WorkingDirectory=/home/pi/ice_runner
 Restart=on-failure
 RestartSec=5
 
