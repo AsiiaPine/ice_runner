@@ -75,6 +75,8 @@ async def start_bot() -> None:
         logging.info("Tasks cancelled, cleaning up...")
     except Exception as e:
         logging.error(f"Error in bot tasks: {e}")
+    except TimeoutError:
+        logging.error("Timeout while waiting for tasks to complete")
     finally:
         # Ensure all tasks are cancelled
         logging.info("Cleanup completed")

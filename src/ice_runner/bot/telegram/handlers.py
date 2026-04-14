@@ -506,10 +506,8 @@ async def get_rp_status(runner_id: int, state: FSMContext) -> Tuple[str, bool]:
     else:
         if status is None:
             status_str = "\tОбкатчик не шлет свой статус\n"
-            print("status is None")
         else:
             for name, value in status.items():
-                print(name, value)
                 status_str += f"{name}:\t{value}\n"
     last_status_update = time.time()
     data["last_status_update"] = last_status_update
