@@ -17,7 +17,7 @@ mode:
 rpm:
   default: 4500
   help: Целевые обороты ДВС
-  value: 10000
+  value: 4000
   min: 0
   max: 12000
   unit: 1/min
@@ -39,7 +39,7 @@ gas_throttle_pct:
   help: Положение дроссельной заслонки
   value: 15
   min: 0
-  max: 100
+  max: 30
   unit: '%'
   type: int
   usage: base
@@ -125,7 +125,7 @@ max_temperature:
 max_rpm:
   help: Граничные обороты двигателя, при их достижения, обкатка обрывается, -1 --
     проверка отключена
-  value: -1
+  value: 7000
   min: -1
   max: 10000
   unit: rpm
