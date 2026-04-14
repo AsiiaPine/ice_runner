@@ -64,8 +64,8 @@ class ICENODE:
         self.dt = 0.05
         self.rpm = 0
         self.status = EngineState.STOPPED
-        self.temp: float = 0
-        self.int_temp: float = 0
+        self.temp: float = 273.15 + 25
+        self.int_temp: float = 273.15 + 25
 
         self.current: float = 40
 
