@@ -122,11 +122,12 @@ class ExceedanceTracker:
                             start_time: float,
                             state_controller: RunnerStateController) -> bool:
         """The function checks conditions when the ICE is running"""
-        if state.rpm > configuration.max_rpm:
+        print(f"RPM: {state.rpm}, MAX: {configuration.max_rpm}")
+        if configuration.max_rpm > 0 and state.rpm > configuration.max_rpm:
             logging.warning(
                     f"STATUS\t-\tRPM exceeded rpm_max value {state.rpm}, {configuration.max_rpm}")
             self.max_rpm = True
-
+        print(self.max_rpm)
         self.check_mode_specialized(state, configuration, start_time, state_controller)
         self.fuel_level = configuration.min_fuel_volume > state.fuel_level_percent
         if configuration.max_temperature != 0:
