@@ -73,12 +73,15 @@ class CanNode:
     def spin(cls) -> None:
         """The function spins dronecan node and broadcasts commands"""
         cls.node.spin(timeout=0)
-        if time.time() - cls.prev_broadcast_time > 0.1:
-            cls.prev_broadcast_time = time.time()
-            cls.node.broadcast(cls.cmd)
-            cls.node.broadcast(dronecan.uavcan.equipment.actuator.ArrayCommand(
-                                                                        commands = [cls.air_cmd]))
-            cls.save_files()
+        try:
+            if time.time() - cls.prev_broadcast_time > 0.1:
+                cls.prev_broadcast_time = time.time()
+                cls.node.broadcast(cls.cmd)
+                cls.node.broadcast(dronecan.uavcan.equipment.actuator.ArrayCommand(
+                                                                            commands = [cls.air_cmd]))
+                cls.save_files()
+        except dronecan.exceptions.TimeoutError:
+            raise KeyboardInterrupt
 
     @classmethod
     def start_dump(cls) -> None:
