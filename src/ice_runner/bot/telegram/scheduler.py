@@ -109,7 +109,7 @@ class Scheduler:
         for job in cls.jobs.values():
             try:
                 cls.scheduler.remove_job(job)
-                logging.info(f"Removed job {job.id}")
+                logging.info(f"Removed job {job}")
             except Exception as e:
                 logging.debug(f"Error removing job: {e}")
         cls.jobs.clear()

@@ -162,6 +162,9 @@ async def command_status_handler(message: Message, state: FSMContext) -> None:
     MqttClient.client.publish("ice_runner/bot/usr_cmd/state", str(runner_id))
     MqttClient.client.publish("ice_runner/bot/usr_cmd/status", str(runner_id))
     await asyncio.sleep(0.5)
+    if runner_id not in MqttClient.rp_states:
+        await message.answer("Ошибка: двигатель не подключен")
+        return
     upd_state = await set_report_period(runner_id, state)
     status_str, _ = await get_rp_status(runner_id, upd_state)
 
@@ -489,6 +492,8 @@ async def get_rp_status(runner_id: int, state: FSMContext) -> Tuple[str, bool]:
     await asyncio.sleep(0.4)
     data = await state.get_data()
     await asyncio.sleep(0.5)
+    if runner_id not in MqttClient.rp_status:
+        return "", False
     status = MqttClient.rp_status[runner_id]
     rp_state = MqttClient.rp_states[runner_id]
     MqttClient.rp_status[runner_id] = None
@@ -501,10 +506,8 @@ async def get_rp_status(runner_id: int, state: FSMContext) -> Tuple[str, bool]:
     else:
         if status is None:
             status_str = "\tОбкатчик не шлет свой статус\n"
-            print("status is None")
         else:
             for name, value in status.items():
-                print(name, value)
                 status_str += f"{name}:\t{value}\n"
     last_status_update = time.time()
     data["last_status_update"] = last_status_update

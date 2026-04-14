@@ -186,6 +186,12 @@ class TestStarting(BaseTest):
         assert not self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
         self.state.rpm = 7501
+
+        # sould not check rpm if max_rpm is -1
+        self.config.max_rpm = -1
+        assert not self.ex_tracker.is_exceeded_check(
+            self.state, self.config, self.runner_state, self.start_time)
+        self.config.max_rpm = 7500
         assert self.ex_tracker.is_exceeded_check(
             self.state, self.config, self.runner_state, self.start_time)
 

@@ -7,7 +7,7 @@ mode:
     \ запускается на 12 секунд\n\t4 - Запуск двигателя с закрытой воздушной заслонкой\
     \ на 30 секунд\n\t5 - RANDOM: после запуска берет рандомное значение между min_gas_throttle\
     \ и max_gas_throttle"
-  value: 5
+  value: 0
   min: 0
   max: 5
   unit: ''
@@ -39,7 +39,7 @@ gas_throttle_pct:
   help: Положение дроссельной заслонки
   value: 15
   min: 0
-  max: 100
+  max: 30
   unit: '%'
   type: int
   usage: base
@@ -69,7 +69,7 @@ max_gas_throttle_pct:
   default: 0
   help: Максимальное значение дроссельной заслонки, которое будет отправляться, используется
     для mode 1
-  value: 30
+  value: 100
   min: 0
   max: 100
   unit: '%'
@@ -123,9 +123,10 @@ max_temperature:
   usage: flag
 
 max_rpm:
-  help: Граничные обороты двигателя, при их достижения, обкатка обрывается
-  value: 7500
-  min: 0
+  help: Граничные обороты двигателя, при их достижения, обкатка обрывается, -1 --
+    проверка отключена
+  value: 7000
+  min: -1
   max: 10000
   unit: rpm
   type: int
