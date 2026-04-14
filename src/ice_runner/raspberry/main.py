@@ -24,7 +24,7 @@ last_sync_time = time.time()
 async def main(run_id: int, configuration: RunnerConfiguration, log_dir: str) -> None:
     """The function starts the ICE runner"""
     print(f"RP\t-\tStarting raspberry {run_id}")
-    load_dotenv()
+
     server_ip = os.getenv("SERVER_IP")
     server_port = int(os.getenv("SERVER_PORT"))
     MqttClient.connect(run_id, server_ip, server_port)
@@ -64,6 +64,7 @@ def start(log_dir: str, args: list['str'] = None) -> None:
     # This is disgusting
     CanNode.set_log_dir(log_dir)
     logging_configurator.get_logger(__file__, log_dir)
+    load_dotenv()
 
     args: argparse.Namespace = parser.parse_args(args)
     if args.id == -1:
